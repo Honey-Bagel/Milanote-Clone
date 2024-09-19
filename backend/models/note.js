@@ -1,4 +1,4 @@
-const mongoose = require('mognoose');
+const mongoose = require('mongoose');
 
 const noteSchema = new mongoose.Schema({
 	title: {
@@ -20,6 +20,22 @@ const noteSchema = new mongoose.Schema({
 	parent: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'Note'
+	},
+	x: {
+		type: Number,
+		required: true
+	},
+	y: {
+		type: Number,
+		required: true
+	},
+	width: {
+		type: Number,
+		required: true
+	},
+	height: {
+		type: Number,
+		required: true
 	}
 });
 
