@@ -32,6 +32,109 @@ header a {
   margin: 0 auto;
 }
 
+/* Profile dropdown */
+.relative-div{
+	position: relative;
+	margin-left: 10px;
+}
+
+.relative-div .user-profile{
+	width: 50px;
+	height: 50px;
+	border-radius: 50%;
+	overflow: hidden;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background-color: #555;
+	color:#e4e4e4;
+	font-weight: 600;
+	letter-spacing: 0.2em;
+	font-size: 15px;
+}
+
+.relative-div .profile-dropdown{
+	width: 200px;
+	position: absolute;
+	top: 60px;
+	right: -10px;
+	padding: 10px 20px;
+	background-color: #ddd;
+	box-sizing: 0 5px 25px rgb(0 0 0 / 10%);
+	border-radius: 15px;
+	transition: 0.5s;
+	border: 1px solid #555;
+	height: fit-content;
+	visibility: hidden;
+	opacity: 0;
+}
+
+.relative-div .profile-dropdown.active{
+	visibility: visible;
+	opacity: 1;
+}
+
+.relative-div .profile-dropdown::before{
+	content: "";
+	position: absolute;
+	top: -5px;
+	right: 24px;
+	width: 20px;
+	height: 20px;
+	background-color: #555;
+	transform: rotate(45deg);
+	border-top: 1px solid #555;
+	border-left: 1px solid #555;
+}
+
+.profile-dropdown h3.menu-name {
+	text-align: center;
+	width: 100%;
+	font-size: 18px;
+	padding: 20px 0;
+	font-weight: 600;
+	line-height: 1.2em;
+	color: #1aac83;
+	border-bottom: 1px solid #555;
+}
+
+.profile-dropdown .menu-items-div{
+	width: 100%;
+}
+
+.menu-items-div .menu-item{
+	padding: 10px 0;
+	width: 100%;
+	cursor: pointer;
+	font-size: 13px;
+	text-align: left;
+	color: #e4e4e4;
+}
+
+.menu-item .menu-item-link{
+	text-decoration: none;
+	color: #1aac83
+}
+
+.menu-item .menu-item-link.active, .menu-item .menu-item-link:hover{
+	color: #1aac83;
+}
+
+.border-top{
+	width: 100%;
+	border-top: 1px solid #555;
+}
+
+.menu-item.logout{
+	color: #1aac83;
+	border: none;
+	outline: none;
+	background-color: transparent;
+}
+
 /* homepage */
 .home {
   display: grid;

@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Navbar from './components/Navbar';
+import Sandbox from './pages/Sandbox';
 
 function App() {
 	const { user } = useAuthContext();
@@ -25,6 +26,9 @@ function App() {
 						/>
 						<Route
 						path='/signup' element={<Signup />}
+						/>
+						<Route
+						path='/sandbox' element={<Sandbox />}
 						/>
 					</Routes>
 				</div>
