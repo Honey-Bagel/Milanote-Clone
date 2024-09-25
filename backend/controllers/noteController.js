@@ -2,6 +2,12 @@ const Note = require('../models/note');
 const mongoose = require('mongoose');
 
 // get ALL User Notes
+const getNotes = async (req, res) => {
+
+	const notes = await Note.find({})
+
+	res.status(200).json(notes)
+}
 
 // Get a note
 const getNote = async (req, res) => {
@@ -48,4 +54,4 @@ const deleteNote = async (req, res) => {
 	res.status(200).json(note);
 }
 
-module.exports = { getNote, createNote, deleteNote};
+module.exports = { getNotes, getNote, createNote, deleteNote};

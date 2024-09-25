@@ -39,7 +39,8 @@ module.exports.Login = async (req, res, next) => {
 		}
 		const token = createSecretToken(user._id);
 		const username = user.username;
-		res.status(201).json({email, username, token });
+		const id = user._id;
+		res.status(201).json({email, username, token, id });
 		next()
 	} catch (error) {
 		res.status(400).json({error: error.message});

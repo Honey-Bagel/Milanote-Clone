@@ -23,11 +23,11 @@ const noteSchema = new mongoose.Schema({
 	},
 	x: {
 		type: Number,
-		required: true
+		required: true,
 	},
 	y: {
 		type: Number,
-		required: true
+		required: true,
 	},
 	width: {
 		type: Number,

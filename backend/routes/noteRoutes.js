@@ -1,7 +1,10 @@
 const express = require('express');
-const { getNote, createNote, deleteNote } = require('../controllers/noteController');
+const { getNotes, getNote, createNote, deleteNote } = require('../controllers/noteController');
 
 const router = express.Router();
+
+// GET all notes
+router.get('/', getNotes);
 
 // GET a single board
 router.get('/:id', getNote);

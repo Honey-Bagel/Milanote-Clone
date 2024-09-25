@@ -41,6 +41,7 @@ const Navbar = () => {
 			</Link>
 			<nav>
 				{user && (
+					console.log(user),
 					<div className="relative-div" ref={dropdownRef}>
 						<button type="button" className="user-profile" onClick={handleDropdownToggle}>
 							<b>{user.username}</b>
@@ -48,6 +49,13 @@ const Navbar = () => {
 						<div className={`profile-dropdown ${dropdownToggle ? "active":""}`}>
 							<h3 className="menu-name">{user.username}</h3>
 							<div className="menu-items-div">
+							<div className="menu-item">
+								{user && (
+									<Link to={`/profile/${user.id}`} className="menu-item-link" onClick={handleDropdownToggle}>
+									<b>Profile</b>
+								</Link>
+								)}
+								</div>
 								<div className="menu-item">
 									<Link to="/sandbox" className="menu-item-link" onClick={handleDropdownToggle}>
 										<b>Sandbox</b>
