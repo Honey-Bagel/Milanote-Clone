@@ -14,8 +14,15 @@ const Canvas = (props) => {
 
 	const canvasRef = useRef<HTMLDivElement | null>(null);
 
-	const updateDraggedCardPosition = ({ delta, active}) => {
-		console.log('drag');
+	const handleDragEnd = (e) => {
+		const note = notes.find((n) => n._id === e.active.id);
+		note.position.x += e.delta.x;
+		note.position.y += e.delta.y;
+		const _notes = notes.map((n) => {
+			if(n._id === note._id) return note;
+			return n;
+		});
+		dispatch({ type: 'SET_NOTES', payload: _notes });
 	}
 
 	useEffect(() => {
@@ -53,9 +60,14 @@ const Canvas = (props) => {
           height: "300px",
         }}
       >
-        <DndContext onDragEnd={updateDraggedCardPosition}>
+        <DndContext onDragEnd={handleDragEnd}>
           {notes && notes.map((note) => (
-            <Note note={note} key={note._id} canvasTransform={transform} />
+            <Note note={note} key={note._id} 
+			styles={{
+				position: "absolute",
+				left: `${note.position.x}px`,
+				top: `${note.position.y}px`
+			}} />
           ))}
         </DndContext>
       </div>

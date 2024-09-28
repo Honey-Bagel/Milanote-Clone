@@ -21,12 +21,8 @@ const noteSchema = new mongoose.Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'Note'
 	},
-	x: {
-		type: Number,
-		required: true,
-	},
-	y: {
-		type: Number,
+	position: {
+		type: mongoose.Schema.Types.Mixed,
 		required: true,
 	},
 	width: {
