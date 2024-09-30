@@ -29,14 +29,11 @@ app.use(cors({
 }));
 
 // Routes
-app.use('/api/boards', boardRoutes);
-app.use('/api/notes', noteRoutes);
-app.use('/api/auth', authRoutes);
+app.use('/api/boards', boardRoutes); // handle user boards
+app.use('/api/notes', noteRoutes); // handle notes
+app.use('/api/auth', authRoutes); // user authentication
 
-app.get('/', (req, res) => {
-	
-});
-
+// Handle real time interactivity using socket.io
 io.on('connection', (socket) => {
 	console.log('a user connected');
 	socket.on('chat message', (msg) => {

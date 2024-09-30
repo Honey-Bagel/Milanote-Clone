@@ -32,6 +32,9 @@ function App() {
 						path='/sandbox' element={user ? <Sandbox /> : <Navigate to="/"/>}
 						/>
 						<Route
+						path='/b/:id' element={user ? <Sandbox /> : <Navigate to="/"/>}
+						/>
+						<Route
 						path='/profile/:id' element={<Profile />}
 						/>
 					</Routes>

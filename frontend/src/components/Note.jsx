@@ -23,7 +23,10 @@ const Note = (props) => {
 		>
 			<h1>{note.title}</h1>
 			<div className="card-body">
-				{note.content}
+				<input
+				type="text"
+				value={note.content}
+				></input>
 			</div>
       </button>
 	);
