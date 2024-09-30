@@ -162,11 +162,6 @@ header a {
   grid-template-columns: 3fr 1fr;
   gap: 100px;
 }
-.sandbox {
-	display: grid;
-	grid-template-columns: 3fr 1fr;
-	gap: 100px;
-}
 .board-details {
   background: #fff;
   border-radius: 4px;

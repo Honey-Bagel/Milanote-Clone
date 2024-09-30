@@ -3,6 +3,7 @@ import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } fr
 import { useNotesContext } from '../hooks/useNotesContext';
 import { useAuthContext } from "../hooks/useAuthContext";
 import { ZoomTransform, zoom } from 'd3-zoom';
+import { select } from 'd3-selection';
 
 import Note from './Note';
 
@@ -12,7 +13,41 @@ const Canvas = (props) => {
 	const { notes, dispatch } = useNotesContext();
 	const { user } = useAuthContext();
 
-	const canvasRef = useRef<HTMLDivElement | null>(null);
+	const { setNodeRef } = useDroppable({
+		id: "canvas",
+	});
+
+	const canvasRef = useRef(null);
+
+	const updateAndForwardRef = (div) => {
+		canvasRef.current = div;
+		setNodeRef(div);
+	}
+
+	const zoomBehavior = useMemo(() => zoom(), []);
+
+	const updateTransform = useCallback(({ transform}) => {
+		setTransform(transform);
+	}, [setTransform]);
+
+	const saveData = async (id, payload) => {
+		console.log(id)
+		const response = await fetch('/api/notes/' + id, {
+			method: 'PATCH',
+			body: JSON.stringify(payload),
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		})
+		const json = await response.json();
+
+		if(!response.ok) {
+			console.log('patch failed');
+		}
+		// if(response.ok) {
+		// 	dispatch({type: 'SET_NOTES', })
+		// }
+	}
 
 	const handleDragEnd = (e) => {
 		const note = notes.find((n) => n._id === e.active.id);
@@ -23,6 +58,7 @@ const Canvas = (props) => {
 			return n;
 		});
 		dispatch({ type: 'SET_NOTES', payload: _notes });
+		saveData(note._id, note);
 	}
 
 	useEffect(() => {
@@ -46,10 +82,14 @@ const Canvas = (props) => {
 
 	useLayoutEffect(() => {
 		if(!canvasRef.current) return;
-	})
+
+		zoomBehavior.on("zoom", updateTransform);
+
+		select(canvasRef.current).call(zoomBehavior);
+	}, [zoomBehavior, canvasRef, updateTransform]);
 
 	return (
-		<div className="canvasWindow">
+		<div className="canvasWindow" ref={updateAndForwardRef}>
       <div
         className="canvas"
         style={{
@@ -62,11 +102,11 @@ const Canvas = (props) => {
       >
         <DndContext onDragEnd={handleDragEnd}>
           {notes && notes.map((note) => (
-            <Note note={note} key={note._id} 
+            <Note note={note} key={note._id} canvasTransform={transform}
 			styles={{
 				position: "absolute",
-				left: `${note.position.x}px`,
-				top: `${note.position.y}px`
+				left: `${note.position.x * transform.k}px`,
+				top: `${note.position.y * transform.k}px`
 			}} />
           ))}
         </DndContext>

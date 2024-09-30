@@ -54,4 +54,22 @@ const deleteNote = async (req, res) => {
 	res.status(200).json(note);
 }
 
-module.exports = { getNotes, getNote, createNote, deleteNote};
+const updateNote = async (req, res) => {
+	const { id } = req.params;
+	console.log(req.body)
+
+	if(!mongoose.Types.ObjectId.isValid(id)) {
+		return res.status(404).json({error: 'No such note'});
+	}
+
+	const note = await Note.findByIdAndUpdate({_id: id}, {
+		...req.body
+	});
+
+	if(!note) {
+		return res.status(404).json({error: 'No such note'});
+	}
+	res.status(200).json(note);
+}
+
+module.exports = { getNotes, getNote, createNote, deleteNote, updateNote };
