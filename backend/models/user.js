@@ -19,6 +19,10 @@ const userSchema = new mongoose.Schema({
 		type: Date,
 		default: new Date()
 	},
+	rootBoard: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'Board'
+	}
 });
 
 userSchema.pre("save", async function () {

@@ -1,16 +1,24 @@
 const User = require("../models/user");
+const Board = require("../models/board");
 const { createSecretToken } = require("../util/SecretToken");
 const bcrypt = require("bcrypt");
 
+// Handle user signup (email, password, username)
 module.exports.Signup = async (req, res, next) => {
 	try {
 		const { email, password, username, createdAt } = req.body;
 		const existingUser = await User.findOne({ email });
-		if(existingUser) {
-			return res.json({ message: "User already exists"});
-		}
-		const user = await User.create({ email: email, password: password, username: username, createdAt: createdAt });
+		const rootBoard = new Board({title: "root board", root: true });
+		await rootBoard.save();
+
+		if(existingUser) return res.json({ message: "User already exists"});
+
+		const user = await User.create({ email: email, password: password, username: username, createdAt: createdAt, rootBoard: rootBoard });
+
+		// create secret token for user
 		const token = createSecretToken(user._id);
+
+		// create cookie token to keep user signed in
 		res.cookie("token", token, {
 			withCredentials: true,
 			httpOnly: false,
@@ -23,20 +31,29 @@ module.exports.Signup = async (req, res, next) => {
 	}
 }
 
+// Handle user login ( email, password)
 module.exports.Login = async (req, res, next) => {
 	try { 
 		const { email, password } = req.body;
+		
+		// check to see if method was provided an email and password
 		if(!email || !password) {
 			return res.json({message: 'All fields are required'});
 		}
+
 		const user = await User.findOne({ email });
+
+		// Confirm user is valid
 		if(!user) {
 			return res.json({message: 'That email does not have a account'});
 		}
+		
+		// Confirm password is valid
 		const auth = await bcrypt.compare(password, user.password);
 		if(!auth) {
 			return res.json({message: 'Incorrect password'});
 		}
+		
 		const token = createSecretToken(user._id);
 		const username = user.username;
 		const id = user._id;

@@ -16,7 +16,10 @@ const boardSchema = new mongoose.Schema({
 	collaborators: [{
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'User'
-	}]
+	}],
+	root: {
+		type: Boolean
+	}
 });
 
 module.exports = mongoose.model('Board', boardSchema);

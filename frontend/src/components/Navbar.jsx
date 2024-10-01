@@ -27,6 +27,8 @@ const Navbar = () => {
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
+	// Figure out how to fetch user's root board
+
 	// logout
 	const handleLogout=()=> {
 		logout();
@@ -57,7 +59,7 @@ const Navbar = () => {
 								)}
 								</div>
 								<div className="menu-item">
-									<Link to="/sandbox" className="menu-item-link" onClick={handleDropdownToggle}>
+									<Link to={`/b/${user.rootBoard}`} className="menu-item-link" onClick={handleDropdownToggle}>
 										<b>Sandbox</b>
 									</Link>
 								</div>
