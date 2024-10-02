@@ -67,7 +67,6 @@ const Canvas = (props) => {
 			const response = await fetch('/api/notes');
 
 			const json = await response.json();
-			console.log(json);
 
 			if(response.ok) {
 				dispatch({type: 'SET_NOTES', payload: json});

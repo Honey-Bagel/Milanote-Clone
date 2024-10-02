@@ -2,9 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogout } from '../hooks/useLogout';
 import { useAuthContext } from '../hooks/useAuthContext';
+import axios from 'axios';
 
 const Navbar = () => {
 	const { user } = useAuthContext();
+	const [rootBoard, setRootBoard] = useState(null);
 	const { logout } = useLogout();
 
 	const [dropdownToggle, setDropdownToggle] = useState(false);
@@ -35,6 +37,26 @@ const Navbar = () => {
 		handleDropdownToggle();
 	}
 
+	useEffect(() => {
+		const fetchRootBoard = async () => {
+			const response = await axios.post('/api/auth', {
+				"token": user.token
+			})
+
+			const data = response.data;
+
+			if(data.status == true) {
+				setRootBoard(data.user.rootBoard);
+			}
+		}
+
+		if(user) {
+			fetchRootBoard();
+		}
+
+		return () => setRootBoard(null);
+	}, [user]);
+
 	return (
 		<header>
 			<div className="container">
@@ -43,7 +65,6 @@ const Navbar = () => {
 			</Link>
 			<nav>
 				{user && (
-					console.log(user),
 					<div className="relative-div" ref={dropdownRef}>
 						<button type="button" className="user-profile" onClick={handleDropdownToggle}>
 							<b>{user.username}</b>
@@ -59,9 +80,11 @@ const Navbar = () => {
 								)}
 								</div>
 								<div className="menu-item">
-									<Link to={`/b/${user.rootBoard}`} className="menu-item-link" onClick={handleDropdownToggle}>
+									{rootBoard && (
+										<Link to={`/b/${rootBoard}`} className="menu-item-link" onClick={handleDropdownToggle}>
 										<b>Sandbox</b>
 									</Link>
+								)}
 								</div>
 								<div className="border-top">
 								<button

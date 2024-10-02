@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import { ZoomTransform, zoomIdentity } from 'd3-zoom';
+import { useParams } from 'react-router-dom';
 
 import Note from '../components/Note';
 //components
@@ -10,6 +11,8 @@ const Sandbox = () => {
 	const [parent, setParent] = useState(null);
 	const [transform, setTransform] = useState(zoomIdentity);
 	const [activeId, setActiveId] = useState(null);
+	const [board, setBoard] = useState(null);
+	const boardId = useParams().id
 
 	const calculateCanvasPos = (
 		initialRect,
@@ -28,6 +31,19 @@ const Sandbox = () => {
 	function handleDragEnd(event) {
 		console.log('dragend')
 	}
+
+	useEffect(() => {
+
+		const getBoard = async () => {
+			const response = await fetch('/api/boards/' + boardId)
+
+			const json = await response.json();
+
+			setBoard(json)
+		}
+
+		getBoard()
+	}, [boardId])
 
 
 	return (
