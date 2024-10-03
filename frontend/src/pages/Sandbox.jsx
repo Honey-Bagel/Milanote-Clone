@@ -6,13 +6,18 @@ import { useParams } from 'react-router-dom';
 import Note from '../components/Note';
 //components
 import Canvas from '../components/Canvas';
+import { useAuthContext } from '../hooks/useAuthContext';
 
 const Sandbox = () => {
+	const boardId = useParams().id
+	const { user } = useAuthContext();
+
+	// States
 	const [parent, setParent] = useState(null);
 	const [transform, setTransform] = useState(zoomIdentity);
 	const [activeId, setActiveId] = useState(null);
 	const [board, setBoard] = useState(null);
-	const boardId = useParams().id
+	const [error, setError] = useState(null);
 
 	const calculateCanvasPos = (
 		initialRect,
@@ -42,16 +47,43 @@ const Sandbox = () => {
 			setBoard(json)
 		}
 
-		getBoard()
-	}, [boardId])
+		const hasBoardAccess = async () => {
+			console.log(user.id);
+			const response = await fetch('/api/auth/b/' + boardId, {
+				method: "POST",
+				body: JSON.stringify({ "userId": user.id}),
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			const json = await response.json();	
+			if(json.status == true) {
+				setError(null);
+				getBoard();
+			} else {
+				setBoard(null);
+				setError("Denied Access to this Board.");
+			}
+		}
+
+		hasBoardAccess()
+
+		return () => {
+			setBoard(null);
+		}
+
+	}, [user, boardId])
 
 
 	return (
 		<DndContext 
 		onDragEnd={handleDragEnd}
 		>
-		
+		{board && (
 		<Canvas transform={transform} setTransform={setTransform}/>
+		)}
+		{error && <div className="error">{error}</div>}
 	
 
 		

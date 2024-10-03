@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const Board = require('../models/board');
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 
@@ -17,4 +18,20 @@ module.exports.userVerification = (req, res) => {
 			else return res.json({ status: false });
 		}
 	})
+}
+
+module.exports.boardVerification = async (req, res) => {
+	const userId = req.body.userId;
+	const { id } = req.params;
+
+	const board = await Board.findById(id);
+	if(!board) {
+		console.log('no board')
+		return res.json({status: false});
+	}
+
+	if(board.owner == userId || board.collaborators.includes(userId)) {
+		return res.json({status: true});
+	}
+	return res.json({status: false});
 }

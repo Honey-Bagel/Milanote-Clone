@@ -1,6 +1,6 @@
 const express = require('express');
 const { Signup, Login } = require("../controllers/authController");
-const { userVerification } = require("../middleware/AuthMiddleware");
+const { userVerification, boardVerification } = require("../middleware/AuthMiddleware");
 
 const router = express.Router();
 
@@ -12,5 +12,8 @@ router.post("/login", Login);
 
 // Verification
 router.post('/', userVerification);
+
+// Verify Board Access
+router.post('/b/:id', boardVerification);
 
 module.exports = router;
