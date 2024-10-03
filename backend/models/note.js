@@ -32,6 +32,11 @@ const noteSchema = new mongoose.Schema({
 	height: {
 		type: Number,
 		required: true
+	},
+	board: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'Board',
+		required: true
 	}
 });
 

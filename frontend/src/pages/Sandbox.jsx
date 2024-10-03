@@ -81,7 +81,7 @@ const Sandbox = () => {
 		onDragEnd={handleDragEnd}
 		>
 		{board && (
-		<Canvas transform={transform} setTransform={setTransform}/>
+		<Canvas transform={transform} setTransform={setTransform} board={board}/>
 		)}
 		{error && <div className="error">{error}</div>}
 	

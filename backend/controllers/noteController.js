@@ -3,8 +3,15 @@ const mongoose = require('mongoose');
 
 // get ALL User Notes
 const getNotes = async (req, res) => {
+	const { authorization } = req.headers;
+	if(!authorization) {
+		console.log('no board found')
+		return res.status(401).json({error: 'Board id required'});
+	}
 
-	const notes = await Note.find({})
+	const id = authorization.split(' ')[1];
+
+	const notes = await Note.find({ board: id });
 
 	res.status(200).json(notes)
 }

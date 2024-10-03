@@ -8,8 +8,7 @@ import { select } from 'd3-selection';
 import Note from './Note';
 
 const Canvas = (props) => {
-	const transform = props.transform;
-	const setTransform = props.setTransform;
+	const { transform, setTransform, board} = props;
 	const { notes, dispatch } = useNotesContext();
 	const { user } = useAuthContext();
 
@@ -64,9 +63,15 @@ const Canvas = (props) => {
 	useEffect(() => {
 		
 		const fetchNotes = async () => {
-			const response = await fetch('/api/notes');
+			const response = await fetch('/api/notes', {
+				headers: {
+					'Authorization': `Board ${board._id}`
+				}
+			});
 
 			const json = await response.json();
+			
+			console.log('NOTES: ' + JSON.stringify(json))
 
 			if(response.ok) {
 				dispatch({type: 'SET_NOTES', payload: json});
