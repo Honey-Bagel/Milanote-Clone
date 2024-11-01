@@ -14,7 +14,12 @@ const { MONGO_URL, PORT } = process.env;
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+	cors: {
+		origin: "http://localhost:3001",
+		methods: ["GET", "POST"]
+	}
+});
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URL);
@@ -28,18 +33,24 @@ app.use(cors({
 	credentials: true
 }));
 
+// Error Handling
+app.use((err, req, res, next) => {
+	console.error(err.stack); // Log error details for debugging
+  
+	// Customize the response based on error type
+	res.status(err.status || 500).json({
+	  message: err.message || 'Internal Server Error',
+	  details: err.details || null,
+	});
+  });
+
 // Routes
 app.use('/api/boards', boardRoutes); // handle user boards
 app.use('/api/notes', noteRoutes); // handle notes
 app.use('/api/auth', authRoutes); // user authentication
 
 // Handle real time interactivity using socket.io
-io.on('connection', (socket) => {
-	console.log('a user connected');
-	socket.on('chat message', (msg) => {
-		io.emit('chat message', msg);
-	});
-});
+require('./util/socket')(io);
 
 server.listen(PORT, () => {
 	console.log('Server listening on port ', process.env.PORT);

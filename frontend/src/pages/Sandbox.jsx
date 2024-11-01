@@ -37,44 +37,6 @@ const Sandbox = () => {
 		console.log('dragend')
 	}
 
-	useEffect(() => {
-
-		const getBoard = async () => {
-			const response = await fetch('/api/boards/' + boardId)
-
-			const json = await response.json();
-
-			setBoard(json)
-		}
-
-		const hasBoardAccess = async () => {
-			console.log(user.id);
-			const response = await fetch('/api/auth/b/' + boardId, {
-				method: "POST",
-				body: JSON.stringify({ "userId": user.id}),
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			const json = await response.json();	
-			if(json.status == true) {
-				setError(null);
-				getBoard();
-			} else {
-				setBoard(null);
-				setError("Denied Access to this Board.");
-			}
-		}
-
-		hasBoardAccess()
-
-		return () => {
-			setBoard(null);
-		}
-
-	}, [user, boardId])
-
 
 	return (
 		<DndContext 

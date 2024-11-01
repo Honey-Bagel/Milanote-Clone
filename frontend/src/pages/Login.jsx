@@ -15,7 +15,14 @@ const Login = () => {
 		} catch (e) { console.log(e); }
 	}
 
+	const forgotPassword = async (e) => {
+		e.preventDefault()
+
+		
+	}
+
 	return (
+		<div>
 		<form className='login' onSubmit={handleSubmit}>
 			<h3>Login</h3>
 
@@ -34,6 +41,8 @@ const Login = () => {
 
 			<button>Login</button>
 		</form>
+		<button onSubmit={forgotPassword}>Forgot Password</button>
+		</div>
 	)
 }
 

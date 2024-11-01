@@ -1,10 +1,12 @@
 
 import { useAuthContext } from "../hooks/useAuthContext";
+import socket from '../utils/socket';
 
 // components
 
 const Home = () => {
 	const { user } = useAuthContext();
+	
 	
 
 	return (
@@ -12,6 +14,7 @@ const Home = () => {
 			{user && (
 				<div>user: {user.username} </div>
 			)}
+			<button onClick={(e) => {socket.emit('test', {'1': "one", '2': "two"})}}>Socket Testing!</button>
 		</div>
 	)
 }

@@ -12,8 +12,8 @@ export const useLogin = () => {
 		setError(true);
 		
 		const response = await axios.post('/api/auth/login', {email, password});
-		
 		const data = response.data;
+		console.log(JSON.stringify(data))
 
 		if(!response.status != "201") {
 			setIsLoading(false);

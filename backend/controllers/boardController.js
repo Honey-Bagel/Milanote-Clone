@@ -10,17 +10,7 @@ const getBoards = async (req, res) => {
 
 // get a board
 const getBoard = async (req, res) => {
-	const { id } = req.params;
-
-	if(!mongoose.Types.ObjectId.isValid(id)) {
-		return res.status(404).json({error: 'No such board'});
-	}
-
-	const board = await Board.findById(req.params.id).populate('notes collaborators');
-	
-	if(!board) {
-		return res.status(404).json({error: 'No such board'});
-	}
+	const board = req.board;
 
 	res.status(200).json(board);
 }

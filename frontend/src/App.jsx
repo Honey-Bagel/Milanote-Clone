@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthContext } from './hooks/useAuthContext';
+import React, { useEffect } from 'react';
+import socket from './utils/socket';
 
 // pages and components
 import Home from './pages/Home';
@@ -9,8 +11,19 @@ import Navbar from './components/Navbar';
 import Sandbox from './pages/Sandbox';
 import Profile from './pages/Profile';
 
+
 function App() {
 	const { user } = useAuthContext();
+
+	useEffect(() => {
+		socket.on('test', (data) => {
+			console.log('test completed:', data);
+		});
+
+		return () => {
+			socket.off('test');
+		};
+	}, []);
 	
 	return (
 		<div className="App">
@@ -29,10 +42,10 @@ function App() {
 						path='/signup' element={!user ? <Signup /> : <Navigate to="/"/>}
 						/>
 						<Route
-						path='/sandbox' element={user ? <Sandbox /> : <Navigate to="/"/>}
+						path='/sandbox' element={<Sandbox />}
 						/>
 						<Route
-						path='/b/:id' element={user ? <Sandbox /> : <Navigate to="/"/>}
+						path='/b/:id' element={<Sandbox />}
 						/>
 						<Route
 						path='/profile/:id' element={<Profile />}

@@ -45,7 +45,7 @@ const Navbar = () => {
 
 			const data = response.data;
 
-			if(data.status == true) {
+			if(data.status === true) {
 				setRootBoard(data.user.rootBoard);
 			}
 		}
