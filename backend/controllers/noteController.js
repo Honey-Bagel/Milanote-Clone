@@ -3,15 +3,14 @@ const mongoose = require('mongoose');
 
 // get ALL User Notes
 const getNotes = async (req, res) => {
-	const { authorization } = req.headers;
-	if(!authorization) {
+	const { boardId } = req.params;
+	if(!boardId) {
 		console.log('no board found')
 		return res.status(401).json({error: 'Board id required'});
 	}
 
-	const id = authorization.split(' ')[1];
 
-	const notes = await Note.find({ board: id });
+	const notes = await Note.find({ board: boardId });
 
 	res.status(200).json(notes)
 }
@@ -36,6 +35,7 @@ const getNote = async (req, res) => {
 // Create a new Note
 const createNote = async (req, res) => {
 	try {
+		console.log(req.body);
 		const note = new Note(req.body);
 		await note.save();
 		res.status(201).json(note);
@@ -63,7 +63,6 @@ const deleteNote = async (req, res) => {
 
 const updateNote = async (req, res) => {
 	const { id } = req.params;
-	console.log(req.body)
 
 	if(!mongoose.Types.ObjectId.isValid(id)) {
 		return res.status(404).json({error: 'No such note'});

@@ -4,7 +4,7 @@ const { getNotes, getNote, createNote, deleteNote, updateNote } = require('../co
 const router = express.Router();
 
 // GET all notes
-router.get('/', getNotes);
+router.get('/:boardId', getNotes);
 
 // GET a single note
 router.get('/:id', getNote);
@@ -16,6 +16,6 @@ router.post('/', createNote);
 router.delete('/:id', deleteNote);
 
 // UPDATE a note
-router.patch('/:id', updateNote);
+router.put('/:id', updateNote);
 
 module.exports = router;

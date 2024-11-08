@@ -16,7 +16,6 @@ const Home = () => {
 				<div>user: {user.username} </div>
 			)}
 			<button onClick={(e) => {socket.emit('test', {'1': "one", '2': "two"})}}>Socket Testing!</button>
-			<FabCanvas/>
 		</div>
 	)
 }

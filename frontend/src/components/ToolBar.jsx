@@ -1,5 +1,6 @@
+import useCanvas from "../hooks/useCanvas";
 
-const ToolBar = ({ addNote }) => {
+const ToolBar = ({addNote}) => {
 
 	return (
 		<div id="toolbar" className="Toolbar">
