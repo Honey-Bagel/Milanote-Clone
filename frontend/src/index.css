@@ -1,5 +1,8 @@
 /* google font */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;800&family=VT323&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* layout */
 :root {
@@ -352,4 +355,20 @@ textarea:focus {
     height: 100vh;
     position: relative;
     overflow: auto;
+  }
+
+  .Toolbar {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	background-color: #707070;
+	padding: 8px 8px;
+	border-radius: 4px;
+	position: fixed;
+	top: 50%;
+	transform: translateY(-50%);
+	left: 15px;
+	&:empty {
+		display: none;
+	}
   }

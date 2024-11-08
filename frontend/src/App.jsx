@@ -10,6 +10,7 @@ import Signup from './pages/Signup';
 import Navbar from './components/Navbar';
 import Sandbox from './pages/Sandbox';
 import Profile from './pages/Profile';
+import BoardPage from './pages/BoardPage';
 
 
 function App() {
@@ -49,6 +50,9 @@ function App() {
 						/>
 						<Route
 						path='/profile/:id' element={<Profile />}
+						/>
+						<Route
+						path='/board' element={<BoardPage />}
 						/>
 					</Routes>
 				</div>
