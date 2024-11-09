@@ -49,7 +49,7 @@ app.use('/api/boards', boardRoutes); // handle user boards
 app.use('/api/notes', noteRoutes); // handle notes
 app.use('/api/auth', authRoutes); // user authentication
 
-// Handle real time interactivity using socket.io
+// Handle real time interactivity using socket.io.
 require('./util/socket')(io);
 
 server.listen(PORT, () => {

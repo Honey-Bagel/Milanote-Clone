@@ -4,7 +4,6 @@ import useCanvas from '../hooks/useCanvas';
 import ToolBar from './ToolBar';
 
 const Board = () => {
-
 	const canvasRef = useRef(null);
 	const { canvas, addNote } = useCanvas(canvasRef);
 
@@ -15,7 +14,12 @@ const Board = () => {
 	return (
 		<div>
 			<ToolBar addNote={tbAddNote}></ToolBar>
-			<canvas ref={canvasRef} />
+			<div>
+				<div className="canvas-container">
+				<canvas ref={canvasRef}/>
+			</div>
+			</div>
+			
 		</div>
 	)
 

@@ -357,7 +357,7 @@ textarea:focus {
     overflow: auto;
   }
 
-  .Toolbar {
+.Toolbar {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
@@ -371,4 +371,12 @@ textarea:focus {
 	&:empty {
 		display: none;
 	}
-  }
+}
+
+/* Draggable note styling */
+.draggable-note {
+  padding: 10px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  cursor: grab;
+}

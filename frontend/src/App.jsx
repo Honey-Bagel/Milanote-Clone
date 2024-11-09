@@ -8,7 +8,6 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Navbar from './components/Navbar';
-import Sandbox from './pages/Sandbox';
 import Profile from './pages/Profile';
 import BoardPage from './pages/BoardPage';
 
@@ -41,12 +40,6 @@ function App() {
 						/>
 						<Route
 						path='/signup' element={!user ? <Signup /> : <Navigate to="/"/>}
-						/>
-						<Route
-						path='/sandbox' element={<Sandbox />}
-						/>
-						<Route
-						path='/b/:id' element={<Sandbox />}
 						/>
 						<Route
 						path='/profile/:id' element={<Profile />}
