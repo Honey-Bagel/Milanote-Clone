@@ -1,9 +1,11 @@
 // hooks/useCanvas.js
 import { useEffect, useState } from 'react';
-import { Canvas, Rect, Textbox, Group, Control } from 'fabric';
+import { Canvas, Rect, Textbox, Group, Control, FabricImage } from 'fabric';
 import { getNotes, createNote, updateNote, deleteNote } from '../services/notesAPI';
+import { getImages, createImage, deleteImage, updateImage } from '../services/imagesAPI';
 import { useNotesContext } from './useNotesContext';
 import { useAuthContext } from './useAuthContext';
+
 
 const useCanvas = (canvasRef) => {
   const { user } = useAuthContext();
@@ -15,6 +17,7 @@ const useCanvas = (canvasRef) => {
   useEffect(() => {
 	if(!user) return;
     const canvasInstance = new Canvas(canvasRef.current);
+	const { innerWidth, innerHeight } = window;
     canvasInstance.setWidth(1300);
     canvasInstance.setHeight(1100);
 	canvasInstance.backgroundColor = "#222222";
@@ -29,6 +32,21 @@ const useCanvas = (canvasRef) => {
 			addNoteToCanvas(canvasInstance, note.position.x, note.position.y, note.width, note.height, note.content, note._id);
 		})
 	});
+
+	getImages(user.rootBoard).then((res) => {
+		res.data.forEach((image) => {
+			FabricImage.fromURL(image.src, (fabricImage) => {
+				fabricImage.set({
+					left: image.left,
+					top: image.top,
+					scaleX: image.scaleX,
+					scaleY: image.scaleY,
+					angle: image.angle,
+				});
+				canvasInstance.add(fabricImage);
+			})
+		})
+	})
 
 	canvasInstance.on('mouse:wheel', (event) => {
 		event.e.preventDefault();
@@ -45,10 +63,56 @@ const useCanvas = (canvasRef) => {
 		
 		if(canvasInstance.getWidth() - panX + (deltaX * 30) <= viewportWidth && ((deltaX * 30) - panX) > 0) {
 			canvasInstance.relativePan({ x: -deltaX * 30, y: 0});
-		} else if(canvasInstance.getHeight() - panY + (deltaY * 30) <= viewportHeight && ((deltaY * 30) - panY) > 0) {
+		}
+		if(canvasInstance.getHeight() - panY + (deltaY * 30) <= viewportHeight && ((deltaY * 30) - panY) >= 0) {
 			canvasInstance.relativePan({ x: 0, y: -deltaY * 30 });
 		}
-	})
+	});
+	
+	const handleDrop = (e) => {
+		e.preventDefault();
+		const files = e.dataTransfer.files;
+
+		if(files.length > 0) {
+			const file = files[0];
+			const reader = new FileReader();
+
+			reader.onload = (event) => {
+				const img = new Image();
+				img.onload = () => {
+					const fabricImage = new FabricImage(img, {
+						left: e.offsetX,
+						top: e.offsetY,
+						selectable: true,
+					});
+					canvasInstance.add(fabricImage);
+					canvasInstance.renderAll();
+
+					const imageData = {
+						boardId: user.boardId,
+						src: event.target.result,
+						left: e.offsetX,
+						right: e.offsetY,
+						width: img.width,
+						height: img.height,
+						scaleX: 1,
+						scaleY: 1,
+						angle: 0,
+					};
+					createImage(imageData);
+				};
+				img.src = event.target.result;
+			};
+			reader.readAsDataURL(file);
+		}
+	}
+	const handleDragOver = (e) => {
+		e.preventDefault();
+	}
+
+	const canvasContainer = document.getElementById('canvas-container');
+	canvasContainer.addEventListener('dragover', handleDragOver);
+	canvasContainer.addEventListener('drop', handleDrop);
 
 	const checkCanvasEdges = (object) => {
 		let newViewportHeight = canvasInstance.height;
@@ -68,18 +132,12 @@ const useCanvas = (canvasRef) => {
 		} else {
 			newViewportWidth = 1300;
 		}
-		// if (objectLeft < EXPAND_THRESHOLD) {
-		// 	newViewportWidth = Math.max(newViewportWidth, obj.width * obj.scaleX);
-		// }
 	  
 		if (objectBottom > newViewportHeight - EXPAND_THRESHOLD) {
 			newViewportHeight = objectBottom + EXPAND_AMOUNT;
 		} else {
 			newViewportHeight = 1100;
 		} 
-		// if (objectTop < EXPAND_THRESHOLD) {
-		// 	newViewportHeight = Math.max(newViewportHeight, obj.height * obj.scaleY);
-		// }
 
 		if(viewportHeight < newViewportHeight) {
 			viewportHeight = newViewportHeight;
@@ -99,13 +157,48 @@ const useCanvas = (canvasRef) => {
 		checkCanvasEdges(e.target);
 	})
 
-	canvasInstance.on('object:removed', (e) => {
-		canvasInstance.getObjects().forEach((obj) => {
-			checkCanvasEdges(obj)
-		})
-	})
+	/** Milanote doesn't implement idk if I should */
+	// canvasInstance.on('object:removed', (e) => {
+	// 	let maxRight = 0;
+	// 	let maxBottom = 0;
+
+	// 	canvasInstance.getObjects().forEach((obj) => {
+	// 		const rightEdge = obj.left + obj.width * obj.scaleY;
+	// 		const bottomEdge = obj.top + obj.height * obj.scaleY;
+
+	// 		maxRight = Math.max(maxRight, rightEdge);
+	// 		maxBottom = Math.max(maxBottom, bottomEdge);
+	// 	});
+
+	// 	const newWidth = Math.max(1300, maxRight + EXPAND_THRESHOLD);
+	// 	const newHeight = Math.max(1100, maxBottom + EXPAND_THRESHOLD);
+
+	// 	if(newWidth < viewportWidth || newHeight < viewportHeight) {
+	// 		const panX = canvasInstance.viewportTransform[4];
+	// 		const panY = canvasInstance.viewportTransform[5];
+	// 		console.log('pan: ', panX, panY);
+
+	// 		const newPanX = panX + (viewportWidth - newWidth);
+	// 		const newPanY = panY + (viewportHeight - newHeight);
+	// 		//console.log(newPanX, newPanY);
+	// 		console.log(viewportHeight - newHeight);
+
+	// 		viewportWidth = newWidth;
+	// 		viewportHeight = newHeight;
+	// 		canvasInstance.relativePan({ x: panX , y: panY + 50 });
+	// 		canvasInstance.renderAll();
+	// 		console.log('changed height/width')
+	// 	};
+	// });
+
+	// canvasInstance.on('object:removed', (e) => {
+	// 	canvasInstance.getObjects().forEach((obj) => {
+	// 		console.log(obj);
+	// 	})
+	// })
 
 	// Handle keyboard backspace/delete event to delete notes
+	
 	const handleKeyDown = (event) => {
 		if(canvasInstance.getActiveObject() && canvasInstance.getActiveObject().type && canvasInstance.getActiveObject().type === 'textbox') {
 			return;
@@ -126,37 +219,6 @@ const useCanvas = (canvasRef) => {
 		}
 	};
 
-	// canvasInstance.on('selection:created', (e) => {
-
-	// 	e.selected.forEach((obj) => {
-	// 		const selectionRect = new Rect({
-	// 			left: obj.left - 5,
-	// 			top: obj.top - 5,
-	// 			width: obj.width,
-	// 			height: obj.height,
-	// 			fill: 'transparent',
-	// 			stroke: 'blue',
-	// 			strokeWidth: 5,
-	// 			selectable: false,
-	// 			rx: 10,
-	// 			  ry: 10,
-	// 		})
-
-	// 		canvasInstance.add(selectionRect);
-	// 		obj.selectionRect = selectionRect;
-	// 	})
-
-	// 	canvasInstance.renderAll();
-	// })
-	
-	// canvasInstance.on('selection:cleared', (e) => {
-	// 	e.deselected.forEach((obj) => {
-	// 		if(obj.selectionRect) {
-	// 			canvasInstance.remove(obj.selectionRect);
-	// 		}
-	// 	})
-	// })
-
 	window.addEventListener('keydown', handleKeyDown);
 	// end keyboard listener
 
@@ -164,6 +226,8 @@ const useCanvas = (canvasRef) => {
 		// clean up canvas to prevent leaks
 		canvasInstance.dispose();
 		window.removeEventListener('keydown', handleKeyDown);
+		canvasContainer.removeEventListener('dragover', handleDragOver);
+		canvasContainer.removeEventListener('drop', handleDrop);
 	}
   }, [canvasRef, user]);
 

@@ -10,12 +10,12 @@ const Board = () => {
 	const tbAddNote = () => {
 		addNote(0, 0);
 	}
-
+	
 	return (
 		<div>
 			<ToolBar addNote={tbAddNote}></ToolBar>
 			<div>
-				<div className="canvas-container">
+				<div id="canvas-container">
 				<canvas ref={canvasRef}/>
 			</div>
 			</div>
