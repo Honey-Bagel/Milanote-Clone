@@ -1,5 +1,5 @@
 const express = require('express');
-const { getBoard, getBoards, createBoard, deleteBoard } = require('../controllers/boardController');
+const { getBoard, getBoards, createBoard, deleteBoard, updateBoard } = require('../controllers/boardController');
 const { checkBoardAccess } = require('../middleware/BoardMiddleware');
 
 const router = express.Router();
@@ -15,5 +15,8 @@ router.post('/', createBoard);
 
 // DELETE a board
 router.delete('/:id', deleteBoard);
+
+// UPDATE a board
+router.put('/:id', updateBoard);
 
 module.exports = router;

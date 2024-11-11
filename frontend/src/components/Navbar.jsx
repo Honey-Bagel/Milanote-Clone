@@ -63,9 +63,11 @@ const Navbar = () => {
 			<Link to="/">
 				<h1>Note App</h1>
 			</Link>
-			<Link to="/Board">
-				<h1>Boards</h1>
-			</Link>
+			{user && (
+				<Link to={`/board/${user.rootBoard}`}>
+					<h1>Boards</h1>
+				</Link>
+			)}
 			<nav>
 				{user && (
 					<div className="relative-div" ref={dropdownRef}>

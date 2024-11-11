@@ -7,7 +7,8 @@ import { useNotesContext } from './useNotesContext';
 import { useAuthContext } from './useAuthContext';
 
 
-const useCanvas = (canvasRef) => {
+const useCanvas = (canvasRef, board) => {
+  const boardId = board.boardId;
   const { user } = useAuthContext();
   const [canvas, setCanvas] = useState(null);
   const {notes, dispatch} = useNotesContext();
@@ -26,7 +27,7 @@ const useCanvas = (canvasRef) => {
     setCanvas(canvasInstance);
 
 	// Load notes from backend need to un-hardcode board id
-	getNotes(user.rootBoard).then((res) => {
+	getNotes(boardId).then((res) => {
 		dispatch({type: 'SET_NOTES', payload: res.data });
 		res.data.forEach((note) => {
 			addNoteToCanvas(canvasInstance, note.position.x, note.position.y, note.width, note.height, note.content, note._id);
@@ -354,7 +355,7 @@ const useCanvas = (canvasRef) => {
 		},
 		width: 200,
 		height: 50,
-		board: user.rootBoard,
+		board: boardId,
 	}
 
 	// Send to backend

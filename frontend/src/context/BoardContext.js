@@ -4,26 +4,23 @@ export const BoardsContext = createContext();
 
 export const boardsReducer = (state, action) => {
 	switch (action.type) {
-		case 'SET_BOARDS':
+		case 'SET_BOARD':
+			console.log('payload: ', action.payload);
 			return {
-				boards: action.payload
+				board: action.payload
 			}
-		case 'CREATE_BOARD':
+		case 'REMOVE_BOARD':
 			return {
-				boards: [action.payload, ...state.boards]
-			}
-		case 'DELETE_BOARD':
-			return {
-				boards: state.boards.filter((b) => b._id !== action.payload._id)
+				board: null
 			}
 		default:
-			return state
+			return state;
 	}
 };
 
 export const BoardsContextProvider = ({ children }) => {
 	const [state, dispatch] = useReducer(boardsReducer, {
-		boards: null
+		board: null
 	});
 
 	return (

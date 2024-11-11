@@ -58,7 +58,7 @@ const updateBoard = async (req, res) => {
 	if(!board) {
 		return res.status(404).json({error: 'No such board'});
 	}
-	res.status(200).json(workout);
+	res.status(200).json(board);
 }
 
-module.exports = { getBoard, getBoards , createBoard, deleteBoard };
+module.exports = { getBoard, getBoards , createBoard, deleteBoard, updateBoard };

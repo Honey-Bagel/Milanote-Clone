@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from './hooks/useAuthContext';
 import React, { useEffect } from 'react';
 import socket from './utils/socket';
+import { BoardsContextProvider } from './context/BoardContext';
 
 // pages and components
 import Home from './pages/Home';
@@ -15,6 +16,9 @@ import BoardPage from './pages/BoardPage';
 function App() {
 	const { user } = useAuthContext();
 
+	const hideNavbarPaths = [];
+	const location = useLocation();
+
 	useEffect(() => {
 		socket.on('test', (data) => {
 			console.log('test completed:', data);
@@ -27,8 +31,7 @@ function App() {
 	
 	return (
 		<div className="App">
-			<BrowserRouter>
-				<Navbar />
+				{!hideNavbarPaths.includes(location.pathname) && <Navbar />}
 				<div className='pages'>
 					<Routes>
 						<Route
@@ -45,13 +48,20 @@ function App() {
 						path='/profile/:id' element={<Profile />}
 						/>
 						<Route
-						path='/board' element={<BoardPage />}
+						path='/board/:id' element={<BoardPage />}
 						/>
 					</Routes>
 				</div>
-			</BrowserRouter>
 		</div>
 	);
 }
 
-export default App;
+export default function AppWrapper() {
+	return (
+		<BrowserRouter>
+			<BoardsContextProvider>
+				<App />
+			</BoardsContextProvider>
+		</BrowserRouter>
+	)
+};
