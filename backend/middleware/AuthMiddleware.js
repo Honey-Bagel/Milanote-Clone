@@ -7,7 +7,6 @@ module.exports.userVerification = async (req, res, next) => {
 	const authHeader = req.headers.authorization;
 
 	if(!authHeader || !authHeader.startsWith('Bearer ')) {
-		console.log('fails')
 		return res.status(401).json({ status: false, message: 'Unauthorized' });
 	}
 

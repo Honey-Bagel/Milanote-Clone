@@ -5,6 +5,7 @@ import { getNotes, createNote, updateNote, deleteNote } from '../services/notesA
 import { getImages, createImage, deleteImage, updateImage } from '../services/imagesAPI';
 import { useNotesContext } from './useNotesContext';
 import { useAuthContext } from './useAuthContext';
+import socket from '../utils/socket';
 
 
 const useCanvas = (canvasRef, board) => {
@@ -26,13 +27,32 @@ const useCanvas = (canvasRef, board) => {
 	let viewportHeight = canvasInstance.getHeight();
     setCanvas(canvasInstance);
 
+
+	socket.on('noteUpdated', ({ id, updates }) => {
+		const note = canvasInstance.getObjects().find(obj => obj.id === id);
+		if(note) {
+			note.set({
+				top: updates.position.y,
+				left: updates.position.x,
+				width: updates.width,
+				height: updates.height
+			})
+
+			canvasInstance.renderAll();
+		}
+	})
+
 	// Load notes from backend need to un-hardcode board id
-	getNotes(boardId).then((res) => {
-		dispatch({type: 'SET_NOTES', payload: res.data });
-		res.data.forEach((note) => {
-			addNoteToCanvas(canvasInstance, note.position.x, note.position.y, note.width, note.height, note.content, note._id);
-		})
-	});
+	try {
+		getNotes(boardId).then((res) => {
+			dispatch({type: 'SET_NOTES', payload: res.data });
+			res.data.forEach((note) => {
+				addNoteToCanvas(canvasInstance, note.position.x, note.position.y, note.width, note.height, note.content, note._id);
+			})
+		});
+	} catch (error) {
+
+	}
 
 	getImages(user.rootBoard).then((res) => {
 		res.data.forEach((image) => {
@@ -208,11 +228,15 @@ const useCanvas = (canvasRef, board) => {
 			canvasInstance.getActiveObjects().forEach((obj) => {
 				const activeObject = obj;
 				if(activeObject.id) {
-					deleteNote(activeObject.id).then((res) => {
+					try {
+						deleteNote(activeObject.id, boardId).then((res) => {
 						if(res.status >= 200 && res.status < 300) {
 							canvasInstance.remove(activeObject);
 						}
 					}).catch(console.error);
+					} catch (error) {
+
+					}	
 				};
 			});
 			canvasInstance.discardActiveObject();
@@ -310,16 +334,20 @@ const useCanvas = (canvasRef, board) => {
 	// When the note is modified save the changes to the db
 	noteGroup.on('modified', (event) => {
 		if(event.target.id === noteGroup.id) {
-			updateNote(noteGroup.id, {
-				position: {
-				x: noteGroup.left,
-				y: noteGroup.top,
-				},
-				width: Math.round(noteGroup.width),
-				height: Math.round(noteGroup.height),
-		}).then((res) => {
-				//console.log(res)
-			})
+			try {
+				updateNote(noteGroup.id, boardId, {
+					position: {
+					x: noteGroup.left,
+					y: noteGroup.top,
+					},
+					width: Math.round(noteGroup.width),
+					height: Math.round(noteGroup.height),
+				}).then((res) => {
+					//console.log(res)
+				})
+			} catch (e) {
+
+			}
 		}
 	});
 
@@ -359,7 +387,7 @@ const useCanvas = (canvasRef, board) => {
 	}
 
 	// Send to backend
-	createNote(noteBody).then((res) => {
+	createNote(noteBody, boardId).then((res) => {
 		console.log(res);
 		if(res.status >= 200 && res.status < 300) {
 			addNoteToCanvas(canvas, res.data.position.x, res.data.position.y, res.data.width, res.data.height, res.data.content, res.data._id);

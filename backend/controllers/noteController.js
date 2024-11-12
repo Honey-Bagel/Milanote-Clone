@@ -1,5 +1,6 @@
 const Note = require('../models/note');
 const mongoose = require('mongoose');
+const { getSocketInstance } = require('../util/socketSingleton');
 
 // get ALL User Notes
 const getNotes = async (req, res) => {
@@ -34,11 +35,13 @@ const getNote = async (req, res) => {
 
 // Create a new Note
 const createNote = async (req, res) => {
+	const { note, boardId } = req.body;
 	try {
-		console.log(req.body);
-		const note = new Note(req.body);
-		await note.save();
-		res.status(201).json(note);
+		console.log(note);
+		const noteObject = new Note(note);
+		await noteObject.save();
+		
+		res.status(201).json(noteOjbect);
 	} catch (err) {
 		res.status(500).json({error: 'Failed to create note'});
 	}
@@ -47,6 +50,7 @@ const createNote = async (req, res) => {
 // Delete a note
 const deleteNote = async (req, res) => {
 	const { id } = req.params;
+	const { boardID } = req.body;
 
 	if(!mongoose.Types.ObjectId.isValid(id)) {
 		return res.status(404).json({error: 'No such note'});
@@ -62,14 +66,19 @@ const deleteNote = async (req, res) => {
 }
 
 const updateNote = async (req, res) => {
+	const io = getSocketInstance();
 	const { id } = req.params;
+	const { updates } = req.body;
+	const boardId = req.headers['board-id'];
+
+	io.to(boardId).emit('noteUpdated', { id, updates});
 
 	if(!mongoose.Types.ObjectId.isValid(id)) {
 		return res.status(404).json({error: 'No such note'});
 	}
 
 	const note = await Note.findByIdAndUpdate({_id: id}, {
-		...req.body
+		...updates
 	});
 
 	if(!note) {

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Board from "../components/Board";
 import { useBoardsContext } from '../hooks/useBoardsContext';
 import { fetchBoard } from '../services/boardAPI';
+import socket from '../utils/socket';
 
 
 const BoardPage = () => {
@@ -18,6 +19,9 @@ const BoardPage = () => {
 		try {
 			fetchBoard(boardId).then(() => {
 				dispatch({ type: 'SET_BOARD', payload: boardId })
+
+				socket.emit('joinBoard', {boardId});
+
 			})
 		} catch (error) {
 			if(error.response && error.response.status === 403) {
@@ -25,6 +29,10 @@ const BoardPage = () => {
 			} else {
 				setError('An error occurred' + error);
 			}
+		}
+
+		return () => {
+			socket.emit('leaveBoard', boardId);
 		}
 	}, [boardId])
 

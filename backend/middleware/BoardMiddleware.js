@@ -24,7 +24,7 @@ module.exports.checkBoardAccess = async (req, res, next) => {
 }
 
 module.exports.authorizeBoardAccess = async (req, res, next) => {
-	const { id } = req.params;
+	const id = req.headers['board-id'];
 	const userId = req.user._id;
 
 	try {

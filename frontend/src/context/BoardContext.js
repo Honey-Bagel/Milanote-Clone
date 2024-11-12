@@ -5,7 +5,6 @@ export const BoardsContext = createContext();
 export const boardsReducer = (state, action) => {
 	switch (action.type) {
 		case 'SET_BOARD':
-			console.log('payload: ', action.payload);
 			return {
 				board: action.payload
 			}

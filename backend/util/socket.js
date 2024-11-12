@@ -4,19 +4,17 @@ module.exports = (io) => {
 	io.on('connection', (socket) => {
 		console.log('A user connected:', socket.id);
 
-		socket.on('joinBoardRoom', async ({ boardId, userId }) => {
-				const board = await Board.findById(boardId);
-				if(board && (board.owner === userId || board.collaborators.includes(userId))) {
+		socket.on('joinBoard', async ({ boardId, userId }) => {
 					socket.join(boardId);
-					console.log(`User ${userId} joined room for board ${boardId}`);
-				} else {
-					socket.emit('error', 'Access denied');
-				}
+					console.log(`User ${socket.id} joined room for board ${boardId}`);
+
+					socket.to(boardId).emit('userJoined', { boardId, userId: socket.id });
 		});
 
-		socket.on('leaveBoardRoom', (boardId) => {
-			socket.leave(boardId);
+		socket.on('leaveBoard', (boardId) => {
 			console.log(`User left room for board ${boardId}`);
+
+			socket.leave(boardId);
 		});
 
 

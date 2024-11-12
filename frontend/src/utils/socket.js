@@ -27,10 +27,8 @@ socket.on('connect_error', (e) => {
 	console.error('Socket connection error:', e);
 });
 
-// Util functions for event managing
 
-export const emitNoteUpdate = (data) => {
-	socket.emit('noteUpdated', data);
-}
-
+socket.on('noteUpdated', (data) => {
+	console.log('note updated:', data);
+})
 export default socket;

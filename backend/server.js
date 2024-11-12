@@ -12,15 +12,18 @@ const authRoutes = require('./routes/authRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const cookieParser = require('cookie-parser');
 const { MONGO_URL, PORT } = process.env;
+const { initializeSocket } = require('./util/socketSingleton');
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server, {
-	cors: {
-		origin: "http://localhost:3001",
-		methods: ["GET", "POST"]
-	}
-});
+// const io = new Server(server, {
+// 	cors: {
+// 		origin: "http://localhost:3001",
+// 		methods: ["GET", "POST"]
+// 	}
+// });
+initializeSocket(server);
+const io = require('./util/socketSingleton').getSocketInstance();
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URL);
