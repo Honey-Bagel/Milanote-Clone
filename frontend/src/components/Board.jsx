@@ -14,8 +14,7 @@ const Board = (board) => {
 	}
 	
 	return (
-		<BoardsContextProvider>
-			<div>
+		<div>
 			<BoardNavBar />
 			<ToolBar addNote={tbAddNote}></ToolBar>
 			<div>
@@ -25,8 +24,6 @@ const Board = (board) => {
 			</div>
 			
 		</div>
-		</BoardsContextProvider>
-		
 	)
 
 }

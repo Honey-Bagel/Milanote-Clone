@@ -44,6 +44,9 @@ const deleteBoard = async (req, res) => {
 }
 
 // update a board
+/*
+In order to add user to collaborators I need to add a user ID so I need to add a way to get user id from email
+*/
 const updateBoard = async (req, res) => {
 	const { id } = req.params;
 
@@ -51,9 +54,9 @@ const updateBoard = async (req, res) => {
 		return res.status(404).json({error: 'No such board'});
 	}
 
-	const board = await Board.findByIdAndUpdate({_id: id}, {
-		...req.body
-	});
+	const body = req.body;
+
+	const board = await Board.findByIdAndUpdate({_id: id}, body);
 
 	if(!board) {
 		return res.status(404).json({error: 'No such board'});

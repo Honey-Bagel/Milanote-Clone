@@ -65,3 +65,21 @@ module.exports.Login = async (req, res, next) => {
 		console.log(error);
 	}
 }
+
+module.exports.fetchUserId = async (req, res) => {
+	const { email } = req.body;
+
+	if(!email) {
+		return res.status(404).json({ message: "No email entered"});
+	}
+
+	const user = await User.findOne({ email });
+
+	if(!user) {
+		return res.status(404).json({message: "Email was not a valid user" });
+	}
+
+	const id = user._id;
+
+	res.status(200).json({ id });
+}

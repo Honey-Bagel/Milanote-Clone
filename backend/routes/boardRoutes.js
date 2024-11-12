@@ -1,11 +1,14 @@
 const express = require('express');
 const { getBoard, getBoards, createBoard, deleteBoard, updateBoard } = require('../controllers/boardController');
-const { checkBoardAccess } = require('../middleware/BoardMiddleware');
+const { authorizeBoardAccess } = require('../middleware/BoardMiddleware');
+const { userVerification } = require('../middleware/AuthMiddleware');
 
 const router = express.Router();
 
+router.use(userVerification);
+
 // GET a single board
-router.get('/:id', checkBoardAccess, getBoard);
+router.get('/:id', authorizeBoardAccess, getBoard);
 
 // GET all the boards
 router.get('/', getBoards);
@@ -14,9 +17,9 @@ router.get('/', getBoards);
 router.post('/', createBoard);
 
 // DELETE a board
-router.delete('/:id', deleteBoard);
+router.delete('/:id', authorizeBoardAccess, deleteBoard);
 
 // UPDATE a board
-router.put('/:id', updateBoard);
+router.put('/:id', authorizeBoardAccess, updateBoard);
 
 module.exports = router;

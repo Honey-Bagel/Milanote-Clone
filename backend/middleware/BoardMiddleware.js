@@ -22,3 +22,26 @@ module.exports.checkBoardAccess = async (req, res, next) => {
 		return res.status(500).json({ message: 'Server error.' });
 	}
 }
+
+module.exports.authorizeBoardAccess = async (req, res, next) => {
+	const { id } = req.params;
+	const userId = req.user._id;
+
+	try {
+		const board = await Board.findById(id);
+		if(!board) {
+			console.log('board not found')
+			return res.status(404).json({ error: 'Board not found' });	
+		}
+		const isOwner = board.owner.equals(userId);
+		const isCollaborator = board.collaborators.some(collaboratorId => collaboratorId.equals(userId));
+
+		if(isOwner || isCollaborator) {
+			next();
+		} else {
+			return res.status(403).json({ error: 'Access Denied' });
+		}
+	} catch (error) {
+		return res.status(500).json({ error: 'Server error' });
+	}
+}

@@ -39,14 +39,21 @@ const Navbar = () => {
 
 	useEffect(() => {
 		const fetchRootBoard = async () => {
-			const response = await axios.post('/api/auth', {
-				"token": user.token
-			})
+			const user = JSON.parse(localStorage.getItem('user'));
+			if(!user) return;
+			const token = user.token;
+			if(!token) return;
+			try {
+				const response = await axios.post('/api/auth', {
+				headers: { Authorization: `Bearer ${token}`}
+				})
 
-			const data = response.data;
+				const data = response.data;
 
-			if(data.status === true) {
-				setRootBoard(data.user.rootBoard);
+				if(data.status === true) {
+					setRootBoard(data.user.rootBoard);
+				}
+			} catch (error) {
 			}
 		}
 

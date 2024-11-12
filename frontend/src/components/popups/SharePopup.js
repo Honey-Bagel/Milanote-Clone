@@ -1,10 +1,12 @@
 // SharePopup.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from 'react-modal';
+import axios from 'axios';
 import { FiX } from 'react-icons/fi';
 import { useAuthContext } from '../../hooks/useAuthContext';
 import { updateBoard } from '../../services/boardAPI';
 import { useBoardsContext } from '../../hooks/useBoardsContext';
+import { fetchUserId } from '../../services/userAPI';
 
 Modal.setAppElement('#root'); // Set the root for accessibility
 
@@ -15,15 +17,22 @@ function SharePopup({ isOpen, onClose }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const { user } = useAuthContext();
   const { board } = useBoardsContext();
- 
-  if(board) {
-	console.log('board ' + board);
-  }
+
 
   const sendInvite = () => {
 	if(!user || !email === '') return;
 
-	updateBoard()
+	fetchUserId(email).then((res) => {
+		const { id } = res.data;
+		if(!id) return;
+		updateBoard(board, {
+			$push: {
+				collaborators: id
+			}
+		})
+	})
+
+	setEmail('');
   }
 
 
@@ -50,7 +59,7 @@ function SharePopup({ isOpen, onClose }) {
             onChange={(e) => setEmail(e.target.value)}
             style={inputStyle}
           />
-          <button style={inviteButtonStyle}>Send invite</button>
+          <button onClick={sendInvite} style={inviteButtonStyle}>Send invite</button>
 
           <div style={inviteLinkContainerStyle}>
             <input type="text" value={readOnlyLink} readOnly style={linkInputStyle} />
@@ -150,7 +159,7 @@ const inputStyle = {
   marginBottom: '10px',
   borderRadius: '4px',
   border: '1px solid #555',
-  color: 'black',
+  color: 'white',
 };
 
 const inviteButtonStyle = {

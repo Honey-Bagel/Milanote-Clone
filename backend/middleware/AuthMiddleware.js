@@ -3,9 +3,16 @@ const Board = require('../models/board');
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 
-module.exports.userVerification = (req, res) => {
+module.exports.userVerification = async (req, res, next) => {
+	const authHeader = req.headers.authorization;
 
-	const token = req.body.token;
+	if(!authHeader || !authHeader.startsWith('Bearer ')) {
+		console.log('fails')
+		return res.status(401).json({ status: false, message: 'Unauthorized' });
+	}
+
+	const token = authHeader.split(' ')[1];
+
 	if(!token) {
 		return res.json({ status: false });
 	}
@@ -14,7 +21,10 @@ module.exports.userVerification = (req, res) => {
 			return res.json({status: false});
 		} else {
 			const user = await User.findById(data.id);
-			if(user) return res.json({ status: true, user: user });
+			if(user) {
+				req.user = user;
+				next();
+			}
 			else return res.json({ status: false });
 		}
 	})
@@ -31,7 +41,9 @@ module.exports.boardVerification = async (req, res) => {
 	}
 
 	if(board.owner == userId || board.collaborators.includes(userId)) {
+		console.log('true')
 		return res.json({status: true});
 	}
+	console.log('false')
 	return res.json({status: false});
 }
