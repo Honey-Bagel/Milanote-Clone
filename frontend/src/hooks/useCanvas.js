@@ -31,16 +31,38 @@ const useCanvas = (canvasRef, board) => {
 	socket.on('noteUpdated', ({ id, updates }) => {
 		const note = canvasInstance.getObjects().find(obj => obj.id === id);
 		if(note) {
+			if(updates.position && updates.width && updates.height) {
 			note.set({
 				top: updates.position.y,
 				left: updates.position.x,
 				width: updates.width,
 				height: updates.height
 			})
+			}
+			if(updates.content) {
+				note.textbot.set({
+					text: updates.content
+				})
+			}
 
 			canvasInstance.renderAll();
 		}
-	})
+	});
+
+	socket.on('noteCreated', ({ note }) => {
+		if(note) {
+			addNoteToCanvas(canvasInstance, note.position.x, note.position.y, note.width, note.height, note.content, note._id);
+			canvasInstance.renderAll();
+		}
+	});
+
+	socket.on('noteDeleted', ({ id }) => {
+		const note = canvasInstance.getObjects().find(obj => obj.id === id);
+		if(note) {
+			canvasInstance.remove(note);
+			canvasInstance.renderAll();
+		}
+	});
 
 	// Load notes from backend need to un-hardcode board id
 	try {
@@ -239,6 +261,7 @@ const useCanvas = (canvasRef, board) => {
 					}	
 				};
 			});
+			canvasInstance.renderAll();
 			canvasInstance.discardActiveObject();
 			
 		}
@@ -258,6 +281,7 @@ const useCanvas = (canvasRef, board) => {
 
   // General function for adding a note to the canvas
   const addNoteToCanvas = (canvas, x, y, width = 200, height = 50, content = 'New Note', id = null) => {
+	if(!canvas) return;
 
 	// create the textbox part
 	const textbox = new Textbox(content, {
@@ -268,7 +292,8 @@ const useCanvas = (canvasRef, board) => {
 		textAlign: 'left',
 		left: 10,
 		top: 10,
-		splitByGrapheme: true
+		splitByGrapheme: true,
+		selectable: false
 	  });
 
 	  // note the text height to ensure rect is big enough to hold all the text
@@ -283,6 +308,7 @@ const useCanvas = (canvasRef, board) => {
       strokeWidth: 1,
       rx: 10,
       ry: 10,
+	  selectable: false
     });
 
     // Group the textbox and rectangle
@@ -387,13 +413,18 @@ const useCanvas = (canvasRef, board) => {
 	}
 
 	// Send to backend
-	createNote(noteBody, boardId).then((res) => {
-		console.log(res);
-		if(res.status >= 200 && res.status < 300) {
-			addNoteToCanvas(canvas, res.data.position.x, res.data.position.y, res.data.width, res.data.height, res.data.content, res.data._id);
-			canvas.renderAll();
-		}
-	}).catch(console.error);
+	try {
+		createNote(noteBody, boardId).then((res) => {
+			console.log(res);
+			if(res.status >= 200 && res.status < 300) {
+				addNoteToCanvas(canvas, res.data.position.x, res.data.position.y, res.data.width, res.data.height, res.data.content, res.data._id);
+				canvas.renderAll();
+			}
+		}).catch(console.error);
+	} catch (e) {
+		
+	}
+	
   };
 
   return { canvas, addNote };

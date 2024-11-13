@@ -6,14 +6,14 @@ const bcrypt = require("bcrypt");
 // Handle user signup (email, password, username)
 module.exports.Signup = async (req, res, next) => {
 	try {
-		const { email, password, username, createdAt } = req.body;
+		const { email, password, username } = req.body;
 		const existingUser = await User.findOne({ email });
 		const rootBoard = new Board({title: "root board", root: true });
 		await rootBoard.save();
 
 		if(existingUser) return res.json({ message: "User already exists"});
 
-		const user = await User.create({ email: email, password: password, username: username, createdAt: createdAt, rootBoard: rootBoard });
+		const user = await User.create({ email: email, password: password, username: username, rootBoard: rootBoard });
 
 		// create secret token for user
 		const token = createSecretToken(user._id);

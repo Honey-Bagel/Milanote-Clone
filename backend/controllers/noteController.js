@@ -35,13 +35,16 @@ const getNote = async (req, res) => {
 
 // Create a new Note
 const createNote = async (req, res) => {
-	const { note, boardId } = req.body;
+	const io = getSocketInstance();
+	const { note} = req.body;
+	const boardId = req.headers['board-id'];
 	try {
 		console.log(note);
 		const noteObject = new Note(note);
 		await noteObject.save();
 		
-		res.status(201).json(noteOjbect);
+		io.to(boardId).emit('noteCreated', { note });
+		res.status(201).json(noteObject);
 	} catch (err) {
 		res.status(500).json({error: 'Failed to create note'});
 	}
@@ -49,8 +52,9 @@ const createNote = async (req, res) => {
 
 // Delete a note
 const deleteNote = async (req, res) => {
+	const io = getSocketInstance();
 	const { id } = req.params;
-	const { boardID } = req.body;
+	const boardId = req.headers['board-id'];
 
 	if(!mongoose.Types.ObjectId.isValid(id)) {
 		return res.status(404).json({error: 'No such note'});
@@ -62,6 +66,7 @@ const deleteNote = async (req, res) => {
 		return res.status(404).json({error: 'no such'})
 	}
 
+	io.to(boardId).emit('noteDeleted', {id});
 	res.status(200).json(note);
 }
 
@@ -71,7 +76,6 @@ const updateNote = async (req, res) => {
 	const { updates } = req.body;
 	const boardId = req.headers['board-id'];
 
-	io.to(boardId).emit('noteUpdated', { id, updates});
 
 	if(!mongoose.Types.ObjectId.isValid(id)) {
 		return res.status(404).json({error: 'No such note'});
@@ -84,6 +88,10 @@ const updateNote = async (req, res) => {
 	if(!note) {
 		return res.status(404).json({error: 'No such note'});
 	}
+
+	
+	io.to(boardId).emit('noteUpdated', { id, updates});
+
 	res.status(200).json(note);
 }
 
