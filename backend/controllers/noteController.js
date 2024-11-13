@@ -43,7 +43,7 @@ const createNote = async (req, res) => {
 		const noteObject = new Note(note);
 		await noteObject.save();
 		
-		io.to(boardId).emit('noteCreated', { note });
+		//io.to(boardId).emit('noteCreated', { note });
 		res.status(201).json(noteObject);
 	} catch (err) {
 		res.status(500).json({error: 'Failed to create note'});
@@ -66,7 +66,7 @@ const deleteNote = async (req, res) => {
 		return res.status(404).json({error: 'no such'})
 	}
 
-	io.to(boardId).emit('noteDeleted', {id});
+	//io.to(boardId).emit('noteDeleted', {id});
 	res.status(200).json(note);
 }
 
@@ -90,7 +90,7 @@ const updateNote = async (req, res) => {
 	}
 
 	
-	io.to(boardId).emit('noteUpdated', { id, updates});
+	//io.to(boardId).emit('noteUpdated', { id, updates});
 
 	res.status(200).json(note);
 }

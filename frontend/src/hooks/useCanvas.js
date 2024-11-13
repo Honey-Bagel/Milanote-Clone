@@ -39,14 +39,21 @@ const useCanvas = (canvasRef, board) => {
 				height: updates.height
 			})
 			}
+			
 			if(updates.content) {
-				note.textbot.set({
-					text: updates.content
-				})
+				
+				note.forEachObject((obj) => {
+				if(obj.type === 'textbox') {
+					console.log('here');
+					obj.set({
+						text: updates.content
+					})
+				}
+			})
 			}
-
-			canvasInstance.renderAll();
+			note.setCoords();
 		}
+		canvasInstance.renderAll();
 	});
 
 	socket.on('noteCreated', ({ note }) => {
@@ -68,6 +75,8 @@ const useCanvas = (canvasRef, board) => {
 	try {
 		getNotes(boardId).then((res) => {
 			dispatch({type: 'SET_NOTES', payload: res.data });
+			if(res.data.status === 'false') return;
+				
 			res.data.forEach((note) => {
 				addNoteToCanvas(canvasInstance, note.position.x, note.position.y, note.width, note.height, note.content, note._id);
 			})
@@ -361,15 +370,18 @@ const useCanvas = (canvasRef, board) => {
 	noteGroup.on('modified', (event) => {
 		if(event.target.id === noteGroup.id) {
 			try {
-				updateNote(noteGroup.id, boardId, {
+				const updates = {
 					position: {
 					x: noteGroup.left,
 					y: noteGroup.top,
 					},
 					width: Math.round(noteGroup.width),
 					height: Math.round(noteGroup.height),
-				}).then((res) => {
-					//console.log(res)
+				}
+				const noteId = noteGroup.id;
+
+				updateNote(noteGroup.id, boardId, updates).then((res) => {
+					
 				})
 			} catch (e) {
 
@@ -385,7 +397,7 @@ const useCanvas = (canvasRef, board) => {
     // Update backend with content changes when editing is done
     textbox.on('editing:exited', () => {
       if (noteGroup.id) {
-		updateNote(noteGroup.id, {
+		updateNote(noteGroup.id, boardId, {
 			content: textbox.text
 		}).then((res) => {
 			console.log(res);
@@ -419,7 +431,11 @@ const useCanvas = (canvasRef, board) => {
 			if(res.status >= 200 && res.status < 300) {
 				addNoteToCanvas(canvas, res.data.position.x, res.data.position.y, res.data.width, res.data.height, res.data.content, res.data._id);
 				canvas.renderAll();
+
+				const note = res.data;
+			
 			}
+			
 		}).catch(console.error);
 	} catch (e) {
 		

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import socket from '../utils/socket';
 
 export const getNotes = (boardId) => {
 	const user = JSON.parse(localStorage.getItem('user'));
@@ -14,13 +15,13 @@ export const getNotes = (boardId) => {
 	});
 };
 
-export const createNote = (note, boardId) => {
+export const createNote = async (note, boardId) => {
 	const user = JSON.parse(localStorage.getItem('user'));
 	if(!user) return;
 	const token = user.token;
 	if(!token) return;
 
-	return axios.post('/api/notes', {
+	const response = await axios.post('/api/notes', {
 		note
 	}, {
 		headers: { 
@@ -28,15 +29,22 @@ export const createNote = (note, boardId) => {
 			'Board-Id': boardId,
 		}
 	});
+	
+	if(response.status === 201) {
+		const note = response.data;
+		console.log('respNote', note);
+		socket.emit('createNote', { boardId, note});
+	}
+	return response;
 };
 
-export const updateNote = (id, boardId, updates) => {
+export const updateNote = async (id, boardId, updates) => {
 	const user = JSON.parse(localStorage.getItem('user'));
 	if(!user) return;
 	const token = user.token;
 	if(!token) return;
 
-	return axios.put(`/api/notes/${id}`, {
+	const response = await axios.put(`/api/notes/${id}`, {
 		updates: updates
 	}, {
 		headers: { 
@@ -44,19 +52,29 @@ export const updateNote = (id, boardId, updates) => {
 			'Board-Id': boardId,
 		}
 	});
+
+	if(response.status === 200) {
+		socket.emit('updateNote', {boardId, id, updates});
+	}
+	return response;
 };
 
-export const deleteNote = (id, boardId) => {
+export const deleteNote = async (id, boardId) => {
 	const user = JSON.parse(localStorage.getItem('user'));
 	if(!user) return;
 	const token = user.token;
 	if(!token) return;
 
-	return axios.delete(`/api/notes/${id}`, {
+	const response = await axios.delete(`/api/notes/${id}`, {
 		headers: { 
 			Authorization: `Bearer ${token}`,
 			'Board-Id': boardId,
 		}
 	});
+
+	if(response.status === 200) {
+		socket.emit('deleteNote', {boardId, id});
+	}
+	return response;
 }
 
