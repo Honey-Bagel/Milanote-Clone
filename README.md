@@ -1,6 +1,6 @@
-#Milanote Clone
+# Milanote Clone
 
-#####A Milanote-insipired notes app that lets users create and organize boards with freeform notes. Built a full-stack web app using React, Node.js, Express.js MongoDB, and Fabric.js
+#### A Milanote-insipired notes app that lets users create and organize boards with freeform notes. Built a full-stack web app using React, Node.js, Express.js MongoDB, and Fabric.js
 
 
 ## Features
