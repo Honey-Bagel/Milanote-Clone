@@ -1,15 +1,29 @@
-# Milanote clone 
-### Clone of milanote.com[https://milanote.com/]
+#Milanote Clone
 
-## Description
-I developed a very similified bare bones version of milanote. 
+#####A Milanote-insipired notes app that lets users create and organize boards with freeform notes. Built a full-stack web app using React, Node.js, Express.js MongoDB, and Fabric.js
 
-### Backend
-I used Express.js to runmy backend server.
-JWT and bcrypt were implemented for authentication as encryption respectively.
-I implemented MongoDB as my nosql database to hold information about users, boards, and notes.
 
-### Frontend
-I built a React frontend, and made use of axios to send requests to the backend.
-I used fabric.js for the canvas and canvas interactions.
-Socket.io allowed for real-time interacticty on boards between users.
+## Features
+- Free Placement Canvas: Drag, drop, and arrange notes freely making using of Fabric.js
+- Board Management: Manage individual boards
+- Collaborative Editing: Implemented access control for shared boards
+- JWT Auth: Secure login/signup for secure access to protected routes
+- Socket.io Real-Time Updates: Seamlessly updates notes and boards for viewing collaborators
+
+## Tech Stack
+### Frontend:
+- React
+- Fabric.js
+### Backend:
+- Node.js
+- Express.js
+- MongoDB
+### Additional Tools
+- Socket.io
+- JWT
+
+## Roadmap
+- Update UI
+- Allow for creation of new boards
+- Add a centralized board management page for creating, deleteing, and viewing all of a user's boards
+- Add more note types
