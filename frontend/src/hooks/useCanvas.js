@@ -1,8 +1,8 @@
 // hooks/useCanvas.js
 import { useEffect, useState } from 'react';
-import { Canvas, Rect, Textbox, Group, Control, FabricImage } from 'fabric';
+import { Canvas, Rect, Textbox, Group, FabricImage } from 'fabric';
 import { getNotes, createNote, updateNote, deleteNote } from '../services/notesAPI';
-import { getImages, createImage, deleteImage, updateImage } from '../services/imagesAPI';
+import { getImages, createImage } from '../services/imagesAPI';
 import { useNotesContext } from './useNotesContext';
 import { useAuthContext } from './useAuthContext';
 import socket from '../utils/socket';
@@ -12,14 +12,13 @@ const useCanvas = (canvasRef, board) => {
   const boardId = board.boardId;
   const { user } = useAuthContext();
   const [canvas, setCanvas] = useState(null);
-  const {notes, dispatch} = useNotesContext();
+  const {dispatch} = useNotesContext();
   const EXPAND_THRESHOLD = 100;
   const EXPAND_AMOUNT = 500;
 
   useEffect(() => {
 	if(!user) return;
     const canvasInstance = new Canvas(canvasRef.current);
-	const { innerWidth, innerHeight } = window;
     canvasInstance.setWidth(1300);
     canvasInstance.setHeight(1100);
 	canvasInstance.backgroundColor = "#222222";
@@ -32,25 +31,40 @@ const useCanvas = (canvasRef, board) => {
 		const note = canvasInstance.getObjects().find(obj => obj.id === id);
 		if(note) {
 			if(updates.position && updates.width && updates.height) {
+				console.log('pos', updates.position);
 			note.set({
 				top: updates.position.y,
 				left: updates.position.x,
 				width: updates.width,
-				height: updates.height
+				height: updates.height,
 			})
+			note.setCoords();
 			}
+
+			
 			
 			if(updates.content) {
 				
+				// NEED TO FIX - textbox doesnt resize here
+				let rect;
+				let textbox;
 				note.forEachObject((obj) => {
 				if(obj.type === 'textbox') {
-					console.log('here');
+					textbox = obj;
 					obj.set({
 						text: updates.content
 					})
+				} else if(obj.type === 'rect') {
+					rect = obj;
 				}
-			})
+				});
+				if(updates.height) {
+					rect.setHeight(updates.height);
+					rect.setCoords();
+				}
+				textbox.setCoords();
 			}
+			console.log(note.height);
 			note.setCoords();
 		}
 		canvasInstance.renderAll();
@@ -71,11 +85,15 @@ const useCanvas = (canvasRef, board) => {
 		}
 	});
 
-	// Load notes from backend need to un-hardcode board id
+	// Load notes from backend
 	try {
 		getNotes(boardId).then((res) => {
+			if(res.data.status === false) {
+				dispatch({type: 'SET_NOTES', payload: null });
+				return;
+			}
 			dispatch({type: 'SET_NOTES', payload: res.data });
-			if(res.data.status === 'false') return;
+			console.log(res.data);
 				
 			res.data.forEach((note) => {
 				addNoteToCanvas(canvasInstance, note.position.x, note.position.y, note.width, note.height, note.content, note._id);
@@ -170,12 +188,9 @@ const useCanvas = (canvasRef, board) => {
 		let newViewportHeight = canvasInstance.height;
 		let newViewportWidth = canvasInstance.width;
 
-		const objectLeft = object.left;
 		const objectRight = object.left + object.width * object.scaleX;
-		const objectTop = object.top;
 		const objectBottom = object.top + object.height * object.scaleY;
 
-		const panX = canvasInstance.viewportTransform[4];
 		const panY = canvasInstance.viewportTransform[5];
 		console.log(newViewportHeight + panY - EXPAND_THRESHOLD, newViewportHeight - EXPAND_AMOUNT + panY)
 
@@ -286,7 +301,7 @@ const useCanvas = (canvasRef, board) => {
 		canvasContainer.removeEventListener('dragover', handleDragOver);
 		canvasContainer.removeEventListener('drop', handleDrop);
 	}
-  }, [canvasRef, user]);
+  }, [canvasRef, user, boardId, dispatch]);
 
   // General function for adding a note to the canvas
   const addNoteToCanvas = (canvas, x, y, width = 200, height = 50, content = 'New Note', id = null) => {
@@ -360,10 +375,24 @@ const useCanvas = (canvasRef, board) => {
 	// Ensure the background rect grows as the text box gets bigger
 	textbox.on('changed', () => {
 		const boundingRect = textbox.getBoundingRect();
-		rect.set({
-		  height: boundingRect.height + 2 * 10, // Adjust height based on textbox height plus padding
-		});
-		canvas.renderAll();         // Re-render canvas to apply changes
+		if(rect.height !== boundingRect.height + 20) {
+			rect.set({
+				height: boundingRect.height + 2 * 10, // Adjust height based on textbox height plus padding
+			});
+			canvas.renderAll();         // Re-render canvas to apply changes
+			const updates = {
+				position: {
+				x: noteGroup.left,
+				y: noteGroup.top,
+				},
+				width: Math.round(noteGroup.width),
+				height: Math.round(noteGroup.height),
+			}
+			updateNote(noteGroup.id, boardId, updates).catch((e) => {
+
+			})
+		}
+		
 	  });
 
 	// When the note is modified save the changes to the db
@@ -378,8 +407,6 @@ const useCanvas = (canvasRef, board) => {
 					width: Math.round(noteGroup.width),
 					height: Math.round(noteGroup.height),
 				}
-				const noteId = noteGroup.id;
-
 				updateNote(noteGroup.id, boardId, updates).then((res) => {
 					
 				})
@@ -397,6 +424,8 @@ const useCanvas = (canvasRef, board) => {
     // Update backend with content changes when editing is done
     textbox.on('editing:exited', () => {
       if (noteGroup.id) {
+		console.log('position: ', noteGroup.left, noteGroup.top);
+		noteGroup.setCoords();
 		updateNote(noteGroup.id, boardId, {
 			content: textbox.text
 		}).then((res) => {
@@ -430,10 +459,7 @@ const useCanvas = (canvasRef, board) => {
 			console.log(res);
 			if(res.status >= 200 && res.status < 300) {
 				addNoteToCanvas(canvas, res.data.position.x, res.data.position.y, res.data.width, res.data.height, res.data.content, res.data._id);
-				canvas.renderAll();
-
-				const note = res.data;
-			
+				canvas.renderAll();			
 			}
 			
 		}).catch(console.error);
@@ -443,7 +469,13 @@ const useCanvas = (canvasRef, board) => {
 	
   };
 
-  return { canvas, addNote };
+  const addBoard = (x, y) => {
+	if (!canvas || !user) return;
+	
+
+  }
+
+  return { canvas, addNote, addBoard };
 };
 
 export default useCanvas;

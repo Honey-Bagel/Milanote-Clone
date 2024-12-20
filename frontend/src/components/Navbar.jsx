@@ -44,15 +44,16 @@ const Navbar = () => {
 			const token = user.token;
 			if(!token) return;
 			try {
-				const response = await axios.post('/api/auth', {
-				headers: { Authorization: `Bearer ${token}`}
-				})
+				// const response = await axios.post('/api/auth', {
+				// headers: { Authorization: `Bearer ${token}`}
+				// })
 
-				const data = response.data;
+				// const data = response.data;
 
-				if(data.status === true) {
-					setRootBoard(data.user.rootBoard);
-				}
+				// if(data.status === true) {
+				// 	setRootBoard(data.user.rootBoard);
+				// }
+				setRootBoard(user.rootBoard);
 			} catch (error) {
 			}
 		}

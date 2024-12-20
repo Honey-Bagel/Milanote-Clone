@@ -7,16 +7,20 @@ import BoardNavBar from './BoardNavBar';
 
 const Board = (board) => {
 	const canvasRef = useRef(null);
-	const { canvas, addNote } = useCanvas(canvasRef, board);
+	const { canvas, addNote, addBoard } = useCanvas(canvasRef, board);
 
 	const tbAddNote = () => {
 		addNote(0, 0);
+	}
+
+	const tbAddBoard = () => {
+		addBoard(0, 0);
 	}
 	
 	return (
 		<div>
 			<BoardNavBar />
-			<ToolBar addNote={tbAddNote}></ToolBar>
+			<ToolBar addNote={tbAddNote} addBoard={tbAddBoard}></ToolBar>
 			<div>
 				<div id="canvas-container">
 				<canvas ref={canvasRef}/>

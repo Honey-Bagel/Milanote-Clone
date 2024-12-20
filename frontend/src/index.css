@@ -361,7 +361,6 @@ textarea:focus {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	background-color: #707070;
 	padding: 8px 8px;
 	border-radius: 4px;
 	position: fixed;
@@ -373,10 +372,33 @@ textarea:focus {
 	}
 }
 
+.Toolbar button {
+	background-color: #707070;
+	padding: 5px 5px;
+}
+
 /* Draggable note styling */
 .draggable-note {
   padding: 10px;
   border: 1px solid #aaa;
   border-radius: 4px;
   cursor: grab;
+}
+
+
+.navbar-board button .setting-cog {
+	background: 'transparent';
+	border: 'none';
+	cursor: 'pointer';
+}
+
+.navbar-board .setting-menu {
+	position: 'absolute';
+	top: '100%';
+	right: 0;
+	background-color: 'gray';
+	box-shadow: '0 4px 8px rgba(0, 0, 0, 0.1)';
+	border-radius: '4px';
+	padding: '8px';
+	z-index: 1;
 }

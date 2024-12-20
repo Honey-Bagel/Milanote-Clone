@@ -16,25 +16,24 @@ const BoardNavBar = () => {
 	const shareWith = () => {
 		setIsSharePopupOpen(true);
 	}
-	
-	return (
-		<div>
-		<header>
-			<div style={{ position: 'relative' }}>
-      <button onClick={toggleSettings} style={buttonStyle}>
-        <FiSettings size={20} /> {/* Settings icon */}
-      </button>
 
-      {showSettings && (
-        <div style={settingsMenuStyle}>
-          <button onClick={shareWith}>
-			Share
-			</button>
-        </div>
-      )}
-    </div>
-		</header>
-		<SharePopup isOpen={isSharePopupOpen} onClose={() => setIsSharePopupOpen(false)} />
+	return (
+		<div className="navbar-board">
+			<header>
+				<div>
+					<button className="setting-cog" onClick={toggleSettings}>
+						<FiSettings size={20} /> {/* Settings icon */}
+					</button>
+					{showSettings && (
+						<div className="setting-menu">
+							<button onClick={shareWith}>
+								Share
+							</button>
+						</div>
+					)}
+				</div>
+			</header>
+			<SharePopup isOpen={isSharePopupOpen} onClose={() => setIsSharePopupOpen(false)} />
 		</div>
 	)
 }

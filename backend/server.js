@@ -32,7 +32,8 @@ mongoose.connect(MONGO_URL);
 app.use(cookieParser());
 app.use(express.json());
 app.use(cors({
-	origin: ["http://localhost:3001"],
+	//origin: ["http://localhost:3001"],
+	origin: '*',
 	methods: ["GET", "POST", "PUT", "DELETE"],
 	credentials: true
 }));

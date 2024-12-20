@@ -26,7 +26,6 @@ module.exports.checkBoardAccess = async (req, res, next) => {
 module.exports.authorizeBoardAccess = async (req, res, next) => {
 	const id = req.headers['board-id'];
 	const userId = req.user._id;
-	console.log(req.headers);
 
 	try {
 		const board = await Board.findById(id);
