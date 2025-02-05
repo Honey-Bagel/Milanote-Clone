@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getNotes } from '../../services/notesAPI';
 import { useNotesContext } from '../useNotesContext';
 import { addNoteToCanvas } from '../../utils/canvasUtils';
+import { addObjectToCanvas } from '../../utils/canvasUtils';
 import * as fabric from 'fabric';
 
 export const useCanvasInit = (canvasId, boardId) => {
@@ -36,16 +37,17 @@ export const useCanvasInit = (canvasId, boardId) => {
                     console.log(res.data);
 
                     res.data.forEach((note) => {
-                        addNoteToCanvas(
-                            canvas,
-                            boardId,
-                            note.position.x,
-                            note.position.y,
-                            note.width,
-                            note.height,
-                            note.content,
-                            note._id
-                        );
+                        // addNoteToCanvas(
+                        //     canvas,
+                        //     boardId,
+                        //     note.position.x,
+                        //     note.position.y,
+                        //     note.width,
+                        //     note.height,
+                        //     note.content,
+                        //     note._id
+                        // );
+                        addObjectToCanvas(canvas, boardId, "note", note);
                     })
                 })
             } catch (e) {
