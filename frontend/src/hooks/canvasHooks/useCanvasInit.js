@@ -1,0 +1,66 @@
+import { useEffect, useRef } from 'react';
+import { getNotes } from '../../services/notesAPI';
+import { useNotesContext } from '../useNotesContext';
+import { addNoteToCanvas } from '../../utils/canvasUtils';
+import * as fabric from 'fabric';
+
+export const useCanvasInit = (canvasId, boardId) => {
+    const { dispatch } = useNotesContext();
+    const canvasRef = useRef(null);
+
+    useEffect(() => {
+        const canvas = new fabric.Canvas(canvasRef.current);
+        canvas.backgroundColor = "#222222";
+
+        // Allows for canvas to change size when window changes size
+        const resizeCanvas = () => {
+            const container = canvas.getElement().parentElement;
+            const { width, height } = container.getBoundingClientRect();
+            canvas.setWidth(1300);
+            canvas.setHeight(1100);
+            canvas.renderAll();
+        };
+
+        window.addEventListener('resize', resizeCanvas());
+        resizeCanvas();
+
+        // Load notes from backend
+        const loadNotes = async () => {
+            try {
+                getNotes(boardId).then((res) => {
+                    if(res.data.status == false) {
+                        dispatch({ type: 'SET_NOTES', payload: null });
+                        return;
+                    }
+                    dispatch({ type: 'SET_NOTES', payload: res.data });
+                    console.log(res.data);
+
+                    res.data.forEach((note) => {
+                        addNoteToCanvas(
+                            canvas,
+                            boardId,
+                            note.position.x,
+                            note.position.y,
+                            note.width,
+                            note.height,
+                            note.content,
+                            note._id
+                        );
+                    })
+                })
+            } catch (e) {
+                console.log('Error: ' + e);
+            }
+        }
+
+        loadNotes();
+
+        return () => {
+            window.removeEventListener('resize', resizeCanvas);
+            canvas.dispose();
+        };
+    }, [boardId]);
+
+
+    return canvasRef;
+}

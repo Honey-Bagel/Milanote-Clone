@@ -3,16 +3,12 @@ import { useEffect, useState } from 'react';
 import { Canvas, Rect, Textbox, Group, FabricImage } from 'fabric';
 import { getNotes, createNote, updateNote, deleteNote } from '../services/notesAPI';
 import { getImages, createImage } from '../services/imagesAPI';
-import { useNotesContext } from './useNotesContext';
-import { useAuthContext } from './useAuthContext';
 import socket from '../utils/socket';
 
 
-const useCanvas = (canvasRef, board) => {
+const useCanvas = (canvasRef, board, user, dispatch) => {
   const boardId = board.boardId;
-  const { user } = useAuthContext();
   const [canvas, setCanvas] = useState(null);
-  const {dispatch} = useNotesContext();
   const EXPAND_THRESHOLD = 100;
   const EXPAND_AMOUNT = 500;
 

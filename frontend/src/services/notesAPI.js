@@ -53,6 +53,7 @@ export const updateNote = async (id, boardId, updates) => {
 		}
 	});
 
+
 	if(response.status === 200) {
 		socket.emit('updateNote', {boardId, id, updates});
 	}

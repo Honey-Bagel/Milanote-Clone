@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Board from "../components/Board";
+import TestBoard from '../components/TestBoard';
 import { useBoardsContext } from '../hooks/useBoardsContext';
 import { fetchBoard } from '../services/boardAPI';
 import socket from '../utils/socket';
@@ -40,7 +41,7 @@ const BoardPage = () => {
 	return (
 		<div>
 			{error && <div>{error}</div>}
-			{!error && <Board boardId={boardId} />}
+			{!error && <TestBoard boardId={boardId} />}
 		</div>
 	)
 

@@ -1,6 +1,8 @@
- // General function for adding a note to the canvas
- export const addNoteToCanvas = (canvas, x, y, width = 200, height = 50, content = 'New Note', id = null) => {
+import { Canvas, Rect, Textbox, Group, FabricImage } from 'fabric';
+import { updateNote } from '../services/notesAPI';
 
+// General function for adding a note to the canvas
+ export const addNoteToCanvas = (canvas, boardId, x, y, width = 200, height = 50, content = 'New Note', id = null) => {
 	// create the textbox part
 	const textbox = new Textbox(content, {
 		width: width - 2 * 10,
@@ -76,7 +78,8 @@
 	// When the note is modified save the changes to the db
 	noteGroup.on('modified', (event) => {
 		if(event.target.id === noteGroup.id) {
-			updateNote(noteGroup.id, {
+            try {
+                updateNote(noteGroup.id, boardId, {
 				position: {
 				x: noteGroup.left,
 				y: noteGroup.top,
@@ -86,6 +89,9 @@
 		}).then((res) => {
 				//console.log(res)
 			})
+            } catch (e) {
+                console.log(e);
+            }
 		}
 	});
 
@@ -96,12 +102,16 @@
 
     // Update backend with content changes when editing is done
     textbox.on('editing:exited', () => {
-      if (noteGroup.id) {
-		updateNote(noteGroup.id, {
-			content: textbox.text
-		}).then((res) => {
-			console.log(res);
-		})
+    if (noteGroup.id) {
+        try {
+            updateNote(noteGroup.id, boardId, {
+                content: textbox.text
+            }).then((res) => {
+                console.log(res);
+            })
+        } catch (e) {
+            console.log(e);
+        }
 	}
     });
   };

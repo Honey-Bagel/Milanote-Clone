@@ -2,12 +2,20 @@ import React, { useRef } from 'react';
 import useCanvas from '../hooks/useCanvas';
 import { BoardsContextProvider } from '../context/BoardContext';
 
+// Contexts
+import { useAuthContext } from '../hooks/useAuthContext';
+import { useNotesContext } from '../hooks/useNotesContext';
+
+// Components
 import ToolBar from './ToolBar';
 import BoardNavBar from './BoardNavBar';
 
 const Board = (board) => {
 	const canvasRef = useRef(null);
-	const { canvas, addNote, addBoard } = useCanvas(canvasRef, board);
+    const { user } = useAuthContext();
+    const { dispatch } = useNotesContext();
+    
+	const { canvas, addNote, addBoard } = useCanvas(canvasRef, board, user, dispatch);
 
 	const tbAddNote = () => {
 		addNote(0, 0);
