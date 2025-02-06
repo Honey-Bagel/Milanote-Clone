@@ -34,38 +34,54 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
         });
 
         canvasInstance.on('selection:created', (event) => {
-            const obj = event.selected[0];
-            if(obj._customBorder) return;
-            obj._customBorder = new fabric.Rect({
-                left: obj.left - 2,
-                top: obj.top -2,
-                width: obj.width,
-                height: obj.height,
-                rx: 10,
-                ry: 10,
-                stroke: 'grey',
-                strokeWidth: 4,
-                fill: 'transparent',
-                selectable: false,
-                evented: false,
+            applyCustomBorders(event.selected);
+            
+            event.selected[0].group.set({
+                hasBorders: false,
+                hasControls: false
             });
-            canvasInstance.add(obj._customBorder);
-            canvasInstance.renderAll();
         });
 
-        canvasInstance.on('object:moving', (event) => {
-            const obj = event.target;
-            if(obj && obj._customBorder) {
-                console.log('true')
-                obj._customBorder.set({
-                    left: obj.left - 2,
-                    top: obj.top -2,
-                });
-                canvasInstance.renderAll();
-            }
+        canvasInstance.on('selection:updated', (event) => {
+            applyCustomBorders(event.selected);
         });
 
         canvasInstance.on('selection:cleared', () => {
+            removeCustomBorders();
+        });
+
+        canvasInstance.on('object:moving', (event) => {
+            moveCustomBorders(canvasInstance.getActiveObjects());
+        });
+
+        const applyCustomBorders = (objects) => {
+            removeCustomBorders();
+
+            objects = Array.isArray(objects) ? objects : [objects];
+
+            objects.forEach(obj => {
+                const { left, top } = obj.getBoundingRect();
+                if(!obj._customBorder) {
+                    obj._customBorder = new fabric.Rect({
+                        left: left - 2,
+                        top: top - 2,
+                        width: obj.width,
+                        height: obj.height,
+                        rx: 10,
+                        ry: 10,
+                        stroke: 'grey',
+                        strokeWidth: 4,
+                        fill: 'transparent',
+                        selectable: false,
+                        evented: false,
+                    });
+                }
+                canvasInstance.add(obj._customBorder);
+            });
+            canvasInstance.renderAll();
+        }
+
+        const removeCustomBorders = () => {
             canvasInstance.getObjects().forEach((obj) => {
                 if(obj._customBorder) {
                     canvasInstance.remove(obj._customBorder);
@@ -73,7 +89,26 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
                 }
             });
             canvasInstance.renderAll();
-        })
+        }
+
+        const moveCustomBorders = (target) => {
+            if(!target) return;
+
+            let objects = target;
+
+            objects = Array.isArray(objects) ? objects : [objects];
+
+            objects.forEach(obj => {
+                const { left, top } = obj.getBoundingRect();
+                if(obj._customBorder) {
+                    obj._customBorder.set({
+                        left: left - 2,
+                        top: top -2
+                    });
+                }
+            });
+            canvasInstance.renderAll();
+        }
 
         const checkCanvasEdges = (object) => {
             let newViewportHeight = canvasInstance.height;

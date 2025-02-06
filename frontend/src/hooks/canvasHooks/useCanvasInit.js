@@ -13,7 +13,6 @@ export const useCanvasInit = (canvasId, boardId) => {
     useEffect(() => {
         const canvas = new fabric.Canvas(canvasRef.current);
         canvas.backgroundColor = "#222222";
-
         canvasInstanceRef.current = canvas;
 
         // Allows for canvas to change size when window changes size
