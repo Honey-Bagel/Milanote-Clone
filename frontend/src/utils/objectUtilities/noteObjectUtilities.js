@@ -13,7 +13,8 @@ export const addNoteType = (canvas, boardId, info) => {
             textAlign: 'left',
             left: 10,
             top: 10,
-            splitByGrapheme: true
+            splitByGrapheme: true,
+            hasBorders: false,
           });
     
           // note the text height to ensure rect is big enough to hold all the text
@@ -37,7 +38,7 @@ export const addNoteType = (canvas, boardId, info) => {
           id: _id,
           selectable: true,
           lockRotation: true,
-          hasBorders: true,
+          hasBorders: false,
         });
     
         noteGroup.setControlsVisibility({ // disables all handles for the object (for future work)
@@ -59,7 +60,7 @@ export const addNoteEventListeners = (canvas, boardId, object) => {
     const rect = object.item(0);
     const textbox = object.item(1);
 
-    // Ensure textbox is editable when the group is clicked
+    // Ensure textbox is editable when the group is clicked -- TODO: start cursor at end of note
     object.on('mousedblclick', (e) => {
         const targetTextbox = object.item(1); // Index 1 refers to the textbox in our group [rect, textbox]
         if(targetTextbox) {
@@ -80,6 +81,9 @@ export const addNoteEventListeners = (canvas, boardId, object) => {
 
     // Update the note to save the text when the textbox is unfocused
     textbox.on('editing:exited', () => {
+        if(textbox.hiddenTextarea) {
+            textbox.hiddenTextarea.blur();
+        }
         if(object.id) { // Check if object id exists
             try {
                 updateNote(object.id, boardId, { // Update the note matching the id

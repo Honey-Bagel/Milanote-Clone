@@ -8,10 +8,13 @@ import * as fabric from 'fabric';
 export const useCanvasInit = (canvasId, boardId) => {
     const { dispatch } = useNotesContext();
     const canvasRef = useRef(null);
+    const canvasInstanceRef = useRef(null);
 
     useEffect(() => {
         const canvas = new fabric.Canvas(canvasRef.current);
         canvas.backgroundColor = "#222222";
+
+        canvasInstanceRef.current = canvas;
 
         // Allows for canvas to change size when window changes size
         const resizeCanvas = () => {
@@ -37,16 +40,6 @@ export const useCanvasInit = (canvasId, boardId) => {
                     console.log(res.data);
 
                     res.data.forEach((note) => {
-                        // addNoteToCanvas(
-                        //     canvas,
-                        //     boardId,
-                        //     note.position.x,
-                        //     note.position.y,
-                        //     note.width,
-                        //     note.height,
-                        //     note.content,
-                        //     note._id
-                        // );
                         addObjectToCanvas(canvas, boardId, "note", note);
                     })
                 })
@@ -64,5 +57,5 @@ export const useCanvasInit = (canvasId, boardId) => {
     }, [boardId]);
 
 
-    return canvasRef;
+    return { canvasRef, canvasInstanceRef };
 }
