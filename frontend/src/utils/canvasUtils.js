@@ -1,5 +1,5 @@
 import { Canvas, Rect, Textbox, Group, FabricImage } from 'fabric';
-import { updateNote } from '../services/notesAPI';
+import { addNote, addBoard } from './objectUtilities/objectUtilities';
 import { addNoteEventListeners, addNoteType } from './objectUtilities/noteObjectUtilities';
 
 // Handle adding objects to the canvas
@@ -7,8 +7,11 @@ export const addObjectToCanvas = (canvas, boardId, objType, info) => {
     // Types = Note, Image, Board
     let object = null;
     switch(objType) {
-        case "note":
-            object = addNoteType(canvas, boardId, info); // Handles creating a note object
+        case "text":
+            object = addNote(boardId, info);
+            break;
+        case "board":
+            object = addBoard(boardId, info);
             break;
         default:
             console.log('Invalid object type.');
@@ -25,7 +28,7 @@ export const addObjectToCanvas = (canvas, boardId, objType, info) => {
 // Handle attaching events to objects
 export const attachObjectEvents = async (canvas, type, boardId, object) => {
     switch(type) {
-        case "note":
+        case "text":
             addNoteEventListeners(canvas, boardId, object); // Add the event listeners for a Note object
             break;
         default:
@@ -33,31 +36,31 @@ export const attachObjectEvents = async (canvas, type, boardId, object) => {
             break;
     }
 
-    /*
-        General events every object should have
-    */
-    object.on('modified', (event) => {
-        if(event.target.id !== object.id) return; // Ensure the event is targeting the correct object
+    // /*
+    //     General events every object should have
+    // */
+    // object.on('modified', (event) => {
+    //     if(event.target.id !== object.id) return; // Ensure the event is targeting the correct object
 
-        try{
-            updateNote(object.id, boardId, { // Update note matching the id
-                position: {
-                    x: object.left,
-                    y: object.top,
-                },
-                width: Math.round(object.width), // Round width/height values so we don't end up with decimals
-                height: Math.round(object.height),
-            }).then((res) => {
-                console.log(res);
-            });
-        } catch (e) {
-            console.log("Error modifying object(", object.id, ")");
-        }
-    });
+    //     try{
+    //         updateNote(object.id, boardId, { // Update note matching the id
+    //             position: {
+    //                 x: object.left,
+    //                 y: object.top,
+    //             },
+    //             width: Math.round(object.width), // Round width/height values so we don't end up with decimals
+    //             height: Math.round(object.height),
+    //         }).then((res) => {
+    //             console.log(res);
+    //         });
+    //     } catch (e) {
+    //         console.log("Error modifying object(", object.id, ")");
+    //     }
+    // });
 
-    // Handles when an object's scale gets modified
-    object.on('scaled', () => {
-        object.set({ scaleX: 1, scaleY: 1 }); // Basically cancels the scale operation, so objects can't be scaled
-        canvas.renderAll(); // Re-render canvas to update for changes
-    });
+    // // Handles when an object's scale gets modified
+    // object.on('scaled', () => {
+    //     object.set({ scaleX: 1, scaleY: 1 }); // Basically cancels the scale operation, so objects can't be scaled
+    //     canvas.renderAll(); // Re-render canvas to update for changes
+    // });
 };

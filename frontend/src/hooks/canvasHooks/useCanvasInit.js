@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { getNotes } from '../../services/notesAPI';
+import { getObjects } from '../../services/objectAPI';
 import { useNotesContext } from '../useNotesContext';
 import { addNoteToCanvas } from '../../utils/canvasUtils';
 import { addObjectToCanvas } from '../../utils/canvasUtils';
@@ -30,7 +30,7 @@ export const useCanvasInit = (canvasId, boardId) => {
         // Load notes from backend
         const loadNotes = async () => {
             try {
-                getNotes(boardId).then((res) => {
+                getObjects(boardId).then((res) => {
                     if(res.data.status == false) {
                         dispatch({ type: 'SET_NOTES', payload: null });
                         return;
@@ -39,7 +39,7 @@ export const useCanvasInit = (canvasId, boardId) => {
                     console.log(res.data);
 
                     res.data.forEach((note) => {
-                        addObjectToCanvas(canvas, boardId, "note", note);
+                        addObjectToCanvas(canvas, boardId, note.type, note);
                     })
                 })
             } catch (e) {

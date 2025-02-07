@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import useCanvas from '../hooks/useCanvas';
 import { BoardsContextProvider } from '../context/BoardContext';
 
 // Contexts
@@ -15,14 +14,14 @@ const Board = (board) => {
     const { user } = useAuthContext();
     const { dispatch } = useNotesContext();
     
-	const { canvas, addNote, addBoard } = useCanvas(canvasRef, board, user, dispatch);
+	//const { canvas, addNote, addBoard } = useCanvas(canvasRef, board, user, dispatch);
 
 	const tbAddNote = () => {
-		addNote(0, 0);
+		//addNote(0, 0);
 	}
 
 	const tbAddBoard = () => {
-		addBoard(0, 0);
+		//addBoard(0, 0);
 	}
 	
 	return (

@@ -1,5 +1,5 @@
 import { Rect, Textbox, Group } from 'fabric';
-import { updateNote } from '../../services/notesAPI';
+import { updateObject } from '../../services/objectAPI';
 
 // Handles adding a note object to the canvas
 export const addNoteType = (canvas, boardId, info) => {
@@ -86,7 +86,7 @@ export const addNoteEventListeners = (canvas, boardId, object) => {
         }
         if(object.id) { // Check if object id exists
             try {
-                updateNote(object.id, boardId, { // Update the note matching the id
+                updateObject(object.id, boardId, { // Update the note matching the id
                     content: textbox.text
                 }).then((res) => {
                     console.log(res);

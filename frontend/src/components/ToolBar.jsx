@@ -1,4 +1,3 @@
-import useCanvas from "../hooks/useCanvas";
 
 const ToolBar = ({addNote, addBoard}) => {
 

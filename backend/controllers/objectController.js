@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const { getSocketInstance } = require('../util/socketSingleton');
 
 // get ALL User Notes
-const getNotes = async (req, res) => {
+const getObjects = async (req, res) => {
 	const { boardId } = req.params;
 	if(!boardId) {
 		console.log('no board found')
@@ -17,7 +17,7 @@ const getNotes = async (req, res) => {
 }
 
 // Get a note
-const getNote = async (req, res) => {
+const getObject = async (req, res) => {
 	const { id } = req.params;
 
 	if(!mongoose.Types.ObjectId.isValid(id)) {
@@ -34,7 +34,7 @@ const getNote = async (req, res) => {
 }
 
 // Create a new Note
-const createNote = async (req, res) => {
+const createObject = async (req, res) => {
 	const io = getSocketInstance();
 	const { note} = req.body;
 	const boardId = req.headers['board-id'];
@@ -51,7 +51,7 @@ const createNote = async (req, res) => {
 }
 
 // Delete a note
-const deleteNote = async (req, res) => {
+const deleteObject = async (req, res) => {
 	const io = getSocketInstance();
 	const { id } = req.params;
 	const boardId = req.headers['board-id'];
@@ -70,7 +70,7 @@ const deleteNote = async (req, res) => {
 	res.status(200).json(note);
 }
 
-const updateNote = async (req, res) => {
+const updateObject = async (req, res) => {
 	const io = getSocketInstance();
 	const { id } = req.params;
 	const { updates } = req.body;
@@ -95,4 +95,4 @@ const updateNote = async (req, res) => {
 	res.status(200).json(note);
 }
 
-module.exports = { getNotes, getNote, createNote, deleteNote, updateNote };
+module.exports = { getObjects, getObject, createObject, deleteObject, updateObject };

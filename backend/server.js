@@ -7,7 +7,7 @@ const { createServer } = require('node:http');
 const { join } = require('node:path');
 const { Server } = require('socket.io');
 const boardRoutes = require('./routes/boardRoutes');
-const noteRoutes = require('./routes/noteRoutes');
+const objectRoutes = require('./routes/objectRoutes');
 const authRoutes = require('./routes/authRoutes');
 const imageRoutes = require('./routes/imageRoutes');
 const cookieParser = require('cookie-parser');
@@ -51,7 +51,7 @@ app.use((err, req, res, next) => {
 
 // Routes
 app.use('/api/boards', boardRoutes); // handle user boards
-app.use('/api/notes', noteRoutes); // handle notes
+app.use('/api/objects', objectRoutes); // handle notes
 app.use('/api/auth', authRoutes); // user authentication
 app.use('/api/image', imageRoutes) // handle images
 

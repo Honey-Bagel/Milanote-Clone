@@ -1,5 +1,5 @@
 const express = require('express');
-const { getNotes, getNote, createNote, deleteNote, updateNote } = require('../controllers/noteController');
+const { getObjects, getObject, createObject, deleteObject, updateObject } = require('../controllers/objectController');
 const { userVerification } = require('../middleware/AuthMiddleware');
 const { authorizeBoardAccess } = require('../middleware/BoardMiddleware');
 
@@ -8,18 +8,18 @@ const router = express.Router();
 router.use(userVerification);
 
 // GET all notes
-router.get('/:boardId', getNotes);
+router.get('/:boardId', getObjects);
 
 // GET a single note
-router.get('/:id', getNote);
+router.get('/:id', getObject);
 
 // POST a new note
-router.post('/', authorizeBoardAccess, createNote);
+router.post('/', authorizeBoardAccess, createObject);
 
 // DELETE a note
-router.delete('/:id', authorizeBoardAccess, deleteNote);
+router.delete('/:id', authorizeBoardAccess, deleteObject);
 
 // UPDATE a note
-router.put('/:id', authorizeBoardAccess, updateNote);
+router.put('/:id', authorizeBoardAccess, updateObject);
 
 module.exports = router;

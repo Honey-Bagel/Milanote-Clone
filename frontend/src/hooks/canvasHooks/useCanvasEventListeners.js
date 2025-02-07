@@ -1,6 +1,5 @@
-import * as fabric from 'fabric';
 import { useEffect } from 'react';
-import { deleteNote } from '../../services/notesAPI';
+import { deleteObject } from '../../services/objectAPI';
 
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const EXPAND_THRESHOLD = 100;
@@ -33,83 +32,6 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             }
         });
 
-        canvasInstance.on('selection:created', (event) => {
-            applyCustomBorders(event.selected);
-            
-            event.selected[0].group.set({
-                hasBorders: false,
-                hasControls: false
-            });
-        });
-
-        canvasInstance.on('selection:updated', (event) => {
-            applyCustomBorders(event.selected);
-        });
-
-        canvasInstance.on('selection:cleared', () => {
-            removeCustomBorders();
-        });
-
-        canvasInstance.on('object:moving', (event) => {
-            moveCustomBorders(canvasInstance.getActiveObjects());
-        });
-
-        const applyCustomBorders = (objects) => {
-            removeCustomBorders();
-
-            objects = Array.isArray(objects) ? objects : [objects];
-
-            objects.forEach(obj => {
-                const { left, top } = obj.getBoundingRect();
-                if(!obj._customBorder) {
-                    obj._customBorder = new fabric.Rect({
-                        left: left - 2,
-                        top: top - 2,
-                        width: obj.width,
-                        height: obj.height,
-                        rx: 10,
-                        ry: 10,
-                        stroke: 'grey',
-                        strokeWidth: 4,
-                        fill: 'transparent',
-                        selectable: false,
-                        evented: false,
-                    });
-                }
-                canvasInstance.add(obj._customBorder);
-            });
-            canvasInstance.renderAll();
-        }
-
-        const removeCustomBorders = () => {
-            canvasInstance.getObjects().forEach((obj) => {
-                if(obj._customBorder) {
-                    canvasInstance.remove(obj._customBorder);
-                    obj._customBorder = null;
-                }
-            });
-            canvasInstance.renderAll();
-        }
-
-        const moveCustomBorders = (target) => {
-            if(!target) return;
-
-            let objects = target;
-
-            objects = Array.isArray(objects) ? objects : [objects];
-
-            objects.forEach(obj => {
-                const { left, top } = obj.getBoundingRect();
-                if(obj._customBorder) {
-                    obj._customBorder.set({
-                        left: left - 2,
-                        top: top -2
-                    });
-                }
-            });
-            canvasInstance.renderAll();
-        }
-
         const checkCanvasEdges = (object) => {
             let newViewportHeight = canvasInstance.height;
             let newViewportWidth = canvasInstance.width;
@@ -141,6 +63,16 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             
             canvasInstance.renderAll();
         }
+
+        canvasInstance.on('selection:created', (event) => {
+            if(event.selected[0].group) {
+                event.selected[0].group.set({
+                    hasBorders: false,
+                    hasControls: false,
+                    selectable: false,
+                });
+            }
+        })
     
         canvasInstance.on('object:modified', (e) => {
             checkCanvasEdges(e.target);
@@ -153,7 +85,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
         // Handle keyboard backspace/delete event to delete notes
             
         const handleKeyDown = (event) => {
-            if(canvasInstance.getActiveObject() && canvasInstance.getActiveObject().type && canvasInstance.getActiveObject().type === 'textbox') {
+            if(canvasInstance.getActiveObject() && !canvasInstance.getActiveObject().type) {
                 return;
             }
             if((event.key === 'Delete' || event.key === 'Backspace') && canvasInstance.getActiveObjects().length >= 1) {
@@ -161,9 +93,14 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
                 const activeObject = obj;
                 if(activeObject.id) {
                     try {
-                        deleteNote(activeObject.id, boardId).then((res) => {
+                        canvasInstance.discardActiveObject();
+                        canvasInstance.remove(activeObject);
+                        deleteObject(activeObject.id, boardId).then((res) => {
                             if(res.status >= 200 && res.status < 300) {
-                                canvasInstance.remove(activeObject);
+                                console.log('confirm delete');
+                            } else {
+                                console.log('reject delete');
+                                canvasInstance.add(activeObject);
                             }
                         }).catch(console.error);
                     } catch (error) {
