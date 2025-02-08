@@ -16,32 +16,39 @@ const TestBoard = (board) => {
 
         if(!canvasRef) return;
 
-        try{
-            createObject(board.boardId, {
-                title: "Note",
-                content: "New Note",
-                type,
-                position: {
-                    x: 10,
-                    y: 10,
-                },
-                width: 200,
-                height: 50,
-                board: board.boardId,
-            }).then((res) => {
-                const { position, content, width, height, type, _id, board } = res.data;
-                switch(type) {
-                    case "text":
-                        canvasInstanceRef.current.add(addNote(board, res.data));
-                        break;
-                    default:
-                        console.log("type error");
-                        break;
+        switch(type) {
+            case "text":
+                try{
+                    createObject(board.boardId, {
+                        title: "Note",
+                        content: "New Note",
+                        type,
+                        position: {
+                            x: 10,
+                            y: 10,
+                        },
+                        width: 200,
+                        height: 50,
+                        board: board.boardId,
+                    }).then((res) => {
+                        const { type, board } = res.data;
+                        switch(type) {
+                            case "text":
+                                canvasInstanceRef.current.add(addNote(board, res.data));
+                                break;
+                            default:
+                                console.log("type error");
+                                break;
+                        }
+                    })
+                } catch (e) {
+                    console.log(e);
                 }
-            })
-        } catch (e) {
-            console.log(e);
+                break;
+            case "board":
+                break;
         }
+        
 
         // const note = new Note({
         //     left: 10,

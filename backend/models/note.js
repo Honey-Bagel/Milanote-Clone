@@ -1,3 +1,4 @@
+const Item = require("./item");
 const mongoose = require('mongoose');
 
 const noteSchema = new mongoose.Schema({
@@ -8,11 +9,6 @@ const noteSchema = new mongoose.Schema({
 	content: {
 		type: String,
 		required: true
-	},
-	type: {
-		type: String,
-		enum: ['text', 'image', 'link', 'drawing'],
-		default: 'text'
 	},
 	color: {
 		type: String
@@ -40,4 +36,6 @@ const noteSchema = new mongoose.Schema({
 	}
 });
 
-module.exports = mongoose.model('Note', noteSchema);
+const Note = Item.discriminator("note", noteSchema);
+
+module.exports = Note;

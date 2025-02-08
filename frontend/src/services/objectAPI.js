@@ -15,14 +15,14 @@ export const getObjects = (boardId) => {
 	});
 };
 
-export const createObject = async (boardId, note) => {
+export const createObject = async (boardId, object) => {
 	const user = JSON.parse(localStorage.getItem('user'));
 	if(!user) return;
 	const token = user.token;
 	if(!token) return;
 
 	const response = await axios.post('/api/objects', {
-		note
+		object
 	}, {
 		headers: { 
 			Authorization: `Bearer ${token}`,
@@ -31,9 +31,9 @@ export const createObject = async (boardId, note) => {
 	});
 	
 	if(response.status === 201) {
-		const note = response.data;
-		console.log('respNote', note);
-		socket.emit('createObject', { boardId, note});
+		const object = response.data;
+		console.log('respNote', object);
+		socket.emit('createObject', { boardId, object});
 	}
 	return response;
 };

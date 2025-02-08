@@ -1,3 +1,4 @@
+const Item = require("./item");
 const mongoose = require('mongoose');
 
 const boardSchema = new mongoose.Schema({
@@ -5,10 +6,6 @@ const boardSchema = new mongoose.Schema({
 		type: String,
 		required: true
 	},
-	notes: [{
-		type: mongoose.Schema.Types.ObjectId,
-		ref: 'Note'
-	}],
 	owner: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'User'
@@ -19,7 +16,16 @@ const boardSchema = new mongoose.Schema({
 	}],
 	root: {
 		type: Boolean
-	}
+	},
+    board: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Board'
+    },
+    position: {
+        type: mongoose.Schema.Types.Mixed
+    }
 });
 
-module.exports = mongoose.model('Board', boardSchema);
+const Board = Item.discriminator("board", boardSchema);
+
+module.exports = Board;
