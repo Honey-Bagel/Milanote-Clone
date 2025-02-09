@@ -36,7 +36,7 @@ const getItem = async (req, res) => {
 
 // CREATE an item
 const createItem = async (req, res) => {
-    const { type, ...data } = req.body;
+    const { type, ...data } = req.body.object;
     
     try{
         let item = null;
@@ -86,6 +86,7 @@ const updateItem = async (req, res) => {
     const item = await Item.findByIdAndUpdate({ _id: id }, {
         ...updates
     });
+
 
     if(!item) {
         return res.status(404).json({ error: 'Not a valid Item.' });

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { deleteObject } from '../../services/objectAPI';
+import { deleteItem } from '../../services/itemAPI';
 
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const EXPAND_THRESHOLD = 100;
@@ -95,7 +95,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
                     try {
                         canvasInstance.discardActiveObject();
                         canvasInstance.remove(activeObject);
-                        deleteObject(activeObject.id, boardId).then((res) => {
+                        deleteItem(activeObject.id, boardId).then((res) => {
                             if(res.status >= 200 && res.status < 300) {
                                 console.log('confirm delete');
                             } else {

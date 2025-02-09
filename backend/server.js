@@ -7,9 +7,10 @@ const { createServer } = require('node:http');
 const { join } = require('node:path');
 const { Server } = require('socket.io');
 const boardRoutes = require('./routes/boardRoutes');
-const objectRoutes = require('./routes/objectRoutes');
+const noteRoutes = require('./routes/noteRoutes');
 const authRoutes = require('./routes/authRoutes');
 const imageRoutes = require('./routes/imageRoutes');
+const itemRoutes = require('./routes/itemRoutes');
 const cookieParser = require('cookie-parser');
 const { MONGO_URL, PORT } = process.env;
 const { initializeSocket } = require('./util/socketSingleton');
@@ -51,9 +52,10 @@ app.use((err, req, res, next) => {
 
 // Routes
 app.use('/api/boards', boardRoutes); // handle user boards
-app.use('/api/objects', objectRoutes); // handle notes
+app.use('/api/notes', noteRoutes); // handle notes
 app.use('/api/auth', authRoutes); // user authentication
 app.use('/api/image', imageRoutes) // handle images
+app.use('/api/items', itemRoutes); // handle all items
 
 //increase payload limit
 app.use(express.json({ limit: '10mb' }));

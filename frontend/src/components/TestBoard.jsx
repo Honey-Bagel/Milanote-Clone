@@ -3,10 +3,13 @@ import { useCanvasInit } from '../hooks/canvasHooks/useCanvasInit';
 import { useCanvasSocketEvents } from '../hooks/canvasHooks/useCanvasSocketEvents';
 import { useCanvasEventListeners } from '../hooks/canvasHooks/useCanvasEventListeners';
 import { createObject } from '../services/objectAPI';
-import { addBoard, addNote } from '../utils/objectUtilities/objectUtilities';
+import { createNote } from '../utils/objects/noteObject';
+import { useAuthContext } from '../hooks/useAuthContext';
+import { createBoard } from '../utils/objects/boardObject';
 
 const TestBoard = (board) => {
     const { canvasRef, canvasInstanceRef } = useCanvasInit('milanote-canvas', board.boardId);
+    const { user } = useAuthContext();
 
     useCanvasSocketEvents(board.boardId, canvasInstanceRef);
     useCanvasEventListeners(board.boardId, canvasInstanceRef);
@@ -18,34 +21,10 @@ const TestBoard = (board) => {
 
         switch(type) {
             case "text":
-                try{
-                    createObject(board.boardId, {
-                        title: "Note",
-                        content: "New Note",
-                        type,
-                        position: {
-                            x: 10,
-                            y: 10,
-                        },
-                        width: 200,
-                        height: 50,
-                        board: board.boardId,
-                    }).then((res) => {
-                        const { type, board } = res.data;
-                        switch(type) {
-                            case "text":
-                                canvasInstanceRef.current.add(addNote(board, res.data));
-                                break;
-                            default:
-                                console.log("type error");
-                                break;
-                        }
-                    })
-                } catch (e) {
-                    console.log(e);
-                }
+                createNote(canvasInstanceRef, board.boardId);
                 break;
             case "board":
+                createBoard(canvasInstanceRef, board.boardId, user.id);
                 break;
         }
         

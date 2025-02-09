@@ -3,18 +3,19 @@ import { addNote, addBoard } from './objectUtilities/objectUtilities';
 import { addNoteEventListeners, addNoteType } from './objectUtilities/noteObjectUtilities';
 
 // Handle adding objects to the canvas
-export const addObjectToCanvas = (canvas, boardId, objType, info) => {
+export const addObjectToCanvas = (canvas, boardId, objType, info, navigate) => {
     // Types = Note, Image, Board
     let object = null;
+    console.log(objType);
     switch(objType) {
-        case "text":
+        case "note":
             object = addNote(boardId, info);
             break;
         case "board":
-            object = addBoard(boardId, info);
+            object = addBoard(boardId, info, navigate);
             break;
         default:
-            console.log('Invalid object type.');
+            console.log(objType + ' is not a valid object type.');
             break;
     }
     if(!object) {
@@ -28,8 +29,10 @@ export const addObjectToCanvas = (canvas, boardId, objType, info) => {
 // Handle attaching events to objects
 export const attachObjectEvents = async (canvas, type, boardId, object) => {
     switch(type) {
-        case "text":
+        case "note":
             addNoteEventListeners(canvas, boardId, object); // Add the event listeners for a Note object
+            break;
+        case "board":
             break;
         default:
             console.log('Invalid object type.');

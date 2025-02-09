@@ -1,5 +1,7 @@
 import { Rect, Textbox, Group } from "fabric";
 import { updateObject } from "../../services/objectAPI";
+import { createItem, updateItem } from "../../services/itemAPI";
+import { addNote } from '../../utils/objectUtilities/objectUtilities';
 
 export class Note extends Group {
   static type = "note";
@@ -173,7 +175,7 @@ export class Note extends Group {
         width: Math.round(this.width),
         height: Math.round(this.height),
       };
-      updateObject(this.id, this.boardId, updates);
+      updateItem(this.id, this.boardId, "notes", updates);
     }
   }
 
@@ -212,4 +214,29 @@ export class Note extends Group {
   static fromObject(object, callback) {
     return callback(new Note(object));
   }
+}
+
+// Helper function to call backend to create a note
+export const createNote = (canvasInstanceRef, boardId) => {
+    try {
+        createItem(boardId, {
+            title: "Note",
+            content: "New Note",
+            type: "note",
+            position: {
+                x: 10,
+                y: 10,
+            },
+            width: 200,
+            height: 50,
+            board: boardId,
+        }).then((res) => {
+			const { type, board } = res.data;
+			if(type !== "note") return;
+			canvasInstanceRef.current.add(addNote(board, res.data));
+			console.log('Item added successfully')
+        });
+    } catch (e) {
+		console.log(e);
+	}
 }

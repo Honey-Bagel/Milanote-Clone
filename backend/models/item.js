@@ -6,6 +6,10 @@ const BaseItemSchema = new mongoose.Schema({
         required: true,
         enum: ["board", "note"],
     },
+    board: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+    }
 },
 { 
     timestamps: true, discriminatorKey: "type"

@@ -11,7 +11,7 @@ const getBoards = async (req, res) => {
 // get a board
 const getBoard = async (req, res) => {
 	const board = req.board;
-
+    
 	res.status(200).json(board);
 }
 
@@ -54,9 +54,9 @@ const updateBoard = async (req, res) => {
 		return res.status(404).json({error: 'No such board'});
 	}
 
-	const body = req.body;
+	const { updates } = req.body;
 
-	const board = await Board.findByIdAndUpdate({_id: id}, body);
+	const board = await Board.findByIdAndUpdate({_id: id}, updates);
 
 	if(!board) {
 		return res.status(404).json({error: 'No such board'});

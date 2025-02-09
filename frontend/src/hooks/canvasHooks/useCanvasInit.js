@@ -1,14 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { getObjects } from '../../services/objectAPI';
+import { getItems } from '../../services/itemAPI';
 import { useNotesContext } from '../useNotesContext';
-import { addNoteToCanvas } from '../../utils/canvasUtils';
 import { addObjectToCanvas } from '../../utils/canvasUtils';
+import { useNavigate } from 'react-router-dom';
 import * as fabric from 'fabric';
 
 export const useCanvasInit = (canvasId, boardId) => {
     const { dispatch } = useNotesContext();
     const canvasRef = useRef(null);
     const canvasInstanceRef = useRef(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const canvas = new fabric.Canvas(canvasRef.current);
@@ -30,16 +32,16 @@ export const useCanvasInit = (canvasId, boardId) => {
         // Load notes from backend
         const loadNotes = async () => {
             try {
-                getObjects(boardId).then((res) => {
+                getItems(boardId).then((res) => {
                     if(res.data.status == false) {
-                        dispatch({ type: 'SET_NOTES', payload: null });
+                        dispatch({ type: 'SET_ITEMS', payload: null });
                         return;
                     }
-                    dispatch({ type: 'SET_NOTES', payload: res.data });
+                    dispatch({ type: 'SET_ITEMS', payload: res.data });
                     console.log(res.data);
 
                     res.data.forEach((note) => {
-                        addObjectToCanvas(canvas, boardId, note.type, note);
+                        addObjectToCanvas(canvas, boardId, note.type, note, navigate);
                     })
                 })
             } catch (e) {
