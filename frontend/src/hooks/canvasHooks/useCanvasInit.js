@@ -4,6 +4,7 @@ import { getItems } from '../../services/itemAPI';
 import { useNotesContext } from '../useNotesContext';
 import { addObjectToCanvas } from '../../utils/canvasUtils';
 import { useNavigate } from 'react-router-dom';
+import { fetchBoard } from '../../services/boardAPI';
 import * as fabric from 'fabric';
 
 export const useCanvasInit = (canvasId, boardId) => {
@@ -16,6 +17,10 @@ export const useCanvasInit = (canvasId, boardId) => {
         const canvas = new fabric.Canvas(canvasRef.current);
         canvas.backgroundColor = "#222222";
         canvasInstanceRef.current = canvas;
+        canvasInstanceRef.current.left = 0;
+        canvasInstanceRef.current.right = 0;
+        canvasInstanceRef.current.top = 0;
+        canvasInstanceRef.current.bottom = 0;
 
         // Allows for canvas to change size when window changes size
         const resizeCanvas = () => {
@@ -26,7 +31,26 @@ export const useCanvasInit = (canvasId, boardId) => {
             canvas.renderAll();
         };
 
+        const constructBoardStack = async () => {
+            console.log('making board stack');
+            const history = await getParentBoard(boardId);
+            canvasInstanceRef.current.history = history;
+        }
+
+        const getParentBoard = async (boardId) => {
+            const response = await fetchBoard(boardId);
+            const newBoard = response.data;
+            if(newBoard.root) {
+                return [boardId];
+            } else {
+                const parentHist = await getParentBoard(newBoard.board);
+                return [boardId].concat(parentHist);
+            }
+        }
+        constructBoardStack();
+
         window.addEventListener('resize', resizeCanvas());
+
         resizeCanvas();
 
         // Load notes from backend

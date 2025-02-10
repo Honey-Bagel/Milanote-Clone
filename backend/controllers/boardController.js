@@ -10,7 +10,8 @@ const getBoards = async (req, res) => {
 
 // get a board
 const getBoard = async (req, res) => {
-	const board = req.board;
+    const id = req.headers['board-id'];
+	const board = await Board.findById(id);
     
 	res.status(200).json(board);
 }

@@ -126,6 +126,10 @@ export class Board extends Group {
         this.on("deselected", () => {
             this.toggleCustomBorder(false);
             this.canvas?.renderAll();
+        });
+
+        this.textbox.on("selected", () => {
+            console.log('select textbox ')
         })
 
     }
@@ -178,7 +182,7 @@ export class Board extends Group {
 }
 
 // Helper function to call backend to create a board
-export const createBoard = (canvasInstanceRef, boardId, userId) => {
+export const createBoard = (canvasInstanceRef, boardId, userId, position={ x:0, y:0 }) => {
     try {
         createItem(boardId, {
             title: "New Board",

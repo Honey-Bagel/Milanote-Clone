@@ -33,7 +33,7 @@ const FabCanvas = () => {
 			if (isPanning.current) {
 				const deltaX = event.e.clientX - lastPosX.current;
 				const deltaY = event.e.clientY - lastPosY.current;
-				myCanvas.relativePan(new Point(deltaX, deltaY)); // Pan the canvas
+				myCanvas.absolutePan(new Point(deltaX, deltaY)); // Pan the canvas
 				lastPosX.current = event.e.clientX;
 				lastPosY.current = event.e.clientY;
 				console.log('moved')

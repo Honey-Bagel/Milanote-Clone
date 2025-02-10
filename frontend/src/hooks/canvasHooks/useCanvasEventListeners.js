@@ -1,9 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { Point } from 'fabric';
 import { deleteItem } from '../../services/itemAPI';
 
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const EXPAND_THRESHOLD = 100;
-  const EXPAND_AMOUNT = 500; // make a constant file for these
+    const EXPAND_AMOUNT = 500; // make a constant file for these
+    const isPanning = useRef(false);
+    const lastPosX = useRef(0);
+    const lastPosY = useRef(0);
 
     useEffect(() => {
         const canvasInstance = canvasInstanceRef.current;
@@ -92,6 +96,44 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
                     selectable: false,
                 });
             }
+        });
+
+        // Handles panning the canvas
+        canvasInstance.on('mouse:down', (event) => {
+            if(event.e.shiftKey) {
+                if(!isPanning.current) {
+                    isPanning.current = true;
+                    lastPosX.current = event.e.clientX;
+                    lastPosY.current = event.e.clientY;
+                    canvasInstance.selection = false;
+                    canvasInstance.setCursor('grab');
+                }
+            }
+            
+        });
+
+        canvasInstance.on('mouse:move', (event) => {
+            if(isPanning.current) {
+                const width = canvasInstance.width;
+                const height = canvasInstance.height;
+                const deltaX = event.e.clientX - lastPosX.current;
+				const deltaY = event.e.clientY - lastPosY.current;
+
+                const panX = canvasInstance.viewportTransform[4];
+                const panY = canvasInstance.viewportTransform[5];
+				canvasInstance.relativePan(new Point(deltaX, deltaY)); // Pan the canvas
+				lastPosX.current = event.e.clientX;
+				lastPosY.current = event.e.clientY;
+                canvasInstance.setCursor('grab');
+            }
+        });
+
+        canvasInstance.on('mouse:up', () => {
+            if(isPanning.current) {
+                isPanning.current = false;
+                canvasInstance.setCursor('default');
+                canvasInstance.selection = true;
+            }
         })
     
         canvasInstance.on('object:modified', (e) => {
@@ -143,5 +185,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             window.removeEventListener('resize', resizeCanvas);
         }
 
-    }, [canvasInstanceRef]);
+    }, [canvasInstanceRef, boardId]);
+
+    return { lastPosX, lastPosY };
 }

@@ -10,7 +10,7 @@ export const fetchBoard = (boardId) => {
 	const token = user.token;
 	if(!token) return;
 
-	return axios.get(`/api/boards/${boardId}`, {
+    return axios.get(`/api/boards/${boardId}`, {
 		headers: { 
 			Authorization: `Bearer ${token}`,
 			'Board-Id': boardId

@@ -22,8 +22,28 @@ export const addObjectToCanvas = (canvas, boardId, objType, info, navigate) => {
         console.log('No object was created, cannot add to canvas');
     }
 
+    checkEdges(canvas, object);
     canvas.add(object); // Add the created object to the canvas
     attachObjectEvents(canvas, objType, boardId, object); // Attach necessary events to object
+}
+
+const checkEdges = (canvas, object) => {
+    if(!canvas || !object) return;
+
+    const { x, y } = object.position;
+
+    if(x < canvas.left) {
+        canvas.left = x;
+    }
+    if(x > canvas.right) {
+        canvas.right = x;
+    }
+    if(y < canvas.top) {
+        canvas.top = y;
+    }
+    if(y > canvas.bottom) {
+        canvas.bottom = y;
+    }
 }
 
 // Handle attaching events to objects
