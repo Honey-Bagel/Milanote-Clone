@@ -62,7 +62,27 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             }
             
             canvasInstance.renderAll();
+        };
+
+        // Sets the size of the canvas
+        const resizeCanvas = () => {
+            const navbar = document.getElementById('navbar');
+            const toolbar = document.getElementById('toolbar');
+
+            const navbarHeight = navbar ? navbar.offsetHeight : 0;
+            const toolbarWidth = toolbar ? toolbar.offsetWidth : 0;
+
+            const availableHeight = window.innerHeight - navbarHeight;
+            const availableWidth = window.innerWidth - toolbarWidth;
+
+            console.log("height: " + window.innerHeight + " - available height: " + availableHeight )
+
+            canvasInstance.setWidth(availableWidth);
+            canvasInstance.setHeight(availableHeight);
+            canvasInstance.renderAll();
         }
+
+        resizeCanvas();
 
         canvasInstance.on('selection:created', (event) => {
             if(event.selected[0].group) {
@@ -114,11 +134,14 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
         };
         
         window.addEventListener('keydown', handleKeyDown);
+
+        window.addEventListener('resize', resizeCanvas);
         // end keyboard listener
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('resize', resizeCanvas);
         }
 
-    })
+    }, [canvasInstanceRef]);
 }

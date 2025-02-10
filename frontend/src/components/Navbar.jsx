@@ -66,7 +66,7 @@ const Navbar = () => {
 	}, [user]);
 
 	return (
-		<header>
+		<header id="navbar">
 			<div className="container">
 			<Link to="/">
 				<h1>Note App</h1>

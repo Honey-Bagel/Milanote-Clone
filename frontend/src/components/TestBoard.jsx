@@ -40,10 +40,16 @@ const TestBoard = (board) => {
     }
 
     return (
-        <div className="flex-1 relative">
-            <button onClick={() => addObject("text")}>Add note</button>
-            <button onClick={() => addObject("board")}>Add Board</button>
-            <canvas ref={canvasRef} className="border border-gray-300"></canvas>
+        <div className="flex h-screen">
+            {/* Toolbar */ }
+            <div id = "toolbar" className='w-20 bg-gray-800 text-white flex flex-col items-center p-4 space-y-4'>
+                <button onClick={() => addObject("text")}>Add Note</button>
+                <button onClick={() => addObject("board")}>Add Board</button>
+            </div>
+            { /* Canvas */ }
+            <div className="flex-1 relative bg-gray-100">
+                <canvas ref={canvasRef}></canvas>
+            </div>
         </div>
     )
 }
