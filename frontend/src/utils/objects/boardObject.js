@@ -23,6 +23,7 @@ export class Board extends Group {
                 y: 10,
             },
             navigate = null,
+            updateBreadcrumb = null,
             boardId = null,
             root = false,
             ...rest
@@ -95,6 +96,7 @@ export class Board extends Group {
         this.id = id;
         this.position = position;
         this.navigate = navigate;
+        this.updateBreadcrumb = updateBreadcrumb;
         this.boardId = boardId;
 
         this.setupEventListeners();
@@ -157,9 +159,11 @@ export class Board extends Group {
     }
 
     openBoard() {
-        console.log('opening board');
         if(this.navigate) {
+            const id = this.id;
+            const name = this.title;
             this.navigate(`/board/${this.id}`);
+            this.updateBreadcrumb({id, name});
         }
     }
 
@@ -182,7 +186,7 @@ export class Board extends Group {
 }
 
 // Helper function to call backend to create a board
-export const createBoard = (canvasInstanceRef, boardId, userId, position={ x:0, y:0 }) => {
+export const createBoard = (canvasInstanceRef, navigate, updateBreadcrumb, boardId, userId, position={ x:0, y:0 }) => {
     try {
         createItem(boardId, {
             title: "New Board",
@@ -197,7 +201,7 @@ export const createBoard = (canvasInstanceRef, boardId, userId, position={ x:0, 
         }).then((res) => {
             const { type, board } = res.data;
             if(type !== "board") return;
-            canvasInstanceRef.current.add(addBoard(board, res.data));
+            canvasInstanceRef.current.add(addBoard(board, res.data, navigate, updateBreadcrumb));
             console.log("Item added successfully");
         });
     } catch (e) {

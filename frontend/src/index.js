@@ -4,13 +4,16 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthContextProvider } from './context/AuthContext';
 import { NotesContextProvider } from './context/NoteContext';
+import { BreadcrumbProvider } from './context/BreadcrumbContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
 	<React.StrictMode>
 		<AuthContextProvider>
 			<NotesContextProvider>
-				<App />
+                <BreadcrumbProvider>
+                    <App />
+                </BreadcrumbProvider>
 			</NotesContextProvider>
 		</AuthContextProvider>
 	</React.StrictMode>

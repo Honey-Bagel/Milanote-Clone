@@ -8,14 +8,45 @@ import { useAuthContext } from '../hooks/useAuthContext';
 import { createBoard } from '../utils/objects/boardObject';
 import { useNavigate } from 'react-router-dom';
 import { Point } from 'fabric';
+import { useBreadcrumb } from '../context/BreadcrumbContext';
+import { fetchBoard } from '../services/boardAPI';
 
 const TestBoard = (board) => {
     const { canvasRef, canvasInstanceRef } = useCanvasInit('milanote-canvas', board.boardId);
+    const { breadcrumbPath, goToBoard, setBreadcrumbPath } = useBreadcrumb();
     const { user } = useAuthContext();
     const navigate = useNavigate();
 
     useCanvasSocketEvents(board.boardId, canvasInstanceRef);
     const { lastPosX, lastPosY } = useCanvasEventListeners(board.boardId, canvasInstanceRef);
+
+    useEffect(() => {
+        if(!board) return;
+
+        const buildBreadcrumbPath = async (board) => {
+            let path = [];
+            while(board) {
+                try {
+                    const response = await fetchBoard(board);
+                    if(!response) return;
+                    board = response.data;
+
+                    path.unshift({ id: board._id, name: board.title });
+                    board = board.board;
+                } catch (e) {
+                    console.log(e);
+                }
+            }
+            return path;
+        }
+        const getPath = async (boardId) => {
+            const path = await buildBreadcrumbPath(boardId);
+
+            setBreadcrumbPath(path);
+        }
+
+        getPath(board.boardId);
+    }, [board])
 
     const addObject = (type) => {
         if(!canvasRef) return;
@@ -60,12 +91,25 @@ const TestBoard = (board) => {
         e.preventDefault();
     }
 
+    const goToABoard = (board) => {
+        navigate(`/board/${board.id}`);
+        goToBoard(board);
+    }
+
     
 
     return (
         <div className="flex h-screen flex-col">
             { /* Top bar */}
             <div id="topbar" className="h-10 bg-gray-900 text-white flex flex-1 items-center p-4">
+                {breadcrumbPath.map((board, index) => (
+                    <React.Fragment key={board.id}>
+                        <button className="text-blue-500 hover:underline" onClick={() => goToABoard(board)}>
+                            {board.name}
+                        </button>
+                        { index < breadcrumbPath.length - 1 && <span>/</span>}
+                    </React.Fragment>
+                ))}
             </div>
             <div className="flex h-screen">
                 {/* Toolbar */ }

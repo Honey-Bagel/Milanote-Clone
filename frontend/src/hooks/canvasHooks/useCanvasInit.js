@@ -6,12 +6,14 @@ import { addObjectToCanvas } from '../../utils/canvasUtils';
 import { useNavigate } from 'react-router-dom';
 import { fetchBoard } from '../../services/boardAPI';
 import * as fabric from 'fabric';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 export const useCanvasInit = (canvasId, boardId) => {
     const { dispatch } = useNotesContext();
     const canvasRef = useRef(null);
     const canvasInstanceRef = useRef(null);
     const navigate = useNavigate();
+    const { openBoard } = useBreadcrumb();
 
     useEffect(() => {
         const canvas = new fabric.Canvas(canvasRef.current);
@@ -62,10 +64,10 @@ export const useCanvasInit = (canvasId, boardId) => {
                         return;
                     }
                     dispatch({ type: 'SET_ITEMS', payload: res.data });
-                    console.log(res.data);
+                    console.log('res data', res.data);
 
                     res.data.forEach((note) => {
-                        addObjectToCanvas(canvas, boardId, note.type, note, navigate);
+                        addObjectToCanvas(canvas, boardId, note.type, note, navigate, openBoard);
                     })
                 })
             } catch (e) {

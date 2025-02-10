@@ -3,7 +3,7 @@ import { addNote, addBoard } from './objectUtilities/objectUtilities';
 import { addNoteEventListeners, addNoteType } from './objectUtilities/noteObjectUtilities';
 
 // Handle adding objects to the canvas
-export const addObjectToCanvas = (canvas, boardId, objType, info, navigate) => {
+export const addObjectToCanvas = (canvas, boardId, objType, info, navigate, updateBreadcrumb) => {
     // Types = Note, Image, Board
     let object = null;
     console.log(objType);
@@ -12,7 +12,7 @@ export const addObjectToCanvas = (canvas, boardId, objType, info, navigate) => {
             object = addNote(boardId, info);
             break;
         case "board":
-            object = addBoard(boardId, info, navigate);
+            object = addBoard(boardId, info, navigate, updateBreadcrumb);
             break;
         default:
             console.log(objType + ' is not a valid object type.');
