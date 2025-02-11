@@ -1,10 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { getObjects } from '../../services/objectAPI';
 import { getItems } from '../../services/itemAPI';
 import { useNotesContext } from '../useNotesContext';
 import { addObjectToCanvas } from '../../utils/canvasUtils';
 import { useNavigate } from 'react-router-dom';
-import { fetchBoard } from '../../services/boardAPI';
 import * as fabric from 'fabric';
 import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
@@ -23,19 +21,6 @@ export const useCanvasInit = (canvasId, boardId) => {
         canvasInstanceRef.current.right = 0;
         canvasInstanceRef.current.top = 0;
         canvasInstanceRef.current.bottom = 0;
-
-        // Allows for canvas to change size when window changes size
-        const resizeCanvas = () => {
-            const container = canvas.getElement().parentElement;
-            const { width, height } = container.getBoundingClientRect();
-            canvas.setWidth(1300);
-            canvas.setHeight(1100);
-            canvas.renderAll();
-        };
-
-        window.addEventListener('resize', resizeCanvas());
-
-        resizeCanvas();
 
         // Load notes from backend
         const loadNotes = async () => {
@@ -60,7 +45,6 @@ export const useCanvasInit = (canvasId, boardId) => {
         loadNotes();
 
         return () => {
-            window.removeEventListener('resize', resizeCanvas);
             canvas.dispose();
         };
     }, [boardId]);

@@ -1,10 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { useAuthContext } from '../hooks/useAuthContext';
 
 const BreadcrumbContext = createContext();
 
 export const BreadcrumbProvider = ({ children }) => {
-    const { user } = useAuthContext();
     const [breadcrumbPath, setBreadcrumbPath] = useState([]);
 
     const openBoard = (board) => {

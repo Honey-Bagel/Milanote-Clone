@@ -2,9 +2,6 @@
 import { useAuthContext } from "../hooks/useAuthContext";
 import socket from '../utils/socket';
 
-// components
-import FabCanvas from "../components/FabCanvas";
-
 const Home = () => {
 	const { user } = useAuthContext();
 	

@@ -1,6 +1,5 @@
-import { Canvas, Rect, Textbox, Group, FabricImage } from 'fabric';
 import { addNote, addBoard } from './objectUtilities/objectUtilities';
-import { addNoteEventListeners, addNoteType } from './objectUtilities/noteObjectUtilities';
+import { addNoteEventListeners } from './objectUtilities/noteObjectUtilities';
 
 // Handle adding objects to the canvas
 export const addObjectToCanvas = (canvas, boardId, objType, info, navigate, updateBreadcrumb) => {

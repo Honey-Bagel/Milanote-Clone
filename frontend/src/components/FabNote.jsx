@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Rect, Group, Textbox } from 'fabric';
 
 // Define a custom Fabric.js Note class by extending fabric.Rect

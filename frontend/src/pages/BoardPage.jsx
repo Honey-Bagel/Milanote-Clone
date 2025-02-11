@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import Board from "../components/Board";
 import TestBoard from '../components/TestBoard';
 import { useBoardsContext } from '../hooks/useBoardsContext';
 import { fetchBoard } from '../services/boardAPI';
@@ -9,7 +8,7 @@ import socket from '../utils/socket';
 
 const BoardPage = () => {
 	const boardId = useParams().id
-	const { board, dispatch } = useBoardsContext();
+	const { dispatch } = useBoardsContext();
 	const [error, setError] = useState(null);
 
 	useEffect(() => {

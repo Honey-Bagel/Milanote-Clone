@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Canvas, Rect, Point } from "fabric";
+import { Canvas, Point } from "fabric";
 import CustomNoteComponent from "./FabNote";
 
 const FabCanvas = () => {

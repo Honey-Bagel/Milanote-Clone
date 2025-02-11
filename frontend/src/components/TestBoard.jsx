@@ -2,10 +2,6 @@ import React, { useEffect } from 'react';
 import { useCanvasInit } from '../hooks/canvasHooks/useCanvasInit';
 import { useCanvasSocketEvents } from '../hooks/canvasHooks/useCanvasSocketEvents';
 import { useCanvasEventListeners } from '../hooks/canvasHooks/useCanvasEventListeners';
-import { createObject } from '../services/objectAPI';
-import { createNote } from '../utils/objects/noteObject';
-import { useAuthContext } from '../hooks/useAuthContext';
-import { createBoard } from '../utils/objects/boardObject';
 import { useNavigate } from 'react-router-dom';
 import { Point } from 'fabric';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
@@ -14,7 +10,6 @@ import { fetchBoard } from '../services/boardAPI';
 const TestBoard = (board) => {
     const { canvasRef, canvasInstanceRef } = useCanvasInit('milanote-canvas', board.boardId);
     const { breadcrumbPath, goToBoard, setBreadcrumbPath } = useBreadcrumb();
-    const { user } = useAuthContext();
     const navigate = useNavigate();
 
     useCanvasSocketEvents(board.boardId, canvasInstanceRef);

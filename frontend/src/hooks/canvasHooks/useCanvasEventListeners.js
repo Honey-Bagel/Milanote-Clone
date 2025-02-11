@@ -1,12 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { Point } from 'fabric';
 import { deleteItem } from '../../services/itemAPI';
-import { addObjectToCanvas } from '../../utils/canvasUtils';
 import { createNote } from '../../utils/objects/noteObject';
 import { createBoard } from '../../utils/objects/boardObject';
 import { useAuthContext } from '../useAuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const { user } = useAuthContext();
@@ -44,7 +42,6 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             const objectType = e.dataTransfer.getData("objectType");
 
             // get canvas pos
-            const rect = canvasContainer.getBoundingClientRect();
             const x = e.clientX - toolbarWidth;
             const y = e.clientY  - topbarHeight - navbarHeight;
 
