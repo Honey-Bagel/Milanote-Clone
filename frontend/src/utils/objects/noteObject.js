@@ -219,17 +219,20 @@ export class Note extends Group {
 
 // Helper function to call backend to create a note
 export const createNote = (canvasInstanceRef, boardId, position={x: 0, y: 0}) => {
+    const width = 200;
+    const height = 50;
+    const realPosition = {
+        x: position.x - width/2,
+        y: position.y - height/2,
+    }
     try {
         createItem(boardId, {
             title: "Note",
             content: "New Note",
             type: "note",
-            position: {
-                x: 10,
-                y: 10,
-            },
-            width: 200,
-            height: 50,
+            position: realPosition,
+            width,
+            height,
             board: boardId,
         }).then((res) => {
 			const { type, board } = res.data;

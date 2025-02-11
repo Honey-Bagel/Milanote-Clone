@@ -48,19 +48,6 @@ const TestBoard = (board) => {
         getPath(board.boardId);
     }, [board])
 
-    const addObject = (type) => {
-        if(!canvasRef) return;
-
-        switch(type) {
-            case "text":
-                createNote(canvasInstanceRef, board.boardId);
-                break;
-            case "board":
-                createBoard(canvasInstanceRef, board.boardId, user.id);
-                break;
-        }
-    };
-
     const resetPan = () => {
         canvasInstanceRef.current.absolutePan(new Point(0, 0));
         lastPosX.current = 0;
@@ -71,26 +58,6 @@ const TestBoard = (board) => {
     const onDragStart = (e, objectType) => {
         e.dataTransfer.setData('objectType', objectType);
     };
-
-    const handleDrop = (e) => {
-        e.preventDefault();
-        console.log('drop');
-        const objectType = e.dataTransfer.getData('objectType');
-        const { offsetX, offSetY } = e.nativeEvent;
-
-        switch(objectType) {
-            case "text":
-                createNote(canvasInstanceRef, board.boardId, { x: offsetX, y: offSetY });
-                break;
-            case "board":
-                createBoard(canvasInstanceRef, board.boardId, user.id, { x: offsetX, y: offSetY });
-                break;
-        }
-    }
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-    }
 
     const goToABoard = (board) => {
         navigate(`/board/${board.id}`);
@@ -115,17 +82,17 @@ const TestBoard = (board) => {
             <div className="flex h-screen">
                 {/* Toolbar */ }
                 <div id = "toolbar" className='w-20 bg-gray-800 text-white flex flex-col items-center p-4 space-y-4'>
-                    <button onClick={() => addObject("text")}>Add Note</button>
-                    <button onClick={() => addObject("board")}>Add Board</button>
-                    <button 
-                        draggable
-                        onDragStart={(e) => onDragStart(e, 'text')}
-                    >test</button>
+                    <div draggable="true" onDragStart={(e) => onDragStart(e, "text")}
+                        className="p-2 cursor-grab bg-gray-400 hover:bg-gray-300 rounded-md text-gray-100 text-center"
+                    >Add Note</div>
+                    <div draggable="true" onDragStart={(e) => onDragStart(e, "board")}
+                        className="p-2 cursor-grab bg-gray-400 hover:bg-gray-300 rounded-md text-gray-100 text-center"
+                    >Add Board</div>
                     <button className="absolute bottom-2" onClick={() => resetPan()}>Reset View</button>
                 </div>
                 { /* Canvas */ }
-                <div className="flex-1 relative bg-gray-100" onDrop={handleDrop}>
-                    <canvas ref={canvasRef} onDrop={handleDrop} onDragOver={handleDragOver}></canvas>
+                <div id="canvas-container" className="flex-1 relative bg-gray-100">
+                    <canvas id="fab-canvas" ref={canvasRef}></canvas>
                 </div>
             </div>
         </div>

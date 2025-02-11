@@ -21,6 +21,8 @@ export const createItem = async (boardId, object) => {
 	const token = user.token;
 	if(!token) return;
 
+    console.log(boardId)
+
 	const response = await axios.post('/api/items', {
 		object
 	}, {

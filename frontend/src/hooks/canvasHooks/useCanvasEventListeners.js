@@ -1,8 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { Point } from 'fabric';
 import { deleteItem } from '../../services/itemAPI';
+import { addObjectToCanvas } from '../../utils/canvasUtils';
+import { createNote } from '../../utils/objects/noteObject';
+import { createBoard } from '../../utils/objects/boardObject';
+import { useAuthContext } from '../useAuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
+    const { user } = useAuthContext();
+    const navigate = useNavigate();
     const EXPAND_THRESHOLD = 100;
     const EXPAND_AMOUNT = 500; // make a constant file for these
     const isPanning = useRef(false);
@@ -10,31 +18,67 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const lastPosY = useRef(0);
 
     useEffect(() => {
+        const canvasContainer = document.getElementById('canvas-container');
         const canvasInstance = canvasInstanceRef.current;
         let viewportWidth = canvasInstance.getWidth();
-	let viewportHeight = canvasInstance.getHeight();
-        if(!canvasInstance) return;
-        
-        canvasInstance.on('mouse:wheel', (event) => {
-            event.e.preventDefault();
-            event.e.stopPropagation();
-            let deltaX = 0;
-            let deltaY = 0;
-            if(event.e.shiftKey) {
-                deltaX = event.e.deltaY > 0 ? 1 : -1;
-            } else {
-                deltaY = event.e.deltaY > 0 ? 1 : -1;
-            }
-            const panX = canvasInstance.viewportTransform[4];
-            const panY = canvasInstance.viewportTransform[5];
+	    let viewportHeight = canvasInstance.getHeight();
+        const navbar = document.getElementById('navbar');
+        const toolbar = document.getElementById('toolbar');
+        const topbar = document.getElementById('topbar');
 
-            if(canvasInstance.getWidth() - panX + (deltaX * 30) <= viewportWidth && ((deltaX * 30) - panX) > 0) {
-                canvasInstance.relativePan({ x: -deltaX * 30, y: 0 });
+        const navbarHeight = navbar ? navbar.offsetHeight : 0;
+        const toolbarWidth = toolbar ? toolbar.offsetWidth : 0;
+        const topbarHeight = topbar ? topbar.offsetHeight : 0;
+        if(!canvasInstance) return;
+
+        /* Handle Drag and Drop Object Creation */
+
+        const handleDragOver = (e) => {
+            e.preventDefault();
+        };
+
+        const handleDrop = (e) => {
+            e.preventDefault();
+            console.log('drop')
+
+            const objectType = e.dataTransfer.getData("objectType");
+
+            // get canvas pos
+            const rect = canvasContainer.getBoundingClientRect();
+            const x = e.clientX - toolbarWidth;
+            const y = e.clientY  - topbarHeight - navbarHeight;
+
+            switch(objectType) {
+                case "text":
+                    createNote(canvasInstanceRef, boardId, { x, y });
+                    break;
+                case "board":
+                    createBoard(canvasInstanceRef, boardId, user.id, navigate, { x, y });
+                    break;
             }
-            if(canvasInstance.getHeight() - panY + (deltaY * 30) <= viewportHeight && ((deltaY * 30) - panY) >= 0) {
-                canvasInstance.relativePan({ x: 0, y: -deltaY * 30});
-            }
-        });
+        }
+
+        
+        // canvasInstance.on('mouse:wheel', (event) => {
+        //     event.e.preventDefault();
+        //     event.e.stopPropagation();
+        //     let deltaX = 0;
+        //     let deltaY = 0;
+        //     if(event.e.shiftKey) {
+        //         deltaX = event.e.deltaY > 0 ? 1 : -1;
+        //     } else {
+        //         deltaY = event.e.deltaY > 0 ? 1 : -1;
+        //     }
+        //     const panX = canvasInstance.viewportTransform[4];
+        //     const panY = canvasInstance.viewportTransform[5];
+
+        //     if(canvasInstance.getWidth() - panX + (deltaX * 30) <= viewportWidth && ((deltaX * 30) - panX) > 0) {
+        //         canvasInstance.relativePan({ x: -deltaX * 30, y: 0 });
+        //     }
+        //     if(canvasInstance.getHeight() - panY + (deltaY * 30) <= viewportHeight && ((deltaY * 30) - panY) >= 0) {
+        //         canvasInstance.relativePan({ x: 0, y: -deltaY * 30});
+        //     }
+        // });
 
         const checkCanvasEdges = (object) => {
             let newViewportHeight = canvasInstance.height;
@@ -70,14 +114,6 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
 
         // Sets the size of the canvas
         const resizeCanvas = () => {
-            const navbar = document.getElementById('navbar');
-            const toolbar = document.getElementById('toolbar');
-            const topbar = document.getElementById('topbar');
-
-            const navbarHeight = navbar ? navbar.offsetHeight : 0;
-            const toolbarWidth = toolbar ? toolbar.offsetWidth : 0;
-            const topbarHeight = topbar ? topbar.offsetHeight : 0;
-
             const availableHeight = window.innerHeight - navbarHeight - topbarHeight;
             const availableWidth = window.innerWidth - toolbarWidth;
 
@@ -193,13 +229,17 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
         };
         
         window.addEventListener('keydown', handleKeyDown);
-
         window.addEventListener('resize', resizeCanvas);
+
+        canvasContainer.addEventListener('dragover', handleDragOver);
+        canvasContainer.addEventListener('drop', handleDrop);
         // end keyboard listener
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('resize', resizeCanvas);
+            canvasContainer.removeEventListener('dragover', handleDragOver)
+            canvasContainer.removeEventListener('drop', handleDrop);
         }
 
     }, [canvasInstanceRef, boardId]);

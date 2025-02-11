@@ -14,14 +14,13 @@ export const addNote = (boardId, options) => {
     });
 };
 
-export const addBoard = (boardId, options, navigate, updateBreadcrumb) => {
+export const addBoard = (boardId, options, navigate) => {
     return new Board({
         id: options._id,
         title: options.title,
         boardId: boardId,
         position: options.position,
         navigate,
-        updateBreadcrumb,
         root: false,
     })
 }
