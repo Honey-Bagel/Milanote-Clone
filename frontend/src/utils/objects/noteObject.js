@@ -176,6 +176,7 @@ export class Note extends Group {
         height: Math.round(this.height),
       };
       updateItem(this.id, this.boardId, "notes", updates);
+      this.canvas.bringObjectToFront(this);
     }
   }
 

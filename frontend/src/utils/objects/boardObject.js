@@ -155,6 +155,7 @@ export class Board extends Group {
         position: { x: this.left, y: this.top },
         };
         updateItem(this.id, this.boardId, "boards", updates);
+        this.canvas.bringObjectToFront(this);
     }
     }
 

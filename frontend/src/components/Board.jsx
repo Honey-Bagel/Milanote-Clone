@@ -6,7 +6,6 @@ import { useAuthContext } from '../hooks/useAuthContext';
 import { useNotesContext } from '../hooks/useNotesContext';
 
 // Components
-import ToolBar from './ToolBar';
 import BoardNavBar from './BoardNavBar';
 
 const Board = (board) => {
@@ -27,7 +26,6 @@ const Board = (board) => {
 	return (
 		<div>
 			<BoardNavBar />
-			<ToolBar addNote={tbAddNote} addBoard={tbAddBoard}></ToolBar>
 			<div>
 				<div id="canvas-container">
 				<canvas ref={canvasRef}/>

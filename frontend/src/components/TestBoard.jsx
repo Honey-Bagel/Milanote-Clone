@@ -65,6 +65,7 @@ const TestBoard = (board) => {
         canvasInstanceRef.current.absolutePan(new Point(0, 0));
         lastPosX.current = 0;
         lastPosY.current = 0;
+        canvasInstanceRef.current.setZoom(1);
     }
     
     const onDragStart = (e, objectType) => {
@@ -120,7 +121,7 @@ const TestBoard = (board) => {
                         draggable
                         onDragStart={(e) => onDragStart(e, 'text')}
                     >test</button>
-                    <button className="absolute bottom-2" onClick={() => resetPan()}>Reset Pan</button>
+                    <button className="absolute bottom-2" onClick={() => resetPan()}>Reset View</button>
                 </div>
                 { /* Canvas */ }
                 <div className="flex-1 relative bg-gray-100" onDrop={handleDrop}>

@@ -72,11 +72,13 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
         const resizeCanvas = () => {
             const navbar = document.getElementById('navbar');
             const toolbar = document.getElementById('toolbar');
+            const topbar = document.getElementById('topbar');
 
             const navbarHeight = navbar ? navbar.offsetHeight : 0;
             const toolbarWidth = toolbar ? toolbar.offsetWidth : 0;
+            const topbarHeight = topbar ? topbar.offsetHeight : 0;
 
-            const availableHeight = window.innerHeight - navbarHeight;
+            const availableHeight = window.innerHeight - navbarHeight - topbarHeight;
             const availableWidth = window.innerWidth - toolbarWidth;
 
             console.log("height: " + window.innerHeight + " - available height: " + availableHeight )
@@ -84,6 +86,17 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             canvasInstance.setWidth(availableWidth);
             canvasInstance.setHeight(availableHeight);
             canvasInstance.renderAll();
+        };
+
+        const handleZoom = (event) => {
+            let delta = event.e.deltaY;
+            let zoom = canvasInstance.getZoom();
+            zoom *= 0.999 ** delta;
+            if (zoom > 20) zoom = 20;
+            if (zoom < 0.01) zoom = 0.01;
+            canvasInstance.zoomToPoint({ x: event.e.offsetX, y: event.e.offsetY }, zoom);
+            event.e.preventDefault();
+            event.e.stopPropagation();
         }
 
         resizeCanvas();
@@ -142,6 +155,10 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     
         canvasInstance.on('object:added', (e) => {
             checkCanvasEdges(e.target);
+        })
+        
+        canvasInstance.on('mouse:wheel', (e) => {
+            handleZoom(e);
         })
 
         // Handle keyboard backspace/delete event to delete notes
