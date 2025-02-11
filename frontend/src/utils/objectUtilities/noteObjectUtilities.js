@@ -80,20 +80,4 @@ export const addNoteEventListeners = (canvas, boardId, object) => {
     });
 
     // Update the note to save the text when the textbox is unfocused
-    textbox.on('editing:exited', () => {
-        if(textbox.hiddenTextarea) {
-            textbox.hiddenTextarea.blur();
-        }
-        if(object.id) { // Check if object id exists
-            try {
-                updateObject(object.id, boardId, { // Update the note matching the id
-                    content: textbox.text
-                }).then((res) => {
-                    console.log(res);
-                });
-            } catch (e) {
-                console.log(e);
-            }
-        }
-    });
 }

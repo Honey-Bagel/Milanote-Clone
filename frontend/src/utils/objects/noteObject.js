@@ -1,5 +1,4 @@
 import { Rect, Textbox, Group } from "fabric";
-import { updateObject } from "../../services/objectAPI";
 import { createItem, updateItem } from "../../services/itemAPI";
 import { addNote } from '../../utils/objectUtilities/objectUtilities';
 
@@ -187,7 +186,7 @@ export class Note extends Group {
     }
     if(this.id) {
         try {
-            updateObject(this.id, this.boardId, {
+            updateItem(this.id, this.boardId, "notes", {
                 content: this.textbox.text,
             }).then((res) => {
                 console.log(res);

@@ -14,6 +14,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const isPanning = useRef(false);
     const lastPosX = useRef(0);
     const lastPosY = useRef(0);
+    const canDelete = useRef(true);
 
     useEffect(() => {
         const canvasContainer = document.getElementById('canvas-container');
@@ -192,6 +193,14 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
         
         canvasInstance.on('mouse:wheel', (e) => {
             handleZoom(e);
+        });
+
+        canvasInstance.on("text:editing:entered", (e) => {
+            canDelete.current = false;
+        });
+
+        canvasInstance.on("text:editing:exited", (e) => {
+            canDelete.current = true;
         })
 
         // Handle keyboard backspace/delete event to delete notes
@@ -200,7 +209,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             if(canvasInstance.getActiveObject() && !canvasInstance.getActiveObject().type) {
                 return;
             }
-            if((event.key === 'Delete' || event.key === 'Backspace') && canvasInstance.getActiveObjects().length >= 1) {
+            if(canDelete.current && (event.key === 'Delete' || event.key === 'Backspace') && canvasInstance.getActiveObjects().length >= 1) {
                 canvasInstance.getActiveObjects().forEach((obj) => {
                 const activeObject = obj;
                 if(activeObject.id) {
