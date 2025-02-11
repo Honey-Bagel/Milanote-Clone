@@ -33,24 +33,6 @@ export const useCanvasInit = (canvasId, boardId) => {
             canvas.renderAll();
         };
 
-        const constructBoardStack = async () => {
-            console.log('making board stack');
-            const history = await getParentBoard(boardId);
-            canvasInstanceRef.current.history = history;
-        }
-
-        const getParentBoard = async (boardId) => {
-            const response = await fetchBoard(boardId);
-            const newBoard = response.data;
-            if(newBoard.root) {
-                return [boardId];
-            } else {
-                const parentHist = await getParentBoard(newBoard.board);
-                return [boardId].concat(parentHist);
-            }
-        }
-        constructBoardStack();
-
         window.addEventListener('resize', resizeCanvas());
 
         resizeCanvas();
@@ -66,8 +48,8 @@ export const useCanvasInit = (canvasId, boardId) => {
                     dispatch({ type: 'SET_ITEMS', payload: res.data });
                     console.log('res data', res.data);
 
-                    res.data.forEach((note) => {
-                        addObjectToCanvas(canvas, boardId, note.type, note, navigate, openBoard);
+                    res.data.forEach((item) => {
+                        addObjectToCanvas(canvas, boardId, item.type, item, navigate, openBoard);
                     })
                 })
             } catch (e) {

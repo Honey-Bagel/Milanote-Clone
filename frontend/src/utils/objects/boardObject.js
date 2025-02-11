@@ -152,6 +152,7 @@ export class Board extends Group {
         const updates = {
         position: { x: this.left, y: this.top },
         };
+        console.log('udpda', this)
         updateItem(this.id, this.boardId, "boards", updates);
         this.canvas.bringObjectToFront(this);
     }

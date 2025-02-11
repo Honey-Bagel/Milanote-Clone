@@ -21,21 +21,21 @@ module.exports = (io) => {
 			socket.to(boardId).emit('updateCursor', cursorPosition);
 		})
 
-		socket.on('updateObject', ({boardId, id, updates}) => {
+		socket.on('updateItem', ({boardId, id, updates}) => {
 			console.log(`User ${socket.id} updated note ${id} on board ${boardId}`);
 
-			socket.to(boardId).emit('noteUpdated', {id, updates});
+			socket.to(boardId).emit('itemUpdated', {id, updates});
 		})
 
-		socket.on('createObject', ({boardId, note}) => {
+		socket.on('createItem', ({boardId, note}) => {
 			console.log(`User ${socket.id} create note ${note._id} on board ${boardId}`)
 
-			socket.to(boardId).emit('noteCreated', { note });
+			socket.to(boardId).emit('itemCreated', { note });
 		})
 
-		socket.on('deleteObject', ({boardId, id}) => {
+		socket.on('deleteItem', ({boardId, id}) => {
 			console.log(`User ${socket.id} deleted note ${id} on board ${boardId}`)
-			socket.to(boardId).emit('noteDeleted', { id });
+			socket.to(boardId).emit('itemDeleted', { id });
 		})
 
 

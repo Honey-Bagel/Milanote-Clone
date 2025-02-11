@@ -1,68 +1,55 @@
+import { useNavigate } from 'react-router-dom';
 import { addObjectToCanvas } from '../../utils/canvasUtils';
 import socket from '../../utils/socket';
 import { useEffect } from 'react';
+import { useBreadcrumb } from '../../context/BreadcrumbContext';
 
 export const useCanvasSocketEvents = (boardId, canvasRef) => {
+    const navigate = useNavigate();
+    const { openBoard } = useBreadcrumb();
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if(!socket || !canvas) return; 
 
         // Handles when objects are updated
-        socket.on('noteUpdated', ({ id, updates }) => {
-            const note = canvas.getObjects().find(obj => obj.id === id);
-            if(!note) return;
-            if(updates.position && updates.width && updates.height) {
+        socket.on('itemUpdated', ({ id, updates }) => {
+            const object = canvas.getObjects().find(obj => obj.id === id);
+            if(!object) return;
+            console.log(updates);
+            if(updates.position || updates.width && updates.height) {
                 console.log('pos', updates.position);
-                note.set({
+                object.set({
                     top: updates.position.y,
                     left: updates.position.x,
-                    width: updates.width,
-                    height: updates.height,
                 });
-                note.setCoords();
+                object.setCoords();
             }
 
             if(updates.content) {
-                // NEED TO FIX - textbox doesnt resize here
-                let rect;
-                let textbox;
-                note.forEachObject((obj) => {
-                    if(obj.type === 'textbox') {
-                        textbox = obj;
-                        obj.set({
-                            text: updates.content,
-                        });
-                    } else if(obj.type === 'rect') {
-                        rect = obj;
-                    }
-                });
-                
-                if(updates.height) {
-                    rect.setHeight(updates.height);
-                    rect.setCoords();
-                }
-                textbox.setCoords();
+                object.textbox.set({ text: updates.content });
             }
-            console.log(note.height);
-            note.setCoords();
 
             canvas.renderAll();
         });
 
         // Handles the creation of notes
-        socket.on('noteCreated', ({ note }) => {
-            if(note) {
-                addObjectToCanvas(canvas, boardId, "note", {
-                    note
-                });
+        socket.on('itemCreated', ({ item }) => {
+            if(item) {
+                addObjectToCanvas(canvas, boardId, item.type, {
+                    item
+                },
+                navigate,
+                openBoard
+            );
             }
         });
 
         // Handles deleted noets // seems to be broken?
-        socket.on('noteDeleted', ({ id }) => {
-            const note = canvas.getObjects().find(obj => obj.id === id);
-            if(note) {
-                canvas.remove(note);
+        socket.on('itemDeleted', ({ id }) => {
+            const item = canvas.getObjects().find(obj => obj.id === id);
+            if(item) {
+                canvas.remove(item);
                 canvas.renderAll();
             }
         });
