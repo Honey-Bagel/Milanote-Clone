@@ -1,6 +1,7 @@
 import { Rect, Textbox, Group } from "fabric";
 import { createItem, updateItem } from "../../services/itemAPI";
 import { addBoard } from "../objectUtilities/objectUtilities";
+import { renderToPipeableStream } from "react-dom/server";
 
 export class Board extends Group {
     static type = "board";
@@ -81,6 +82,7 @@ export class Board extends Group {
             lockRotation: true,
             hasBorders: false,
             hasControls: false,
+            subTargetCheck: true,
             ...rest,
         });
         
@@ -102,10 +104,41 @@ export class Board extends Group {
 
     setupEventListeners() {
         // Open the new board
-        this.on("mousedblclick", () => {
-            console.log('double click')
-            this.openBoard();
+        this.rect.on("mousedblclick", (event) => {
+                this.openBoard();
         });
+
+        /* Textbox Event Listeners */
+        this.textbox.on("mousedblclick", () => {
+            this.canvas?.setActiveObject(this.textbox);
+            this.textbox.enterEditing();
+            this.textbox.hiddenTextarea?.focus();
+        });
+
+        this.textbox.on("editing:entered", (event) => {
+            //const index = this.textbox.text.length; // Starts the cursor at the end of the text
+            const index = this.textbox.getSelectionStartFromPointer(event.e); // Starts the cursor at the mouse dblclick location
+
+            this.textbox.selectionStart = index;
+            this.textbox.selectionEnd = index;
+
+            const exitEditingOnEnter = (event) => {
+                if(event.key === "Enter") {
+                    event.preventDefault();
+                    this.textbox.exitEditing();
+                    this.canvas?.discardActiveObject();
+                    this.canvas?.renderAll();
+                    window.removeEventListener("keydown", exitEditingOnEnter);
+                }
+            };
+            window.addEventListener("keydown", exitEditingOnEnter);
+        });
+
+        this.textbox.on("editing:exited", () => {
+            this.syncContent();
+        });
+
+
 
         // **Save position & size when note is moved or resized**
         this.on("modified", () => {
@@ -128,10 +161,18 @@ export class Board extends Group {
             this.canvas?.renderAll();
         });
 
-        this.textbox.on("selected", () => {
-            console.log('select textbox ')
-        })
 
+    };
+
+    syncContent() {
+        if(this.textbox.hiddenTextarea) {
+            this.textbox.hiddenTextarea.blur();
+        }
+        if(this.id) {
+            updateItem(this.id, this.boardId, "boards", {
+                title: this.textbox.text,
+            });
+        }
     }
 
     toggleCustomBorder(toggle = null) {
