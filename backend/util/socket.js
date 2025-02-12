@@ -28,7 +28,7 @@ module.exports = (io) => {
 		})
 
 		socket.on('createItem', ({boardId, note}) => {
-			console.log(`User ${socket.id} create note ${note._id} on board ${boardId}`)
+			console.log(`User ${socket.id} create note ${note} on board ${boardId}`)
 
 			socket.to(boardId).emit('itemCreated', { note });
 		})
