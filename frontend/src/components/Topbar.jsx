@@ -1,6 +1,9 @@
 import React from 'react';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
 import { useNavigate } from 'react-router-dom';
+import Breadcrumbs from '@mui/material/Breadcrumbs';
+import Link from '@mui/material/Link';
+import { Typography } from '@mui/material';
 
 const Topbar = () => {
     const { breadcrumbPath, goToBoard } = useBreadcrumb();
@@ -11,18 +14,29 @@ const Topbar = () => {
         goToBoard(board);
     };
 
+
     return (
         <div id="topbar" className="h-10 bg-gray-900 text-white flex flex-1 items-center p-4">
-            {breadcrumbPath.map((board, index) => (
-                <React.Fragment key={board.id}>
-                    <button className="text-blue-500 hover:underline" onClick={() => goToABoard(board)}>
+        <Breadcrumbs aria-label="breadcrumb" sx={{ color: 'white'}}>
+            {breadcrumbPath.map((board, index) => 
+                index === breadcrumbPath.length - 1 ? (
+                    <Typography key={board.id} color="white">
                         {board.name}
-                    </button>
-                    { index < breadcrumbPath.length - 1 && <span>/</span>}
-                </React.Fragment>
-            ))}
+                    </Typography>
+                ) : (
+                    <Link
+                        key={board.id}
+                        onClick={() => goToABoard(board)}
+                        style={{ cursor: 'pointer' }}
+                        color='primary'
+                    >
+                        {board.name}
+                    </Link>
+                )
+            )}
+        </Breadcrumbs>
         </div>
-    );
+    )
 };
 
 export default Topbar;

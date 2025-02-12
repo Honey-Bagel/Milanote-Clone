@@ -2,8 +2,6 @@ import React, { useEffect } from 'react';
 import { useCanvasInit } from '../hooks/canvasHooks/useCanvasInit';
 import { useCanvasSocketEvents } from '../hooks/canvasHooks/useCanvasSocketEvents';
 import { useCanvasEventListeners } from '../hooks/canvasHooks/useCanvasEventListeners';
-import { useNavigate } from 'react-router-dom';
-import { Point } from 'fabric';
 import { useBreadcrumb } from '../context/BreadcrumbContext';
 import { fetchBoard } from '../services/boardAPI';
 
@@ -52,7 +50,7 @@ const TestBoard = (board) => {
             <Topbar />
             <div className="flex h-screen">
                 {/* Toolbar */ }
-                <Toolbar canvasInstanceRef={canvasInstanceRef} lastPosX={lastPosX} lastPosY={lastPosY}/>
+                <Toolbar props={{canvasInstanceRef, lastPosX, lastPosY}} />
                 { /* Canvas */ }
                 <div id="canvas-container" className="flex-1 relative bg-gray-100">
                     <canvas id="fab-canvas" ref={canvasRef}></canvas>

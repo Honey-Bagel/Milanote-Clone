@@ -1,6 +1,8 @@
 import { Point } from "fabric";
 
-const Toolbar = (canvasInstanceRef, lastPosX, lastPosY) => {
+const Toolbar = (props) => {
+    const { canvasInstanceRef, lastPosX, lastPosY } = props.props;
+    
 
     const resetView = () => {
         canvasInstanceRef.current.absolutePan(new Point(0, 0));
