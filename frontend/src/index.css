@@ -47,10 +47,6 @@ header a {
 
 
 /* Profile dropdown */
-.relative-div{
-	position: relative;
-	margin-left: 10px;
-}
 
 .relative-div .user-profile{
 	width: 50px;

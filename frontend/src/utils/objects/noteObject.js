@@ -1,8 +1,9 @@
-import { Rect, Textbox, Group } from "fabric";
+import { Rect, Textbox } from "fabric";
+import { Base } from "./baseObject";
 import { createItem, updateItem } from "../../services/itemAPI";
 import { addNote } from '../../utils/objectUtilities/objectUtilities';
 
-export class Note extends Group {
+export class Note extends Base {
   static type = "note";
 
   constructor(options = {}) {
@@ -67,7 +68,7 @@ export class Note extends Group {
       splitByGrapheme: true
     });
 
-    super([rect, textbox, customBorder], {
+    super([rect, textbox, customBorder], options={
       left: position.x,
       top: position.y,
       width,
@@ -195,7 +196,25 @@ export class Note extends Group {
             console.log(e);
         }
     }
+  };
+
+  saveColor() {
+    if(this.boardId) {
+        const updates = {
+            color: this.rect.fill,
+        };
+        updateItem(this.id, this.boardId, "notes", updates);
+    }
   }
+
+  getColor() {
+    return this.rect.fill;
+  };
+
+  setColor(hex) {
+    this.rect.set("fill", hex);
+    this.saveColor();
+  };
 
   // **Serialization (Save/Load)**
   toObject() {

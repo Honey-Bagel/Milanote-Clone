@@ -9,6 +9,9 @@ const BaseItemSchema = new mongoose.Schema({
     board: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
+    },
+    color: {
+        type: String,
     }
 },
 { 

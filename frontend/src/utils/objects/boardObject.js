@@ -1,9 +1,8 @@
-import { Rect, Textbox, Group } from "fabric";
+import { Rect, Textbox } from "fabric";
+import { Base } from "./baseObject";
 import { createItem, updateItem } from "../../services/itemAPI";
 import { addBoard } from "../objectUtilities/objectUtilities";
-import { renderToPipeableStream } from "react-dom/server";
-
-export class Board extends Group {
+export class Board extends Base {
     static type = "board";
 
     constructor(options = {}) {
@@ -74,7 +73,7 @@ export class Board extends Group {
             splitByGrapheme: true,
         });
 
-        super([rect, textbox, customBorder], {
+        super([rect, textbox, customBorder], options={
             left: position.x,
             top: position.y,
             width,
@@ -98,11 +97,13 @@ export class Board extends Group {
         this.position = position;
         this.navigate = navigate;
         this.boardId = boardId;
+        this.color = backgroundColor;
 
         this.setupEventListeners();
     }
 
     setupEventListeners() {
+        super.setupEventListeners();
         // Open the new board
         this.rect.on("mousedblclick", (event) => {
                 this.openBoard();
@@ -193,10 +194,18 @@ export class Board extends Group {
         const updates = {
         position: { x: this.left, y: this.top },
         };
-        console.log('udpda', this)
         updateItem(this.id, this.boardId, "boards", updates);
         this.canvas.bringObjectToFront(this);
     }
+    };
+
+    saveColor() {
+        if(this.boardId) {
+            const updates = {
+                color: this.rect.fill,
+            };
+            updateItem(this.id, this.boardId, "boards", updates);
+        }
     }
 
     openBoard() {
@@ -205,7 +214,16 @@ export class Board extends Group {
             const name = this.title;
             this.navigate(`/board/${this.id}`);
         }
-    }
+    };
+
+    getColor() {
+        return this.rect.fill;
+    };
+
+    setColor(hex) {
+        this.rect.set("fill", hex);
+        this.saveColor();
+    };
 
      // **Serialization (Save/Load)**
   toObject() {

@@ -1,49 +1,36 @@
-import { Group } from "fabric";
+import { Group, Rect, Textbox} from "fabric";
 import { updateItem } from "../../services/itemAPI";
 
 export class Base extends Group {
     static type = "base";
 
-    constructor(options = {}) {
+    constructor(elements = [], options = {}) {
         const {
             boardId = null,
             id = null,
-            position = {
-                x: 10,
-                y: 10,
-            },
-            width = 100,
-            height = 50,
+            color = "#DCDCDC",
+            objects = null,
             ...rest
         } = options;
 
-        super();
+        super(elements, options);
 
         this.boardId = boardId;
         this.id = id;
+        this.color = color;
+        this.objects = this.objects;
 
-        this.setupEventListeners();
     }
 
     setupEventListeners() {
-        this.on("modified", () => {
-            this.syncNotePosition();
-        });
-
-        this.on("scaled", () => {
-            this.set({ scaleX: 1, scaleY: 1 });
-            this.canvas?.renderAll();
-        });
+        
     }
 
-    syncNotePosition() {
-        if(this.boardId) {
-            const updates = {
-                position: { x: this.left, y: this.top },
-                width: Math.round(this.width),
-                height: Math.round(this.height),
-            };
-            updateItem(this.id, this.boardId, updates);
-        }
+    setColor() {
+        console.log('Parent set color')
+    }
+
+    getColor() {
+        console.log('Parent get color');
     }
 }

@@ -9,7 +9,7 @@ export const addNote = (boardId, options) => {
         position: options.position,
         width: options.width,
         height: options.height,
-        backgroundColor: options.backgroundColor,
+        backgroundColor: options.color,
         textColor: options.textColor,
     });
 };
@@ -20,6 +20,7 @@ export const addBoard = (boardId, options, navigate) => {
         title: options.title,
         boardId: boardId,
         position: options.position,
+        backgroundColor: options.color,
         navigate,
         root: false,
     })
