@@ -23,6 +23,9 @@
 - Socket.IO
 ### User Authentication:
 - JWT
+### Misc:
+- Motion.js -> animations
+- react-color -> color selections
 
 ## Roadmap
 - Update UI
