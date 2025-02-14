@@ -20,6 +20,17 @@ const Toolbar = (props) => {
         }
     }, [activeObject]);
 
+    const updateColors = (hex) => {
+        if(activeObject && activeObject.length > 1) {
+            activeObject.forEach(object => {
+                object.setColor(hex);
+            });
+        } else {
+            activeObject[0].setColor(hex);
+        }
+        canvasInstanceRef.current.renderAll();
+    }
+
 	const resetView = () => {
 		canvasInstanceRef.current.absolutePan(new Point(0, 0));
 		lastPosX.current = 0;
@@ -51,8 +62,7 @@ const Toolbar = (props) => {
                                         onChangeComplete={(color) => {
                                             console.log('1')
                                             setColor(color.hex);
-                                            activeObject[0].setColor(color.hex);
-                                            canvasInstanceRef.current.renderAll();
+                                            updateColors(color.hex);
                                         }}
                                         triangle="hide"
                                     />
