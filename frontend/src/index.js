@@ -5,15 +5,18 @@ import App from './App';
 import { AuthContextProvider } from './context/AuthContext';
 import { NotesContextProvider } from './context/NoteContext';
 import { BreadcrumbProvider } from './context/BreadcrumbContext';
+import { ActiveObjectProvider } from './hooks/useActiveObject';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
 	<React.StrictMode>
 		<AuthContextProvider>
 			<NotesContextProvider>
-                <BreadcrumbProvider>
-                    <App />
-                </BreadcrumbProvider>
+                <ActiveObjectProvider>
+                    <BreadcrumbProvider>
+                        <App />
+                    </BreadcrumbProvider>
+                </ActiveObjectProvider>
 			</NotesContextProvider>
 		</AuthContextProvider>
 	</React.StrictMode>

@@ -5,10 +5,12 @@ import { createNote } from '../../utils/objects/noteObject';
 import { createBoard } from '../../utils/objects/boardObject';
 import { useAuthContext } from '../useAuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useActiveObject } from '../useActiveObject';
 
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const { user } = useAuthContext();
     const navigate = useNavigate();
+    const { setActiveObject } = useActiveObject();
     const EXPAND_THRESHOLD = 100;
     const EXPAND_AMOUNT = 500; // make a constant file for these
     const isPanning = useRef(false);
@@ -142,7 +144,12 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
                     hasControls: false,
                     selectable: false,
                 });
-            }
+            };
+            setActiveObject(event.selected);
+        });
+
+        canvasInstance.on('selection:cleared', () => {
+            setActiveObject(null);
         });
 
         // Handles panning the canvas
