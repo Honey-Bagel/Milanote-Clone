@@ -1,5 +1,6 @@
 import { Note } from "../objects/noteObject";
 import { Board } from "../objects/boardObject";
+import { Image } from "../objects/imageObject";
 
 export const addNote = (boardId, options) => {
     return new Note({
@@ -25,3 +26,15 @@ export const addBoard = (boardId, options, navigate) => {
         root: false,
     })
 }
+
+export const addImage = (boardId, options) => {
+    return new Image({
+        id: options._id,
+        boardId,
+        position: options.position,
+        width: options.width,
+        height: options.height,
+        src: options.src,
+    });
+
+};

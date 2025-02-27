@@ -9,14 +9,9 @@ const imageSchema = new mongoose.Schema({
 	src: {
 		type: String, required: true,
 	},
-	left: {
-		type: Number,
-		default: 0,
-	},
-	top: {
-		type: Number,
-		default: 0,
-	},
+	position: {
+            type: mongoose.Schema.Types.Mixed
+        },
 	width: {
 		type: Number,
 		default: 100,

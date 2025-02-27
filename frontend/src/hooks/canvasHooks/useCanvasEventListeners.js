@@ -3,9 +3,11 @@ import { Point } from 'fabric';
 import { deleteItem } from '../../services/itemAPI';
 import { createNote } from '../../utils/objects/noteObject';
 import { createBoard } from '../../utils/objects/boardObject';
+import { createImageObject } from '../../utils/objects/imageObject';
 import { useAuthContext } from '../useAuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useActiveObject } from '../useActiveObject';
+import axios from "axios";
 
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const { user } = useAuthContext();
@@ -40,45 +42,35 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
 
         const handleDrop = (e) => {
             e.preventDefault();
-            console.log('drop')
-
+            console.log('drop');
             const objectType = e.dataTransfer.getData("objectType");
+            if(objectType) {
 
-            // get canvas pos
-            const x = e.clientX - toolbarWidth;
-            const y = e.clientY  - topbarHeight - navbarHeight;
+                // get canvas pos
+                const x = e.clientX - toolbarWidth;
+                const y = e.clientY  - topbarHeight - navbarHeight;
 
-            switch(objectType) {
-                case "text":
-                    createNote(canvasInstanceRef, boardId, { x, y });
-                    break;
-                case "board":
-                    createBoard(canvasInstanceRef, boardId, user.id, navigate, { x, y });
-                    break;
+                switch(objectType) {
+                    case "text":
+                        createNote(canvasInstanceRef, boardId, { x, y });
+                        break;
+                    case "board":
+                        if(!user) return;
+                        createBoard(canvasInstanceRef, boardId, user.id, navigate, { x, y });
+                        break;
+                }
+            } else {
+                //console.log('file:', e.dataTransfer.files[0]);
+                const file = e.dataTransfer.files[0];
+                if(file) {
+                    const formData = new FormData();
+                    formData.append("image", file);
+                    formData.append("boardId", boardId);
+                    createImageObject(canvasInstanceRef, formData);
+                }
             }
+            
         }
-
-        
-        // canvasInstance.on('mouse:wheel', (event) => {
-        //     event.e.preventDefault();
-        //     event.e.stopPropagation();
-        //     let deltaX = 0;
-        //     let deltaY = 0;
-        //     if(event.e.shiftKey) {
-        //         deltaX = event.e.deltaY > 0 ? 1 : -1;
-        //     } else {
-        //         deltaY = event.e.deltaY > 0 ? 1 : -1;
-        //     }
-        //     const panX = canvasInstance.viewportTransform[4];
-        //     const panY = canvasInstance.viewportTransform[5];
-
-        //     if(canvasInstance.getWidth() - panX + (deltaX * 30) <= viewportWidth && ((deltaX * 30) - panX) > 0) {
-        //         canvasInstance.relativePan({ x: -deltaX * 30, y: 0 });
-        //     }
-        //     if(canvasInstance.getHeight() - panY + (deltaY * 30) <= viewportHeight && ((deltaY * 30) - panY) >= 0) {
-        //         canvasInstance.relativePan({ x: 0, y: -deltaY * 30});
-        //     }
-        // });
 
         const checkCanvasEdges = (object) => {
             let newViewportHeight = canvasInstance.height;
@@ -139,6 +131,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
 
         canvasInstance.on('selection:created', (event) => {
             if(event.selected[0].group) {
+                console.log('here');
                 event.selected[0].group.set({
                     hasBorders: false,
                     hasControls: false,
@@ -255,7 +248,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             canvasContainer.removeEventListener('drop', handleDrop);
         }
 
-    }, [canvasInstanceRef, boardId]);
+    }, [canvasInstanceRef, boardId, user]);
 
     return { lastPosX, lastPosY };
 }

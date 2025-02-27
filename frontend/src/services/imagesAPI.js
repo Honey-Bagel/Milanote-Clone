@@ -4,12 +4,14 @@ export const getImages = (boardId) => {
 	return axios.get(`/api/image/${boardId}`);
 };
 
-export const createImage = (image) => {
-	return axios.post('/api/image', image);
+export const createImage = (formData) => {
+	return axios.post('/api/image', formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+    });
 };
 
-export const updateImage = (id, updates) => {
-	return axios.put(`/api/image/${id}`, updates);
+export const updateImage = async (id, updates) => {
+	return await axios.put(`/api/image/${id}`, updates);
 };
 
 export const deleteImage = (id) => {

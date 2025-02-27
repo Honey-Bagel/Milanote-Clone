@@ -1,5 +1,6 @@
 const Image = require('../models/image');
 const mongoose = require('mongoose');
+const uuidv4 = require("uuid").v4;
 
 // get ALL User images
 const getImages = async (req, res) => {
@@ -16,17 +17,40 @@ const getImages = async (req, res) => {
 }
 
 // Create a new image
-const createImage = async (req, res) => {
+const uploadImage = async (req, res) => {
 	try {
-		if(!req.file) res.status(500).json({ error: 'Failed to create image'});
+		const { bucket } = await import("../util/firebase.mjs");
+        if(!req.file) return res.status(400).send("No file uploaded");
 
-		const imageBuffer = req.file.buffer.toString('base64');
-		
-		console.log(req.body);
-		const image = new Image(req.body);
-		await image.save();
-		res.status(201).json(image);
+        const { boardId } = req.body;
+        const fileName = `images/${uuidv4()}-${req.file.originalname}`;
+        const fileRef = bucket.file(fileName);
+
+        const stream = fileRef.createWriteStream({
+            metadata: {
+                contentType: req.file.mimetype,
+            },
+        });
+
+        stream.on("error", (err) => {
+            console.error(err);
+            res.status(500).send(err);
+        });
+
+        stream.on("finish", async () => {
+            await fileRef.makePublic();
+            const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+            const newImage = new Image({ src: imageUrl, boardId })
+            await newImage.save();
+
+            res.status(201).json({ message: "Image uploaded", newImage });
+        });
+
+        stream.end(req.file.buffer);
+
 	} catch (err) {
+        console.log(err);
 		res.status(500).json({error: 'Failed to create image'});
 	}
 }
@@ -65,4 +89,4 @@ const updateImage = async (req, res) => {
 	res.status(200).json(image);
 }
 
-module.exports = { getImages, createImage, deleteImage, updateImage };
+module.exports = { getImages, uploadImage, deleteImage, updateImage };
