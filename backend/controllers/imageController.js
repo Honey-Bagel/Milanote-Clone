@@ -22,7 +22,8 @@ const uploadImage = async (req, res) => {
 		const { bucket } = await import("../util/firebase.mjs");
         if(!req.file) return res.status(400).send("No file uploaded");
 
-        const { boardId } = req.body;
+        const options = JSON.parse(req.body.options);
+        
         const fileName = `images/${uuidv4()}-${req.file.originalname}`;
         const fileRef = bucket.file(fileName);
 
@@ -41,7 +42,7 @@ const uploadImage = async (req, res) => {
             await fileRef.makePublic();
             const imageUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
 
-            const newImage = new Image({ src: imageUrl, boardId })
+            const newImage = new Image({ src: imageUrl, ...options })
             await newImage.save();
 
             res.status(201).json({ message: "Image uploaded", newImage });

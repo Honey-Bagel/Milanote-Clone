@@ -5,7 +5,6 @@ import { addNoteEventListeners } from './objectUtilities/noteObjectUtilities';
 export const addObjectToCanvas = (canvas, boardId, objType, info, navigate, updateBreadcrumb) => {
     // Types = Note, Image, Board
     let object = null;
-    console.log(objType);
     switch(objType) {
         case "note":
             object = addNote(boardId, info);
@@ -55,6 +54,8 @@ export const attachObjectEvents = async (canvas, type, boardId, object) => {
             addNoteEventListeners(canvas, boardId, object); // Add the event listeners for a Note object
             break;
         case "board":
+            break;
+        case "image":
             break;
         default:
             console.log('Invalid object type.');

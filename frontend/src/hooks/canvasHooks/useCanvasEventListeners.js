@@ -44,12 +44,11 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             e.preventDefault();
             console.log('drop');
             const objectType = e.dataTransfer.getData("objectType");
+            // get the cursor position on the canvas
+            const x = e.clientX - toolbarWidth;
+            const y = e.clientY  - topbarHeight - navbarHeight;
+
             if(objectType) {
-
-                // get canvas pos
-                const x = e.clientX - toolbarWidth;
-                const y = e.clientY  - topbarHeight - navbarHeight;
-
                 switch(objectType) {
                     case "text":
                         createNote(canvasInstanceRef, boardId, { x, y });
@@ -65,8 +64,8 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
                 if(file) {
                     const formData = new FormData();
                     formData.append("image", file);
-                    formData.append("boardId", boardId);
-                    createImageObject(canvasInstanceRef, formData);
+                    
+                    createImageObject(canvasInstanceRef, formData, boardId, { x, y });
                 }
             }
             

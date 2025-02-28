@@ -8,7 +8,7 @@ export class Note extends Base {
 
   constructor(options = {}) {
     const {
-      content = "New Nota",
+      content = "New Note",
       width = 200,
       height = 100,
       backgroundColor = "#DCDCDC",

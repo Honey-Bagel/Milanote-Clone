@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
+const Item = require('./item');
 
 const imageSchema = new mongoose.Schema({
-	boardId: {
+	board: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'Board',
 		required: true,
@@ -34,4 +35,6 @@ const imageSchema = new mongoose.Schema({
 	},
 });
 
-module.exports = mongoose.model('Image', imageSchema)
+const Image = Item.discriminator("image", imageSchema);
+
+module.exports = Image;

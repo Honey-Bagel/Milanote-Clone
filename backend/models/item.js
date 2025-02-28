@@ -4,7 +4,7 @@ const BaseItemSchema = new mongoose.Schema({
     type: {
         type: String,
         required: true,
-        enum: ["board", "note"],
+        enum: ["board", "note", "image"],
     },
     board: {
         type: mongoose.Schema.Types.ObjectId,
