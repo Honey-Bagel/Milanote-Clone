@@ -71,7 +71,6 @@ const deleteObject = async (req, res) => {
 }
 
 const updateObject = async (req, res) => {
-	const io = getSocketInstance();
 	const { id } = req.params;
 	const { updates } = req.body;
 	const boardId = req.headers['board-id'];

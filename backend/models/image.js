@@ -21,14 +21,13 @@ const imageSchema = new mongoose.Schema({
 		type: Number,
 		default: 100,
 	},
-	scaleX: {
-		type: Number,
-		default: 1,
-	},
-	scaleY: {
-		type: Number,
-		default: 1,
-	},
+    scale: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {
+            x: 0.5,
+            y: 0.5,
+        }
+    },
 	angle: {
 		type: Number,
 		default: 0,

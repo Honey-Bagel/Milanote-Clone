@@ -18,10 +18,12 @@ export const useCanvasSocketEvents = (boardId, canvasRef) => {
             if(!object) return;
             console.log(updates);
             if(updates.position || updates.width && updates.height) {
-                console.log('pos', updates.position);
+                console.log('pos', updates);
                 object.set({
                     top: updates.position.y,
                     left: updates.position.x,
+                    scaleX: updates.scale ? updates.scale.x : 1,
+                    scaleY: updates.scale ? updates.scale.y : 1,
                 });
                 object.setCoords();
             }

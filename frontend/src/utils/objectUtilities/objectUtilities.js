@@ -35,6 +35,7 @@ export const addImage = (boardId, options) => {
         width: options.width,
         height: options.height,
         src: options.src,
+        scale: options.scale,
     });
 
 };

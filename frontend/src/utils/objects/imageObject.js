@@ -1,5 +1,5 @@
 import { Base } from "./baseObject";
-import { Rect, FabricImage } from "fabric";
+import { Rect, FabricImage, Control, controlsUtils, FabricObject } from "fabric";
 import { updateItem } from "../../services/itemAPI";
 import { addImage, addNote } from "../objectUtilities/objectUtilities";
 import { createImage } from "../../services/imagesAPI";
@@ -16,6 +16,10 @@ export class Image extends Base {
             position = {
                 x: 10,
                 y: 10,
+            },
+            scale = {
+                x: 0.5,
+                y: 0.5,
             },
             boardId = null,
             ...rest
@@ -41,13 +45,15 @@ export class Image extends Base {
             top: position.y,
             width,
             height,
-            lockRotation:true,
+            lockRotation: true,
+            lockUniScaling: true,
             hasBorders: false,
-            hasControls: false,
             ...rest,
         });
 
         this.customBorder = customBorder;
+        this.scaleX = scale.x;
+        this.scaleY = scale.y;
         this.id = id;
         this.boardId = boardId;
         this.position = position;
@@ -58,8 +64,8 @@ export class Image extends Base {
             crossOrigin: "anonymous"
         }).then((img) => {
             img.set({
-                scaleY: 0.5,
-                scaleX: 0.5,
+                scaleY: this.scaleY,
+                scaleX: this.scaleX,
                 left: position.x,
                 top: position.y,
             })
@@ -70,7 +76,43 @@ export class Image extends Base {
             this.canvas.renderAll();
         });
 
+        this.initControl();
         this.setupEventListeners();
+    };
+
+    initControl() {
+        this.setControlsVisibility({
+            mtr: false,
+            mt: false,
+            mb: false,
+            ml: false,
+            mr: false,
+            tl: false,
+            tr: false,
+            bl: false,
+            br: true,
+        });
+
+        this.controls.br = new Control({
+            x: 0.5,
+            y: 0.5,
+            cursorStyle: 'nwse-resize',
+            actionHandler: controlsUtils.scalingEqually,
+            actionName: 'scale',
+            render: this.renderCircleControl,
+        });
+    };
+
+    renderCircleControl(ctx, left, top, styleOverride, fabricObject) {
+        ctx.save();
+        ctx.fillStyle = "white";
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(left, top, 6, 0, Math.PI * 2, false);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
     };
 
     setupEventListeners() {
@@ -107,10 +149,12 @@ export class Image extends Base {
         if(this.boardId) {
             const updates = {
                 position: { x: this.left, y: this.top },
-                width: Math.round(this.width),
-                height: Math.round(this.height),
+                scale: {
+                    x: this.scaleX,
+                    y: this.scaleY,
+                }
             }
-            updateItem(this.id, this.boardId, "images", updates);
+            updateItem(this.id, this.boardId, "image", updates);
             this.canvas.bringObjectToFront();
         }
     };
@@ -141,6 +185,10 @@ export const createImageObject = (canvasInstanceRef, formData, boardId, position
     const type = "image";
     const options = {
         position: position,
+        scale: {
+            x: 0.5,
+            y: 0.5
+        },
         board,
         type,
     }
