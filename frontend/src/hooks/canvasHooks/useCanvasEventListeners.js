@@ -40,13 +40,12 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             e.preventDefault();
         };
 
-        const handleDrop = (e) => {
-            e.preventDefault();
-            console.log('drop');
-            const objectType = e.dataTransfer.getData("objectType");
+        const handleDrop = (event) => {
+            const objectType = event.e.dataTransfer.getData("objectType");
+
             // get the cursor position on the canvas
-            const x = e.clientX - toolbarWidth;
-            const y = e.clientY  - topbarHeight - navbarHeight;
+            const pointer = canvasInstanceRef.current.getPointer(event.e);
+            const { x, y } = pointer;
 
             if(objectType) {
                 switch(objectType) {
@@ -59,8 +58,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
                         break;
                 }
             } else {
-                //console.log('file:', e.dataTransfer.files[0]);
-                const file = e.dataTransfer.files[0];
+                const file = event.e.dataTransfer.files[0];
                 if(file) {
                     const formData = new FormData();
                     formData.append("image", file);
@@ -194,6 +192,10 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             handleZoom(e);
         });
 
+        canvasInstance.on('drop', (event) => {
+            handleDrop(event);
+        });
+
         canvasInstance.on("text:editing:entered", (e) => {
             canDelete.current = false;
         });
@@ -237,14 +239,14 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
         window.addEventListener('resize', resizeCanvas);
 
         canvasContainer.addEventListener('dragover', handleDragOver);
-        canvasContainer.addEventListener('drop', handleDrop);
+        //canvasContainer.addEventListener('drop', handleDrop);
         // end keyboard listener
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('resize', resizeCanvas);
             canvasContainer.removeEventListener('dragover', handleDragOver)
-            canvasContainer.removeEventListener('drop', handleDrop);
+            //canvasContainer.removeEventListener('drop', handleDrop);
         }
 
     }, [canvasInstanceRef, boardId, user]);
