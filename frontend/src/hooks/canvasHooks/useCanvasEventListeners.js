@@ -12,7 +12,7 @@ import axios from "axios";
 export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
     const { user } = useAuthContext();
     const navigate = useNavigate();
-    const { setActiveObject } = useActiveObject();
+    const { setActiveObject, isEditing } = useActiveObject();
     const EXPAND_THRESHOLD = 100;
     const EXPAND_AMOUNT = 500; // make a constant file for these
     const isPanning = useRef(false);
@@ -210,6 +210,10 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             if(canvasInstance.getActiveObject() && !canvasInstance.getActiveObject().type) {
                 return;
             }
+            // If the object is being edited somewhere return.
+            if(isEditing) {
+                return;
+            }
             if(canDelete.current && (event.key === 'Delete' || event.key === 'Backspace') && canvasInstance.getActiveObjects().length >= 1) {
                 canvasInstance.getActiveObjects().forEach((obj) => {
                 const activeObject = obj;
@@ -249,7 +253,7 @@ export const useCanvasEventListeners = (boardId, canvasInstanceRef) => {
             //canvasContainer.removeEventListener('drop', handleDrop);
         }
 
-    }, [canvasInstanceRef, boardId, user]);
+    }, [canvasInstanceRef, boardId, user, isEditing]);
 
     return { lastPosX, lastPosY };
 }

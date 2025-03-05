@@ -7,7 +7,7 @@ import { Board } from "../utils/objects/boardObject";
 
 const Toolbar = (props) => {
 	const { canvasInstanceRef, lastPosX, lastPosY } = props.props;
-	const { activeObject } = useActiveObject();
+	const { activeObject, setEditing } = useActiveObject();
     const [color, setColor] = useState("#ffffff");
     const [toggleColor, setToggleColor] = useState(false);
     const pickerRef = useRef(null);
@@ -18,7 +18,12 @@ const Toolbar = (props) => {
         } else {
             setColor(activeObject[0].getColor())
         }
-    }, [activeObject]);
+        if(toggleColor) {
+            setEditing(true);
+        } else {
+            setEditing(false);
+        }
+    }, [activeObject, toggleColor]);
 
     const updateColors = (hex) => {
         if(activeObject && activeObject.length > 1) {
@@ -71,7 +76,7 @@ const Toolbar = (props) => {
                         </div>
 					</motion.div>
 				) : (
-					<motion.div 
+					<motion.div
 						key="objects"
 						initial={{ x: "-100%"}}
 						animate={{ x: 0}}
