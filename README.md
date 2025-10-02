@@ -5,24 +5,6 @@ A full-stack collaborative note-taking application inspired by Milanote, featuri
 ![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)
 ![React](https://img.shields.io/badge/react-18.3.1-blue.svg)
 
-## Screenshots
-
-### Main Canvas Workspace
-![Main Workspace](./screenshots/main-workspace.png)
-*Infinite canvas with notes, boards, and images. Drag-and-drop interface with real-time collaboration.*
-
-### Real-Time Collaboration
-![Real-Time Collaboration](./screenshots/realtime-demo.gif)
-*Multiple users editing simultaneously with live cursor tracking and instant updates.*
-
-### Nested Board Navigation
-![Nested Boards](./screenshots/nested-boards.png)
-*Hierarchical board organization with breadcrumb navigation.*
-
-### Object Customization
-![Customization](./screenshots/customization.png)
-*Color picker and multi-select functionality for batch editing.*
-
 ## Overview
 
 This application provides a flexible, infinite canvas workspace where users can create, organize, and collaborate on notes and boards in real-time. The drag-and-drop interface with free-form positioning makes it ideal for brainstorming, project planning, and creative workflows.
