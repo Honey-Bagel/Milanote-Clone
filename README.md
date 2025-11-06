@@ -1,207 +1,453 @@
-# Milanote Clone
+# Milanote Clone - Canvas System
 
-A full-stack collaborative note-taking application inspired by Milanote, featuring an infinite canvas workspace with real-time collaboration capabilities. Built with the MERN stack and modern web technologies.
+A complete, production-ready infinite canvas system built with Next.js, TypeScript, and Zustand. This implementation mimics Milanote's architecture using HTML/CSS transforms instead of canvas libraries.
 
-![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)
-![React](https://img.shields.io/badge/react-18.3.1-blue.svg)
+## 📁 File Structure
 
-## Overview
+```
+/stores
+  └── canvas-store.ts          # Zustand store (state management)
 
-This application provides a flexible, infinite canvas workspace where users can create, organize, and collaborate on notes and boards in real-time. The drag-and-drop interface with free-form positioning makes it ideal for brainstorming, project planning, and creative workflows.
+/utils
+  └── transform.ts             # Transform utilities (viewport, coordinates)
 
-## Key Features
+/hooks
+  ├── useCanvasInteractions.ts # Pan and zoom
+  ├── useDraggable.ts          # Card dragging
+  ├── useKeyboardShortcuts.ts  # Keyboard shortcuts
+  └── useSelectionBox.ts       # Multi-select box
 
-### Core Functionality
-- **Infinite Canvas Workspace**: Drag, drop, and arrange objects freely using Fabric.js
-- **Multi-Object Support**: 
-  - Text notes with auto-resizing
-  - Nested boards for hierarchical organization
-  - Image uploads with Firebase Storage integration
-- **Real-Time Collaboration**: 
-  - Live cursor tracking
-  - Instant object updates across all connected users
-  - Room-based Socket.IO connections
-- **Breadcrumb Navigation**: Intuitive navigation through nested board hierarchies
-- **Advanced Object Management**:
-  - Multi-select with custom controls
-  - Dynamic color customization with BlockPicker
-  - Keyboard shortcuts (Delete/Backspace to remove objects)
-  - Pan and zoom controls (Shift + drag, mouse wheel)
+/components/canvas
+  ├── Canvas.tsx               # Main canvas component
+  ├── CanvasElement.tsx        # Card wrapper
+  ├── Grid.tsx                 # Background grid
+  ├── SelectionBox.tsx         # Visual selection feedback
+  ├── ConnectionLayer.tsx      # SVG lines between cards
+  └── /cards
+      ├── CardRenderer.tsx     # Routes to card types
+      ├── CardBase.tsx         # Base card wrapper
+      ├── NoteCard.tsx         # Text note card
+      ├── ImageCard.tsx        # Image card
+      └── OtherCards.tsx       # Other card types
 
-### Technical Features
-- **Discriminator Pattern**: MongoDB discriminators for polymorphic Item model (Notes, Boards, Images)
-- **JWT Authentication**: Secure token-based authentication with httpOnly cookies
-- **Access Control**: Owner and collaborator-based permissions system
-- **Custom Canvas Objects**: Extended Fabric.js classes for rich interactive components
-- **Responsive Design**: Dynamic canvas resizing with Tailwind CSS styling
-- **State Management**: React Context API for global state (Auth, Notes, Boards, Active Objects)
+/styles
+  └── canvas.css               # Canvas and card styles
 
-## Tech Stack
+/examples
+  └── usage-examples.tsx       # Usage examples
+```
 
-### Frontend
-- **React 18.3.1** - UI framework with hooks-based architecture
-- **Fabric.js 6.4.3** - Canvas manipulation and rendering engine
-- **Socket.IO Client** - Real-time bidirectional communication
-- **Axios** - HTTP client for API requests
-- **React Router v6** - Client-side routing with nested routes
-- **Tailwind CSS** - Utility-first styling
-- **Material-UI** - Component library for breadcrumbs and icons
-- **Framer Motion** - Smooth animations for toolbar transitions
-- **React Color** - Color picker component
+## 🚀 Quick Start
 
-### Backend
-- **Node.js & Express.js** - RESTful API server
-- **MongoDB & Mongoose** - NoSQL database with ODM
-- **Socket.IO** - WebSocket server for real-time features
-- **JWT (jsonwebtoken)** - Secure authentication tokens
-- **bcrypt** - Password hashing
-- **Firebase Admin SDK** - Cloud storage for image uploads
-- **Multer** - Multipart/form-data handling for file uploads
+### 1. Install Dependencies
 
-## Architecture
+```bash
+npm install zustand immer
+```
+
+### 2. Import Styles
+
+Add to your `globals.css` or layout:
+
+```css
+@import './styles/canvas.css';
+```
+
+### 3. Basic Usage
+
+```tsx
+'use client';
+
+import { Canvas } from '@/components/canvas/Canvas';
+
+export default function CanvasPage() {
+  return (
+    <div className="w-full h-screen">
+      <Canvas />
+    </div>
+  );
+}
+```
+
+### 4. Add Cards Programmatically
+
+```tsx
+import { useCanvasStore } from '@/stores/canvas-store';
+
+function MyComponent() {
+  const { addCard } = useCanvasStore();
+
+  const handleAddCard = () => {
+    addCard({
+      id: `card-${Date.now()}`,
+      type: 'note',
+      position: { x: 100, y: 100 },
+      size: { width: 200, height: 120 },
+      zIndex: 0,
+      content: { text: 'Hello World!' },
+    });
+  };
+
+  return <button onClick={handleAddCard}>Add Note</button>;
+}
+```
+
+## 🎨 Features
+
+### Core Features
+- ✅ Infinite canvas with pan and zoom
+- ✅ Drag and drop cards
+- ✅ Multi-select with selection box
+- ✅ Keyboard shortcuts (copy/paste/delete/undo/redo)
+- ✅ Connection lines between cards
+- ✅ Multiple card types (note, image, text, link, etc.)
+- ✅ Double-click to edit
+- ✅ Resize handles
+- ✅ Z-index management
+- ✅ Background grid
+
+### Interactions
+- **Pan**: Space + Drag or Middle Mouse + Drag
+- **Zoom**: Ctrl/Cmd + Scroll
+- **Select**: Click card
+- **Multi-select**: Shift + Click or drag selection box
+- **Edit**: Double-click card
+- **Delete**: Delete/Backspace key
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Cmd/Ctrl + A` | Select all |
+| `Cmd/Ctrl + C` | Copy |
+| `Cmd/Ctrl + X` | Cut |
+| `Cmd/Ctrl + V` | Paste |
+| `Cmd/Ctrl + D` | Duplicate |
+| `Cmd/Ctrl + Z` | Undo |
+| `Cmd/Ctrl + Shift + Z` | Redo |
+| `Delete/Backspace` | Delete selected |
+| `Cmd/Ctrl + ]` | Bring to front |
+| `Cmd/Ctrl + [` | Send to back |
+| `Cmd/Ctrl + +` | Zoom in |
+| `Cmd/Ctrl + -` | Zoom out |
+| `Cmd/Ctrl + 0` | Reset zoom |
+| `Cmd/Ctrl + 1` | Zoom to fit |
+| `Escape` | Clear selection |
+
+## 📚 Core Concepts
+
+### 1. Viewport Transform
+
+The canvas uses CSS `matrix3d` transforms for optimal performance:
+
+```typescript
+transform: matrix3d(
+  zoom, 0, 0, 0,
+  0, zoom, 0, 0,
+  0, 0, 1, 0,
+  x, y, 0, 1
+)
+```
+
+This enables:
+- GPU acceleration
+- Smooth pan and zoom
+- Efficient rendering
+
+### 2. Card Positioning
+
+Cards use absolute positioning with top/left:
+
+```tsx
+<div
+  style={{
+    position: 'absolute',
+    top: card.position.y,
+    left: card.position.x,
+    width: card.size.width,
+    height: card.size.height,
+  }}
+>
+```
+
+### 3. State Management
+
+Zustand with Immer for immutable updates:
+
+```typescript
+const useCanvasStore = create<CanvasState>()(
+  immer((set, get) => ({
+    // state and actions
+  }))
+);
+```
+
+## 🔧 Customization
+
+### Adding a New Card Type
+
+1. **Add type to store** (`stores/canvas-store.ts`):
+```typescript
+export type CardType = 'note' | 'image' | 'myNewType';
+```
+
+2. **Create component** (`components/canvas/cards/MyNewCard.tsx`):
+```tsx
+export function MyNewCard({ card, isEditing }: CardProps) {
+  return (
+    <CardBase isEditing={isEditing}>
+      {/* Your card content */}
+    </CardBase>
+  );
+}
+```
+
+3. **Add to CardRenderer** (`components/canvas/cards/CardRenderer.tsx`):
+```tsx
+case 'myNewType':
+  return <MyNewCard card={card} isEditing={isEditing} />;
+```
+
+### Custom Card Example
+
+```tsx
+export function CustomCard({ card, isEditing }: CardProps) {
+  const { updateCard } = useCanvasStore();
+
+  return (
+    <CardBase isEditing={isEditing}>
+      <div className="p-4">
+        <h3 className="font-bold">{card.content.title}</h3>
+        <p>{card.content.description}</p>
+        {/* Add your custom content */}
+      </div>
+    </CardBase>
+  );
+}
+```
+
+## 🗄️ Supabase Integration
 
 ### Database Schema
-```
-User
-├── email (unique)
-├── username
-├── password (hashed)
-└── rootBoard (ref: Board)
 
-Item (Base Schema - Discriminator Pattern)
-├── type (enum: "note", "board", "image")
-├── board (ref: Board)
-└── timestamps
+```sql
+-- boards table
+create table boards (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references auth.users(id),
+  title text not null,
+  created_at timestamptz default now()
+);
 
-Note (extends Item)
-├── title
-├── content
-├── color
-├── position {x, y}
-├── width
-└── height
+-- cards table
+create table cards (
+  id uuid primary key default uuid_generate_v4(),
+  board_id uuid references boards(id) on delete cascade,
+  type text not null,
+  position_x real not null,
+  position_y real not null,
+  width real not null,
+  height real not null,
+  z_index integer not null default 0,
+  content jsonb not null default '{}',
+  background_color text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
 
-Board (extends Item)
-├── title
-├── owner (ref: User)
-├── collaborators [ref: User]
-├── root (boolean)
-└── position {x, y}
+-- connections table
+create table connections (
+  id uuid primary key default uuid_generate_v4(),
+  board_id uuid references boards(id) on delete cascade,
+  from_card_id uuid references cards(id) on delete cascade,
+  to_card_id uuid references cards(id) on delete cascade,
+  style text default 'solid',
+  color text default '#000000'
+);
 
-Image (extends Item)
-├── src (Firebase Storage URL)
-├── position {x, y}
-├── scale {x, y}
-└── dimensions
-```
-
-### Custom Canvas Objects
-- **Base Class**: Shared functionality for all canvas objects
-- **Note Class**: Auto-resizing textbox with grouped rect background
-- **Board Class**: Navigable containers with custom border on selection
-- **Image Class**: Scalable images with custom resize controls
-
-### Real-Time Architecture
-- Socket.IO rooms for board-specific updates
-- Event types: `itemCreated`, `itemUpdated`, `itemDeleted`, `cursorMove`
-- Optimistic UI updates with server confirmation
-
-## Project Structure
-
-```
-milanote-clone/
-├── backend/
-│   ├── controllers/     # Request handlers (auth, boards, items, images)
-│   ├── middleware/      # Authentication & authorization
-│   ├── models/          # Mongoose schemas with discriminators
-│   ├── routes/          # Express route definitions
-│   ├── util/            # Socket singleton, Firebase, JWT helpers
-│   └── server.js        # Entry point
-├── frontend/
-│   ├── src/
-│   │   ├── components/  # Reusable UI components
-│   │   ├── context/     # React Context providers
-│   │   ├── hooks/       # Custom hooks (canvas, auth, contexts)
-│   │   ├── pages/       # Route components
-│   │   ├── services/    # API service layers
-│   │   └── utils/       # Canvas utilities, custom objects
-│   └── package.json
-└── README.md
+-- Indexes
+create index cards_board_id_idx on cards(board_id);
 ```
 
-## Usage
+### Loading Data
 
-### Creating Notes
-1. Drag the "Add Note" button from the toolbar onto the canvas
-2. Drop at desired location
-3. Double-click to edit text content
-4. Click and drag to reposition
+```typescript
+async function loadBoard(boardId: string) {
+  const { data: cards } = await supabase
+    .from('cards')
+    .select('*')
+    .eq('board_id', boardId);
 
-### Creating Boards
-1. Drag "Add Board" button from toolbar
-2. Double-click the board title to rename
-3. Double-click the board icon to navigate into it
-4. Use breadcrumbs to navigate back
+  cards?.forEach(dbCard => {
+    useCanvasStore.getState().addCard({
+      id: dbCard.id,
+      type: dbCard.type,
+      position: { x: dbCard.position_x, y: dbCard.position_y },
+      size: { width: dbCard.width, height: dbCard.height },
+      zIndex: dbCard.z_index,
+      content: dbCard.content,
+      backgroundColor: dbCard.background_color,
+    });
+  });
+}
+```
 
-### Uploading Images
-1. Drag and drop image files directly onto the canvas
-2. Resize using the corner control
-3. Reposition by dragging
+### Saving Data
 
-### Collaboration
-1. Share board by clicking Settings → Share
-2. Add collaborators by email
-3. Real-time updates appear automatically for all users
+```typescript
+async function saveCard(card: Card) {
+  await supabase.from('cards').upsert({
+    id: card.id,
+    board_id: boardId,
+    type: card.type,
+    position_x: card.position.x,
+    position_y: card.position.y,
+    width: card.size.width,
+    height: card.size.height,
+    z_index: card.zIndex,
+    content: card.content,
+    background_color: card.backgroundColor,
+    updated_at: new Date().toISOString(),
+  });
+}
+```
 
-## Key Technical Decisions
+### Real-time Collaboration
 
-### Why Fabric.js?
-- Native canvas manipulation is complex and low-level
-- Fabric.js provides high-level object-oriented API
-- Built-in support for transformations, groups, and events
-- Excellent performance for large numbers of objects
+```typescript
+function subscribeToBoard(boardId: string) {
+  const channel = supabase
+    .channel(`board:${boardId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'cards',
+      filter: `board_id=eq.${boardId}`,
+    }, (payload) => {
+      if (payload.eventType === 'UPDATE') {
+        // Update local state
+        useCanvasStore.getState().updateCard(payload.new.id, {
+          position: {
+            x: payload.new.position_x,
+            y: payload.new.position_y,
+          },
+        });
+      }
+    })
+    .subscribe();
 
-### MongoDB Discriminators
-- Single collection for all canvas items (Notes, Boards, Images)
-- Shared base schema with type-specific extensions
-- Efficient queries and unified API endpoints
-- Clean polymorphic data model
+  return () => supabase.removeChannel(channel);
+}
+```
 
-### Socket.IO Rooms
-- Board-specific event broadcasting
-- Reduces unnecessary network traffic
-- Scalable architecture for multiple concurrent boards
-- Simple room join/leave on navigation
+## 🎯 Advanced Usage
 
-### Context API Over Redux
-- Simpler setup for medium-sized application
-- Hooks-based API integrates naturally with React
-- Sufficient for current state management needs
-- Easy to migrate to Redux if complexity increases
+### Custom Hooks
 
-## Known Issues & Future Improvements
+```typescript
+// Custom hook for auto-save
+function useAutoSave(boardId: string) {
+  const { cards } = useCanvasStore();
 
-### Current Limitations
-- Canvas edge detection could be more robust
-- No undo/redo functionality
-- Limited export options
-- Mobile responsiveness needs improvement
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Save all cards to Supabase
+      saveAllCards(boardId, Array.from(cards.values()));
+    }, 5000); // Auto-save every 5 seconds
 
-### Roadmap
-- [ ] Enhanced UI/UX with modern design patterns
-- [ ] Additional object types (lines, arrows, shapes)
-- [ ] Rich text editing with formatting
-- [ ] Export to PDF/PNG
-- [ ] Mobile app with React Native
-- [ ] Offline support with service workers
-- [ ] Version history and rollback
-- [ ] Comments and reactions on objects
-- [ ] Search functionality across all boards
+    return () => clearInterval(interval);
+  }, [cards, boardId]);
+}
+```
 
-## Acknowledgments
+### Viewport Controls
 
-- Inspired by [Milanote](https://milanote.com)
+```typescript
+function ViewportControls() {
+  const { zoomIn, zoomOut, resetViewport, zoomToFit } = useCanvasStore();
 
----
+  return (
+    <div className="fixed bottom-4 right-4 flex gap-2">
+      <button onClick={zoomOut}>−</button>
+      <button onClick={resetViewport}>Reset</button>
+      <button onClick={zoomToFit}>Fit</button>
+      <button onClick={zoomIn}>+</button>
+    </div>
+  );
+}
+```
 
-**Note**: This is a portfolio project created for educational purposes. It is not affiliated with or endorsed by Milanote.
+## ⚡ Performance Tips
+
+1. **Virtualization**: For 500+ cards, implement viewport culling:
+```typescript
+const visibleCards = useMemo(() => {
+  return Array.from(cards.values()).filter(card =>
+    isCardInViewport(card, viewport)
+  );
+}, [cards, viewport]);
+```
+
+2. **Debounce saves**: Don't save on every change:
+```typescript
+const debouncedSave = useMemo(
+  () => debounce(saveCard, 500),
+  []
+);
+```
+
+3. **Use CSS transforms**: Already implemented for optimal performance
+
+4. **Memoize expensive calculations**: Use `useMemo` for complex operations
+
+## 🐛 Troubleshooting
+
+### Cards not appearing?
+- Check if cards are added to the store
+- Verify viewport position (use Reset button)
+- Check z-index values
+
+### Dragging not working?
+- Ensure `useDraggable` hook is called
+- Check if `isDragging` state is properly managed
+- Verify event propagation isn't stopped elsewhere
+
+### Selection not working?
+- Check if `useSelectionBox` hook is attached
+- Verify canvas ref is properly passed
+- Ensure click events aren't being stopped
+
+## 📦 Package Requirements
+
+```json
+{
+  "dependencies": {
+    "zustand": "^4.5.0",
+    "immer": "^10.0.0",
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "typescript": "^5.0.0"
+  }
+}
+```
+
+## 🎓 Next Steps
+
+1. **Add Tiptap** for rich text editing in NoteCards
+2. **Implement resize** by completing ResizeHandles logic
+3. **Add animations** with Framer Motion
+4. **Build collaboration** with Supabase Realtime
+5. **Export functionality** (PNG, PDF, JSON)
+6. **Mobile support** (touch events, gestures)
+7. **Search and filter** cards
+8. **Templates** system
+9. **Comments** and annotations
+10. **Version history**
+
+## 📄 License
+
+MIT - feel free to use in your projects!
+
+## 🙏 Credits
+
+Architecture inspired by Milanote's implementation.

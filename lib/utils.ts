@@ -1,0 +1,51 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+	return twMerge(clsx(inputs));
+}
+
+export function getTimeAgo(timestamp: string): string {
+	const now = new Date();
+	const past = new Date(timestamp);
+	const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+	// Less than a minute
+	if (diffInSeconds < 60) {
+		return "Just now";
+	}
+
+	// Minutes
+	const diffInMinutes = Math.floor(diffInSeconds / 60);
+	if (diffInMinutes < 60) {
+		return `${diffInMinutes} ${diffInMinutes === 1 ? 'min' : 'mins'} ago`;
+	}
+
+	// Hours
+	const diffInHours = Math.floor(diffInMinutes / 60);
+	if (diffInHours < 24) {
+		return `${diffInHours} ${diffInHours === 1 ? 'hour' : 'hours'} ago`;
+	}
+
+	// Days
+	const diffInDays = Math.floor(diffInHours / 24);
+	if (diffInDays < 7) {
+		return `${diffInDays} ${diffInDays === 1 ? 'day' : 'days'} ago`;
+	}
+
+	// Weeks
+	const diffInWeeks = Math.floor(diffInDays / 7);
+	if (diffInWeeks < 4) {
+		return `${diffInWeeks} ${diffInWeeks === 1 ? 'week' : 'weeks'} ago`;
+	}
+
+	// Months
+	const diffInMonths = Math.floor(diffInDays / 30);
+	if (diffInMonths < 12) {
+		return `${diffInMonths} ${diffInMonths === 1 ? 'month' : 'months'} ago`;
+	}
+
+	// Years
+	const diffInYears = Math.floor(diffInDays / 365);
+	return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
+}
