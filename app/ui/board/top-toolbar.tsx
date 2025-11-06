@@ -1,11 +1,13 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Minus, Plus, Maximize2, Share2, MoreHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronRight, Minus, Plus, Maximize2, Share2, MoreHorizontal, Settings } from 'lucide-react';
 import ShareModal from './share-modal';
 import { useState } from 'react';
+import SettingsModal from '../home/settings-modal';
 
 export default function TopToolbar() {
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
 	return (
 		<>
@@ -69,9 +71,15 @@ export default function TopToolbar() {
 					<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400">
 						<MoreHorizontal className="w-4 h-4" />
 					</button>
+
+					<button onClick={() => setIsSettingsModalOpen(true)} className="flex items-center gap-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
+						<Settings className="w-5 h-5" />
+						<span className="text-sm">Settings</span>
+					</button>
 				</div>
 			</header>
 
+			<SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
 			<ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
 		</>
 	);

@@ -1,3 +1,5 @@
+import { BoardCard } from "@/app/ui/dashboard/board-card";
+
 export interface User {
 	id: string;
 	name: string;
@@ -283,7 +285,8 @@ export type Card =
 	| LinkCard
 	| FileCard
 	| ColorPaletteCard
-	| ColumnCard;
+	| ColumnCard
+	| BoardCard;
 
 // Type-specific data for creating cards
 export type NoteCardData = {
@@ -349,4 +352,33 @@ export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? ColorPaletteCardData
 	: T extends "column"
 	? ColumnCardData
+	: T extends "board"
+	? BoardCardData
 	: never;
+
+export type BoardCard = {
+	id: string;
+	board_id: string;
+	card_type: "board";
+	position_x: number;
+	position_y: number;
+	width: number;
+	height: number | null;
+	z_index: number;
+	created_by: string | null;
+	created_at: string;
+	updated_at: string;
+	board_cards: {
+		linked_board_id: string;
+		board_title: string;
+		board_color: string;
+		card_count: number;
+	};
+};
+
+export type BoardCardData = {
+	linked_board_id: string;
+	board_title: string;
+	board_color: string;
+	card_count?: number;
+};

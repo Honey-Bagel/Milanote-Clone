@@ -34,7 +34,8 @@ export async function getBoardCards(boardId: string) {
 					card_id,
 					position
 				)
-			)
+			),
+			board_cards(*)
 		`)
 		.eq("board_id", boardId)
 		.order("z_index", { ascending: true });

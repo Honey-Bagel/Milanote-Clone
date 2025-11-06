@@ -1,5 +1,5 @@
 /**
- * CanvasElement Component - Integrated Version
+ * CanvasElement Component - With TipTap Support
  * 
  * Wrapper for each card, adapted to your database schema
  */
@@ -7,6 +7,7 @@
 'use client';
 
 import type { Card } from '@/lib/types';
+import type { Editor } from '@tiptap/react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useDraggable } from '@/lib/hooks/useDraggable';
 import { CardRenderer } from './cards/CardRenderer';
@@ -16,13 +17,15 @@ interface CanvasElementProps {
 	boardId?: string;
 	onCardClick?: (cardId: string) => void;
 	onCardDoubleClick?: (cardId: string) => void;
+	onEditorReady?: (cardId: string, editor: Editor) => void;
 }
 
 export function CanvasElement({ 
 	card, 
 	boardId,
 	onCardClick, 
-	onCardDoubleClick 
+	onCardDoubleClick,
+	onEditorReady 
 }: CanvasElementProps) {
 	const { selectedCardIds, setEditingCardId, editingCardId } = useCanvasStore();
 	
@@ -50,6 +53,22 @@ export function CanvasElement({
 		onCardDoubleClick?.(card.id);
 	};
 
+	const handleCardMouseDown = (e: React.MouseEvent) => {
+		// If editing, don't interfere with text selection
+		if (isEditing) {
+			e.stopPropagation();
+			return;
+		}
+		// Otherwise, handle dragging
+		handleMouseDown(e);
+	};
+
+	const handleEditorReady = (editor: Editor) => {
+		if (onEditorReady) {
+			onEditorReady(card.id, editor);
+		}
+	};
+
 	return (
 		<div
 			data-element-id={card.id}
@@ -60,10 +79,10 @@ export function CanvasElement({
 				top: card.position_y,
 				left: card.position_x,
 				zIndex: card.z_index,
-				userSelect: 'none',
-				WebkitUserSelect: 'none',
-				MozUserSelect: 'none',
-				msUserSelect: 'none',
+				userSelect: isEditing ? 'auto' : 'none',
+				WebkitUserSelect: isEditing ? 'auto' : 'none',
+				MozUserSelect: isEditing ? 'auto' : 'none',
+				msUserSelect: isEditing ? 'auto' : 'none',
 			}}
 		>
 			<div
@@ -78,20 +97,25 @@ export function CanvasElement({
 						${isEditing ? 'editing' : ''}
 						${selectedCardIds.size === 1 && isSelected ? 'selected-single' : ''}
 					`}
-					onMouseDown={handleMouseDown}
+					onMouseDown={handleCardMouseDown}
 					onClick={handleClick}
 					onDoubleClick={handleDoubleClick}
 					style={{
 						display: 'inline-block',
 						width: 'auto',
 						minHeight: 'auto',
-						userSelect: isEditing ? 'text' : 'none',
-						cursor: isEditing ? 'text' : 'move',
-						pointerEvents: isDragging ? 'none' : 'auto'
+						userSelect: isEditing ? 'auto' : 'none',
+						WebkitUserSelect: isEditing ? 'auto' : 'none',
+						cursor: isEditing ? 'auto' : 'move',
+						pointerEvents: isEditing || !isDragging ? 'auto' : 'none'
 					}}
 				>
 					{/* Render the actual card content based on type */}
-					<CardRenderer card={card} isEditing={isEditing} />
+					<CardRenderer 
+						card={card} 
+						isEditing={isEditing}
+						onEditorReady={handleEditorReady}
+					/>
 					
 					{/* Selection indicator */}
 					{isSelected && (

@@ -1,5 +1,5 @@
 /**
- * CardRenderer Component - Integrated Version
+ * CardRenderer Component - With TipTap Support
  * 
  * Routes to the appropriate card type component based on your DB schema
  */
@@ -7,31 +7,35 @@
 'use client';
 
 import type { Card } from '@/lib/types';
+import type { Editor } from '@tiptap/react';
 
-// Import your existing card components (you'll need to create these or adapt them)
-// For now, I'll create placeholder imports - replace these with your actual card components
-import { NoteCardComponent } from './CardComponents';
-import { ImageCardComponent } from './CardComponents';
-import { TextCardComponent } from './CardComponents';
-import { TaskListCardComponent } from './CardComponents';
-import { LinkCardComponent } from './CardComponents';
-import { FileCardComponent } from './CardComponents';
-import { ColorPaletteCardComponent } from './CardComponents';
-import { ColumnCardComponent } from './CardComponents';
+// Import your card components
+import { 
+  NoteCardComponent,
+  ImageCardComponent,
+  TextCardComponent,
+  TaskListCardComponent,
+  LinkCardComponent,
+  FileCardComponent,
+  ColorPaletteCardComponent,
+  ColumnCardComponent,
+  BoardCardComponent
+} from './CardComponents';
 
 interface CardRendererProps {
   card: Card;
   isEditing: boolean;
+  onEditorReady?: (editor: Editor) => void;
 }
 
 /**
  * Main router component for rendering different card types
  * Routes based on your database card_type field
  */
-export function CardRenderer({ card, isEditing }: CardRendererProps) {
+export function CardRenderer({ card, isEditing, onEditorReady }: CardRendererProps) {
   switch (card.card_type) {
     case 'note':
-      return <NoteCardComponent card={card} isEditing={isEditing} />;
+      return <NoteCardComponent card={card} isEditing={isEditing} onEditorReady={onEditorReady} />;
     
     case 'image':
       return <ImageCardComponent card={card} isEditing={isEditing} />;
@@ -53,6 +57,9 @@ export function CardRenderer({ card, isEditing }: CardRendererProps) {
     
     case 'column':
       return <ColumnCardComponent card={card} isEditing={isEditing} />;
+    
+    case 'board':
+      return <BoardCardComponent card={card} isEditing={isEditing} />;
     
     default:
       // TypeScript should prevent this, but just in case

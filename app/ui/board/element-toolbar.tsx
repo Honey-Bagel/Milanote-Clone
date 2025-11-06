@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, ChevronDown, StickyNote, Type, Image, Link, CheckSquare, Columns, Paperclip, Minus, ArrowRight, Grid3x3, Filter } from 'lucide-react';
+import { Plus, Book, ChevronDown, StickyNote, Type, Image, Link, CheckSquare, Columns, Paperclip, Minus, ArrowRight, Grid3x3, Filter } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { createCard } from '@/lib/data/cards-client';
 import { createClient } from '@/lib/supabase/client';
@@ -30,6 +30,7 @@ export default function ElementToolbar({
 				file: { file_name: 'file.pdf', file_url: '', file_type: 'pdf' },
 				color_palette: { title: 'Palette', colors: ['#FF0000', '#00FF00', '#0000FF'] },
 				column: { title: 'Column', background_color: '#f3f4f6' },
+				board: { linked_board_id: '', board_title: 'New Board', board_color: '#3B82F6', card_count: 0 }
 			};
 
 			// Create card in db
@@ -86,6 +87,14 @@ export default function ElementToolbar({
 					title="Add Note"
 				>
 					<StickyNote className="w-4 h-4" />
+				</button>
+
+				<button
+					onClick={() => handleCreateCard('board')}
+					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors"
+					title="Add Board"
+				>
+					<Book className="w-4 h-4" />
 				</button>
 				
 				<button 

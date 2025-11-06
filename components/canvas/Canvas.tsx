@@ -1,12 +1,12 @@
 /**
- * Canvas Component - Integrated Version
+ * Canvas Component - With TipTap Toolbar Integration
  * 
- * Loads cards from your Supabase database and renders them
+ * Loads cards from your Supabase database and renders them with toolbar support
  */
 
 'use client';
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { createViewportMatrix } from '@/lib/utils/transform';
 import { useCanvasInteractions } from '@/lib/hooks/useCanvasInteractions';
@@ -16,7 +16,9 @@ import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
 import type { Card } from '@/lib/types';
+import type { Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/element-toolbar';
+import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
 
 interface CanvasProps {
 	/**
@@ -53,14 +55,17 @@ export function Canvas({
 	onCardDoubleClick,
 }: CanvasProps) {
 	const canvasRef = useRef<HTMLDivElement>(null);
+	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
 	
-	const { viewport, cards, loadCards, clearSelection, setEditingCardId } = useCanvasStore();
+	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard } = useCanvasStore();
 
 	const mouseDownHandler = (e: React.MouseEvent) => {
 		if (e.button !== 0) return;
+		if (e.target !== e.currentTarget) return;
 
 		clearSelection();
 		setEditingCardId(null);
+		setSelectedEditor(null);
 	}
 
 	// Load initial cards on mount
@@ -69,6 +74,13 @@ export function Canvas({
 			loadCards(initialCards);
 		}
 	}, [initialCards, loadCards]);
+
+	// Clear editor when editing is done
+	useEffect(() => {
+		if (!editingCardId) {
+			setSelectedEditor(null);
+		}
+	}, [editingCardId]);
 
 	// Attach interaction hooks
 	useCanvasInteractions(canvasRef, {
@@ -84,11 +96,30 @@ export function Canvas({
 		enabled: enableSelectionBox,
 	});
 
+	const handleCardClick = (cardId: string) => {
+		selectCard(cardId);
+		onCardClick?.(cardId);
+	};
+
+	const handleEditorReady = (cardId: string, editor: Editor) => {
+		// Only set editor if this card is being edited
+		if (editingCardId === cardId) {
+			setSelectedEditor(editor);
+		}
+	};
+
 	return (
 		<div className="flex flex-col h-screen">
+			{/* Toolbar */}
 			<div className="h-[56px] flex-shrink-0">
-				<ElementToolbar onCreateCard={() => {}}/>
+				{selectedEditor ? (
+					<TextEditorToolbar editor={selectedEditor} />
+				) : (
+					<ElementToolbar onCreateCard={() => {}} />
+				)}
 			</div>
+			
+			{/* Canvas */}
 			<div
 				ref={canvasRef}
 				className={`canvas-viewport relative w-full h-full overflow-hidden bg-gray-50 select-none ${className}`}
@@ -121,8 +152,9 @@ export function Canvas({
 										key={card.id}
 										card={card}
 										boardId={boardId}
-										onCardClick={onCardClick}
+										onCardClick={handleCardClick}
 										onCardDoubleClick={onCardDoubleClick}
+										onEditorReady={handleEditorReady}
 									/>
 								))}
 						</div>

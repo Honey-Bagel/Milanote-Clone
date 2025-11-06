@@ -541,3 +541,72 @@ input[type="checkbox"] {
 .editing ::-moz-selection {
   background: black;
 }
+
+/* TipTap Text Selection Fixes */
+
+/* Ensure text selection works in TipTap editor when editing */
+.editing .ProseMirror,
+.editing .ProseMirror * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  cursor: text !important;
+}
+
+/* Allow proper selection highlight when editing */
+.editing ::selection {
+  background: rgba(59, 130, 246, 0.3) !important;
+  color: inherit !important;
+}
+
+.editing ::-moz-selection {
+  background: rgba(59, 130, 246, 0.3) !important;
+  color: inherit !important;
+}
+
+/* Ensure EditorContent allows selection */
+.note-card .ProseMirror {
+  user-select: text;
+  -webkit-user-select: text;
+  outline: none;
+  min-height: 60px;
+}
+
+/* Prevent parent containers from blocking selection when editing */
+.editing-active,
+.editing-active * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Override canvas default user-select when card is editing */
+.canvas-element:has(.editing) {
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+}
+
+/* Make sure drag handle doesn't interfere when editing */
+.drag-handle.editing {
+  cursor: auto !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+}
+
+/* TipTap specific styling for better UX */
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+/* Ensure proper pointer events when editing */
+.editing .note-card {
+  pointer-events: auto !important;
+}
