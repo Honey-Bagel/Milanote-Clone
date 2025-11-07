@@ -1,11 +1,38 @@
 'use client';
 
-import { ChevronDown, ChevronRight, Minus, Plus, Maximize2, Share2, MoreHorizontal, Settings } from 'lucide-react';
+import { ChevronDown, Minus, Plus, Maximize2, Share2, MoreHorizontal, Settings, Home } from 'lucide-react';
 import ShareModal from './share-modal';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import SettingsModal from '../home/settings-modal';
+import Link from 'next/link';
+import {
+	Breadcrumb,
+	BreadcrumbItem,
+	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
+	BreadcrumbSeparator
+} from "@/components/ui/breadcrumb";
 
-export default function TopToolbar() {
+type BreadcrumbItemType = {
+	id: string,
+	title: string,
+	color?: string
+};
+
+type TopToolbarProps = {
+	boardId: string;
+	boardTitle: string;
+	boardColor?: string;
+	breadcrumbs?: BreadcrumbItemType[];
+};
+
+export default function TopToolbar({
+	boardId,
+	boardTitle,
+	boardColor,
+	breadcrumbs = []
+}: TopToolbarProps) {
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
@@ -13,21 +40,67 @@ export default function TopToolbar() {
 		<>
 			<header className="bg-gray-800 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
 				{/* Left Side */}
-				<div className="flex items-center space-x-4">
-					{/* Board Title */}
-					<div className="flex items-center space-x-3">
-						<div className="w-6 h-6 bg-red-500 rounded"></div>
-						<h2 className="text-lg font-semibold text-white">Design System</h2>
-						<button className="text-gray-400 hover:text-gray-300">
-							<ChevronDown className="w-4 h-4" />
-						</button>
-					</div>
+				<div className="flex items-center space-x-4 flex-1 min-w-0">
+					{/* Breadcrumb Navigation */}
+					<Breadcrumb>
+						<BreadcrumbList>
+							<BreadcrumbItem>
+								<BreadcrumbLink	asChild>
+									<Link
+										href="/dashboard"
+										className="flex items-center text-gray-400 hover:text-white transition-colors"
+									>
+										<Home className="w-4 h-4" />
+									</Link>
+								</BreadcrumbLink>
+							</BreadcrumbItem>
 
-					{/* Breadcrumb */}
-					<div className="flex items-center space-x-2 text-sm text-gray-400">
-						<ChevronRight className="w-3 h-3" />
-						<span>Board</span>
-					</div>
+							{/* Parent Boards */}
+							{breadcrumbs.map((crumb, index) => {
+								const isLast = index === breadcrumbs.length - 1;
+
+								return (
+									<Fragment key={`bc-${crumb.id}`}>
+										<BreadcrumbSeparator />
+										<BreadcrumbItem key={crumb.id}>
+											{isLast ? (
+												// Current board - not clickable
+												<BreadcrumbPage className="flex items-center space-x-2">
+													{crumb.color && (
+														<div
+															className="w-4 h-4 rounded"
+															style={{ backgroundColor: crumb.color }}
+														/>
+													)}
+													<span className="text-white font-semibold truncate max-w-[200px]">
+														{crumb.title}
+													</span>
+												</BreadcrumbPage>
+											) : (
+												// Parent boards - clickable
+												<BreadcrumbLink asChild>
+													<Link
+														href={`/board/${crumb.id}`}
+														className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+													>
+														{crumb.color && (
+															<div
+																className="w-4 h-4 rounded"
+																style={{ backgroundColor: crumb.color }}
+															/>
+														)}
+														<span className="truncate max-w-[150px]">
+															{crumb.title}
+														</span>
+													</Link>
+												</BreadcrumbLink>
+											)}
+										</BreadcrumbItem>
+									</Fragment>
+								);
+							})}
+						</BreadcrumbList>
+					</Breadcrumb>
 				</div>
 
 				{/* Right Side */}

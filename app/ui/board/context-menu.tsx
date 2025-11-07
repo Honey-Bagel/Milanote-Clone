@@ -2,12 +2,30 @@
 
 import { ContextMenuProps } from '@/lib/types';
 import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 export default function ContextMenu({ isOpen, position, onClose }: ContextMenuProps) {
+	const contextMenuRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		const handleClickOutside = (ev: MouseEvent) => {
+			if (contextMenuRef.current && !contextMenuRef.current.contains(ev.target as Node)) {
+				onClose();
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [onClose]);
+
 	if (!isOpen) return null;
 
 	return (
-		<div 
+		<div
+			ref={contextMenuRef}
 			className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[200px]"
 			style={{ 
 				top: `${position.y}px`, 

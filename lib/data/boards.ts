@@ -6,6 +6,7 @@ export async function getRecentBoards(limit = 4) {
 	const { data, error } = await supabase
 		.from("boards")
 		.select("*")
+		.is("parent_board_id", null)
 		.order("updated_at", { ascending: false })
 		.limit(limit)
 	

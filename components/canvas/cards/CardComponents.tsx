@@ -26,173 +26,173 @@ import { useDebouncedCallback } from 'use-debounce';
 // ============================================================================
 
 export function NoteCardComponent({ 
-  card, 
-  isEditing,
-  onEditorReady
+	card, 
+	isEditing,
+	onEditorReady
 }: { 
-  card: NoteCard; 
-  isEditing: boolean;
-  onEditorReady?: (editor: TipTapEditor) => void;
+	card: NoteCard; 
+	isEditing: boolean;
+	onEditorReady?: (editor: TipTapEditor) => void;
 }) {
-  const { updateCard, setEditingCardId } = useCanvasStore();
+	const { updateCard, setEditingCardId } = useCanvasStore();
 
-  const debouncedSave = useDebouncedCallback(
-    async (content: string) => {
-      try {
-        await updateCardContent(card.id, 'note', {
-          content,
-        });
-      } catch (error) {
-        console.error('Failed to update note:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSave = useDebouncedCallback(
+		async (content: string) => {
+			try {
+				await updateCardContent(card.id, 'note', {
+					content,
+				});
+			} catch (error) {
+				console.error('Failed to update note:', error);
+			}
+		},
+		1000
+	);
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: {
-          levels: [1, 2, 3],
-        },
-      }),
-      Underline,
-      TextAlign.configure({
-        types: ['heading', 'paragraph'],
-      }),
-      Highlight.configure({
-        multicolor: true,
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-blue-600 underline cursor-pointer',
-        },
-      }),
-      Placeholder.configure({
-        placeholder: 'Type something...',
-      }),
-    ],
-    content: card.note_cards.content || '',
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none p-4 min-h-[60px] text-gray-800 text-sm leading-relaxed',
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      
-      // Update local state
-      updateCard(card.id, {
-        ...card,
-        note_cards: {
-          ...card.note_cards,
-          content: html,
-        },
-      });
+	const editor = useEditor({
+		extensions: [
+			StarterKit.configure({
+				heading: {
+					levels: [1, 2, 3],
+				},
+			}),
+			Underline,
+			TextAlign.configure({
+				types: ['heading', 'paragraph'],
+			}),
+			Highlight.configure({
+				multicolor: true,
+			}),
+			Link.configure({
+				openOnClick: false,
+				HTMLAttributes: {
+					class: 'text-blue-600 underline cursor-pointer',
+				},
+			}),
+			Placeholder.configure({
+				placeholder: 'Type something...',
+			}),
+		],
+		content: card.note_cards.content || '',
+		editorProps: {
+			attributes: {
+				class: 'prose prose-sm max-w-none focus:outline-none p-4 min-h-[60px] text-gray-800 text-sm leading-relaxed',
+			},
+		},
+		onUpdate: ({ editor }) => {
+			const html = editor.getHTML();
+			
+			// Update local state
+			updateCard(card.id, {
+				...card,
+				note_cards: {
+					...card.note_cards,
+					content: html,
+				},
+			});
 
-      // Debounced save to database
-      debouncedSave(html);
-    },
-    onCreate: ({ editor }) => {
-      // Expose editor to parent
-      onEditorReady?.(editor);
-    },
-    editable: isEditing,
-    immediatelyRender: false,
-  });
+			// Debounced save to database
+			debouncedSave(html);
+		},
+		onCreate: ({ editor }) => {
+			// Expose editor to parent
+			onEditorReady?.(editor);
+		},
+		editable: isEditing,
+		immediatelyRender: false,
+	});
 
-  // Update editor content when card content changes externally
-  useEffect(() => {
-    if (editor && card.note_cards.content !== editor.getHTML()) {
-      editor.commands.setContent(card.note_cards.content || '');
-    }
-  }, [card.note_cards.content, editor]);
+	// Update editor content when card content changes externally
+	useEffect(() => {
+		if (editor && card.note_cards.content !== editor.getHTML()) {
+			editor.commands.setContent(card.note_cards.content || '');
+		}
+	}, [card.note_cards.content, editor]);
 
-  // Update editor editable state when isEditing changes
-  useEffect(() => {
-    if (editor) {
-      editor.setEditable(isEditing);
-      
-      if (isEditing) {
-        // Focus editor when entering edit mode
-        setTimeout(() => {
-          editor.commands.focus('end');
-        }, 50);
-      } else {
-        // Blur editor when exiting edit mode
-        editor.commands.blur();
-      }
-    }
-  }, [isEditing, editor]);
+	// Update editor editable state when isEditing changes
+	useEffect(() => {
+		if (editor) {
+			editor.setEditable(isEditing);
+			
+			if (isEditing) {
+				// Focus editor when entering edit mode
+				setTimeout(() => {
+					editor.commands.focus('end');
+				}, 50);
+			} else {
+				// Blur editor when exiting edit mode
+				editor.commands.blur();
+			}
+		}
+	}, [isEditing, editor]);
 
-  // Expose editor to parent when it becomes ready or editing state changes
-  useEffect(() => {
-    if (editor && isEditing) {
-      onEditorReady?.(editor);
-    }
-  }, [editor, isEditing, onEditorReady]);
+	// Expose editor to parent when it becomes ready or editing state changes
+	useEffect(() => {
+		if (editor && isEditing) {
+			onEditorReady?.(editor);
+		}
+	}, [editor, isEditing, onEditorReady]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      setEditingCardId(null);
-      editor?.commands.blur();
-    }
-    // Stop propagation only if we're editing to allow text input
-    if (isEditing) {
-      e.stopPropagation();
-    }
-  };
+	const handleKeyDown = (e: React.KeyboardEvent) => {
+		if (e.key === 'Escape') {
+			e.preventDefault();
+			setEditingCardId(null);
+			editor?.commands.blur();
+		}
+		// Stop propagation only if we're editing to allow text input
+		if (isEditing) {
+			e.stopPropagation();
+		}
+	};
 
-  const colorClasses = {
-    yellow: 'bg-yellow-100 border-yellow-200',
-    blue: 'bg-blue-100 border-blue-200',
-    green: 'bg-green-100 border-green-200',
-    pink: 'bg-pink-100 border-pink-200',
-    purple: 'bg-purple-100 border-purple-200',
-  };
+	const colorClasses = {
+		yellow: 'bg-yellow-100 border-yellow-200',
+		blue: 'bg-blue-100 border-blue-200',
+		green: 'bg-green-100 border-green-200',
+		pink: 'bg-pink-100 border-pink-200',
+		purple: 'bg-purple-100 border-purple-200',
+	};
 
-  return (
-    <CardBase 
-      isEditing={isEditing}
-      className={`${colorClasses[card.note_cards.color]} min-w-[220px] max-w-[460px]`}
-      style={{
-        userSelect: isEditing ? 'text' : 'none',
-        WebkitUserSelect: isEditing ? 'text' : 'none',
-      }}
-    >
-      <div 
-        className="note-card" 
-        onKeyDown={handleKeyDown}
-        onClick={(e) => {
-          if (isEditing) {
-            e.stopPropagation();
-          }
-        }}
-        onMouseDown={(e) => {
-          // Allow text selection when editing
-          if (isEditing) {
-            e.stopPropagation();
-          }
-        }}
-        style={{
-          userSelect: isEditing ? 'text' : 'none',
-          WebkitUserSelect: isEditing ? 'text' : 'none',
-          MozUserSelect: isEditing ? 'text' : 'none',
-          cursor: isEditing ? 'text' : 'pointer',
-        }}
-      >
-        <EditorContent 
-          editor={editor}
-          style={{
-            userSelect: isEditing ? 'text' : 'none',
-            WebkitUserSelect: isEditing ? 'text' : 'none',
-          }}
-        />
-      </div>
-    </CardBase>
-  );
+	return (
+		<CardBase 
+			isEditing={isEditing}
+			className={`${colorClasses[card.note_cards.color]} min-w-[220px] max-w-[460px]`}
+			style={{
+				userSelect: isEditing ? 'text' : 'none',
+				WebkitUserSelect: isEditing ? 'text' : 'none',
+			}}
+		>
+			<div 
+				className="note-card" 
+				onKeyDown={handleKeyDown}
+				onClick={(e) => {
+					if (isEditing) {
+						e.stopPropagation();
+					}
+				}}
+				onMouseDown={(e) => {
+					// Allow text selection when editing
+					if (isEditing) {
+						e.stopPropagation();
+					}
+				}}
+				style={{
+					userSelect: isEditing ? 'text' : 'none',
+					WebkitUserSelect: isEditing ? 'text' : 'none',
+					MozUserSelect: isEditing ? 'text' : 'none',
+					cursor: isEditing ? 'text' : 'pointer',
+				}}
+			>
+				<EditorContent 
+					editor={editor}
+					style={{
+						userSelect: isEditing ? 'text' : 'none',
+						WebkitUserSelect: isEditing ? 'text' : 'none',
+					}}
+				/>
+			</div>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -200,139 +200,139 @@ export function NoteCardComponent({
 // ============================================================================
 
 export function ImageCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: ImageCard; 
-  isEditing: boolean;
+	card: ImageCard; 
+	isEditing: boolean;
 }) {
-  const { updateCard } = useCanvasStore();
+	const { updateCard } = useCanvasStore();
 
-  const debouncedSave = useDebouncedCallback(
-    async (image_url: string, caption: string | null, alt_text: string | null) => {
-      try {
-        await updateCardContent(card.id, 'image', {
-          image_url,
-          caption,
-          alt_text,
-        });
-      } catch (error) {
-        console.error('Failed to update image card:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSave = useDebouncedCallback(
+		async (image_url: string, caption: string | null, alt_text: string | null) => {
+			try {
+				await updateCardContent(card.id, 'image', {
+					image_url,
+					caption,
+					alt_text,
+				});
+			} catch (error) {
+				console.error('Failed to update image card:', error);
+			}
+		},
+		1000
+	);
 
-  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUrl = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      image_cards: {
-        ...card.image_cards,
-        image_url: newUrl,
-      },
-    });
+	const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newUrl = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			image_cards: {
+				...card.image_cards,
+				image_url: newUrl,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(newUrl, card.image_cards.caption, card.image_cards.alt_text);
-  };
+		// Debounced save
+		debouncedSave(newUrl, card.image_cards.caption, card.image_cards.alt_text);
+	};
 
-  const handleCaptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newCaption = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      image_cards: {
-        ...card.image_cards,
-        caption: newCaption,
-      },
-    });
+	const handleCaptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newCaption = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			image_cards: {
+				...card.image_cards,
+				caption: newCaption,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(card.image_cards.image_url, newCaption, card.image_cards.alt_text);
-  };
+		// Debounced save
+		debouncedSave(card.image_cards.image_url, newCaption, card.image_cards.alt_text);
+	};
 
-  const handleAltTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newAltText = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      image_cards: {
-        ...card.image_cards,
-        alt_text: newAltText,
-      },
-    });
+	const handleAltTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newAltText = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			image_cards: {
+				...card.image_cards,
+				alt_text: newAltText,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(card.image_cards.image_url, card.image_cards.caption, newAltText);
-  };
+		// Debounced save
+		debouncedSave(card.image_cards.image_url, card.image_cards.caption, newAltText);
+	};
 
-  return (
-    <CardBase isEditing={isEditing} className="min-w-[220px] max-w-[560px]">
-      <div className="image-card overflow-hidden">
-        {card.image_cards.image_url ? (
-          <>
-            <Image
-              src={card.image_cards.image_url}
-              alt={card.image_cards.alt_text || 'Image'}
-              className="w-full h-auto object-cover"
-              style={{ maxHeight: '420px' }}
-              width={500}
-              height={420}
-            />
-            {isEditing ? (
-              <div className="p-3 space-y-2 bg-gray-50 border-t border-gray-200">
-                <input
-                  type="text"
-                  value={card.image_cards.caption || ''}
-                  onChange={handleCaptionChange}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                  placeholder="Caption (optional)"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <input
-                  type="text"
-                  value={card.image_cards.alt_text || ''}
-                  onChange={handleAltTextChange}
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                  placeholder="Alt text (optional)"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            ) : card.image_cards.caption ? (
-              <div className="p-3 text-xs text-gray-600 bg-gray-50 border-t border-gray-200">
-                {card.image_cards.caption}
-              </div>
-            ) : null}
-          </>
-        ) : (
-          <div className="p-4">
-            {isEditing ? (
-              <div className="space-y-2">
-                <label className="text-xs text-gray-500 block">Image URL</label>
-                <input
-                  type="url"
-                  value={card.image_cards.image_url}
-                  onChange={handleImageUrlChange}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                  placeholder="https://example.com/image.jpg"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-40 bg-gray-100 text-gray-400">
-                No image
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </CardBase>
-  );
+	return (
+		<CardBase isEditing={isEditing} className="min-w-[220px] max-w-[560px]">
+			<div className="image-card overflow-hidden">
+				{card.image_cards.image_url ? (
+					<>
+						<Image
+							src={card.image_cards.image_url}
+							alt={card.image_cards.alt_text || 'Image'}
+							className="w-full h-auto object-cover"
+							style={{ maxHeight: '420px' }}
+							width={500}
+							height={420}
+						/>
+						{isEditing ? (
+							<div className="p-3 space-y-2 bg-gray-50 border-t border-gray-200">
+								<input
+									type="text"
+									value={card.image_cards.caption || ''}
+									onChange={handleCaptionChange}
+									className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									placeholder="Caption (optional)"
+									onClick={(e) => e.stopPropagation()}
+								/>
+								<input
+									type="text"
+									value={card.image_cards.alt_text || ''}
+									onChange={handleAltTextChange}
+									className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									placeholder="Alt text (optional)"
+									onClick={(e) => e.stopPropagation()}
+								/>
+							</div>
+						) : card.image_cards.caption ? (
+							<div className="p-3 text-xs text-gray-600 bg-gray-50 border-t border-gray-200">
+								{card.image_cards.caption}
+							</div>
+						) : null}
+					</>
+				) : (
+					<div className="p-4">
+						{isEditing ? (
+							<div className="space-y-2">
+								<label className="text-xs text-gray-500 block">Image URL</label>
+								<input
+									type="url"
+									value={card.image_cards.image_url}
+									onChange={handleImageUrlChange}
+									className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									placeholder="https://example.com/image.jpg"
+									onClick={(e) => e.stopPropagation()}
+								/>
+							</div>
+						) : (
+							<div className="flex items-center justify-center h-40 bg-gray-100 text-gray-400">
+								No image
+							</div>
+						)}
+					</div>
+				)}
+			</div>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -340,95 +340,95 @@ export function ImageCardComponent({
 // ============================================================================
 
 export function TextCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: TextCard; 
-  isEditing: boolean;
+	card: TextCard; 
+	isEditing: boolean;
 }) {
-  const { updateCard, setEditingCardId } = useCanvasStore();
+	const { updateCard, setEditingCardId } = useCanvasStore();
 
-  const debouncedSave = useDebouncedCallback(
-    async (title: string, content: string) => {
-      try {
-        await updateCardContent(card.id, 'text', {
-          title,
-          content,
-        });
-      } catch (error) {
-        console.error('Failed to update text card:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSave = useDebouncedCallback(
+		async (title: string, content: string) => {
+			try {
+				await updateCardContent(card.id, 'text', {
+					title,
+					content,
+				});
+			} catch (error) {
+				console.error('Failed to update text card:', error);
+			}
+		},
+		1000
+	);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      text_cards: {
-        ...card.text_cards,
-        title: newTitle,
-      },
-    });
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newTitle = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			text_cards: {
+				...card.text_cards,
+				title: newTitle,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(newTitle, card.text_cards.content);
-  };
+		// Debounced save
+		debouncedSave(newTitle, card.text_cards.content);
+	};
 
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      text_cards: {
-        ...card.text_cards,
-        content: newContent,
-      },
-    });
+	const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		const newContent = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			text_cards: {
+				...card.text_cards,
+				content: newContent,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(card.text_cards.title || '', newContent);
-  };
+		// Debounced save
+		debouncedSave(card.text_cards.title || '', newContent);
+	};
 
-  return (
-    <CardBase isEditing={isEditing} className="bg-transparent border-none shadow-none min-w-[280px] max-w-[640px]">
-      <div className="text-card p-2">
-        {card.text_cards.title && (
-          isEditing ? (
-            <input
-              type="text"
-              value={card.text_cards.title}
-              onChange={handleTitleChange}
-              className="text-xl font-bold text-gray-900 mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
-              placeholder="Title"
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <h3 className="text-xl font-bold text-gray-900 mb-1">
-              {card.text_cards.title}
-            </h3>
-          )
-        )}
-        {isEditing ? (
-          <textarea
-            value={card.text_cards.content}
-            onChange={handleContentChange}
-            className="text-base text-gray-800 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 min-h-[100px] resize-y"
-            placeholder="Type your text..."
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <p className="text-base text-gray-800 whitespace-pre-wrap">
-            {card.text_cards.content}
-          </p>
-        )}
-      </div>
-    </CardBase>
-  );
+	return (
+		<CardBase isEditing={isEditing} className="bg-transparent border-none shadow-none min-w-[280px] max-w-[640px]">
+			<div className="text-card p-2">
+				{card.text_cards.title && (
+					isEditing ? (
+						<input
+							type="text"
+							value={card.text_cards.title}
+							onChange={handleTitleChange}
+							className="text-xl font-bold text-gray-900 mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+							placeholder="Title"
+							onClick={(e) => e.stopPropagation()}
+						/>
+					) : (
+						<h3 className="text-xl font-bold text-gray-900 mb-1">
+							{card.text_cards.title}
+						</h3>
+					)
+				)}
+				{isEditing ? (
+					<textarea
+						value={card.text_cards.content}
+						onChange={handleContentChange}
+						className="text-base text-gray-800 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 min-h-[100px] resize-y"
+						placeholder="Type your text..."
+						onClick={(e) => e.stopPropagation()}
+					/>
+				) : (
+					<p className="text-base text-gray-800 whitespace-pre-wrap">
+						{card.text_cards.content}
+					</p>
+				)}
+			</div>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -436,225 +436,225 @@ export function TextCardComponent({
 // ============================================================================
 
 export function TaskListCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: TaskListCard; 
-  isEditing: boolean;
+	card: TaskListCard; 
+	isEditing: boolean;
 }) {
-  const { updateCard, setEditingCardId } = useCanvasStore();
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const [taskText, setTaskText] = useState('');
+	const { updateCard, setEditingCardId } = useCanvasStore();
+	const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+	const [taskText, setTaskText] = useState('');
 
-  const debouncedSaveTitle = useDebouncedCallback(
-    async (title: string) => {
-      try {
-        await updateCardContent(card.id, 'task_list', {
-          title,
-        });
-      } catch (error) {
-        console.error('Failed to update task list title:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSaveTitle = useDebouncedCallback(
+		async (title: string) => {
+			try {
+				await updateCardContent(card.id, 'task_list', {
+					title,
+				});
+			} catch (error) {
+				console.error('Failed to update task list title:', error);
+			}
+		},
+		1000
+	);
 
-  const debouncedSaveTasks = useDebouncedCallback(
-    async (tasks: TaskListCard['task_list_cards']['tasks']) => {
-      try {
-        await updateCardContent(card.id, 'task_list', {
-          tasks,
-        });
-      } catch (error) {
-        console.error('Failed to update tasks:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSaveTasks = useDebouncedCallback(
+		async (tasks: TaskListCard['task_list_cards']['tasks']) => {
+			try {
+				await updateCardContent(card.id, 'task_list', {
+					tasks,
+				});
+			} catch (error) {
+				console.error('Failed to update tasks:', error);
+			}
+		},
+		1000
+	);
 
-  const handleToggleTask = (taskId: string) => {
-    const updatedTasks = card.task_list_cards.tasks.map(task =>
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    );
+	const handleToggleTask = (taskId: string) => {
+		const updatedTasks = card.task_list_cards.tasks.map(task =>
+			task.id === taskId ? { ...task, completed: !task.completed } : task
+		);
 
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      task_list_cards: {
-        ...card.task_list_cards,
-        tasks: updatedTasks,
-      },
-    });
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			task_list_cards: {
+				...card.task_list_cards,
+				tasks: updatedTasks,
+			},
+		});
 
-    // Debounced save to database
-    debouncedSaveTasks(updatedTasks);
-  };
+		// Debounced save to database
+		debouncedSaveTasks(updatedTasks);
+	};
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      task_list_cards: {
-        ...card.task_list_cards,
-        title: newTitle,
-      },
-    });
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newTitle = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			task_list_cards: {
+				...card.task_list_cards,
+				title: newTitle,
+			},
+		});
 
-    // Debounced save
-    debouncedSaveTitle(newTitle);
-  };
+		// Debounced save
+		debouncedSaveTitle(newTitle);
+	};
 
-  const handleTaskTextChange = (taskId: string, newText: string) => {
-    const updatedTasks = card.task_list_cards.tasks.map(task =>
-      task.id === taskId ? { ...task, text: newText } : task
-    );
+	const handleTaskTextChange = (taskId: string, newText: string) => {
+		const updatedTasks = card.task_list_cards.tasks.map(task =>
+			task.id === taskId ? { ...task, text: newText } : task
+		);
 
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      task_list_cards: {
-        ...card.task_list_cards,
-        tasks: updatedTasks,
-      },
-    });
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			task_list_cards: {
+				...card.task_list_cards,
+				tasks: updatedTasks,
+			},
+		});
 
-    // Debounced save
-    debouncedSaveTasks(updatedTasks);
-  };
+		// Debounced save
+		debouncedSaveTasks(updatedTasks);
+	};
 
-  const handleAddTask = () => {
-    const newTask = {
-      id: `task-${Date.now()}`,
-      text: 'New task',
-      completed: false,
-      position: card.task_list_cards.tasks.length,
-    };
+	const handleAddTask = () => {
+		const newTask = {
+			id: `task-${Date.now()}`,
+			text: 'New task',
+			completed: false,
+			position: card.task_list_cards.tasks.length,
+		};
 
-    const updatedTasks = [...card.task_list_cards.tasks, newTask];
+		const updatedTasks = [...card.task_list_cards.tasks, newTask];
 
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      task_list_cards: {
-        ...card.task_list_cards,
-        tasks: updatedTasks,
-      },
-    });
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			task_list_cards: {
+				...card.task_list_cards,
+				tasks: updatedTasks,
+			},
+		});
 
-    // Save immediately
-    debouncedSaveTasks(updatedTasks);
-    setEditingTaskId(newTask.id);
-  };
+		// Save immediately
+		debouncedSaveTasks(updatedTasks);
+		setEditingTaskId(newTask.id);
+	};
 
-  const handleDeleteTask = (taskId: string) => {
-    const updatedTasks = card.task_list_cards.tasks
-      .filter(task => task.id !== taskId)
-      .map((task, index) => ({ ...task, position: index }));
+	const handleDeleteTask = (taskId: string) => {
+		const updatedTasks = card.task_list_cards.tasks
+			.filter(task => task.id !== taskId)
+			.map((task, index) => ({ ...task, position: index }));
 
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      task_list_cards: {
-        ...card.task_list_cards,
-        tasks: updatedTasks,
-      },
-    });
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			task_list_cards: {
+				...card.task_list_cards,
+				tasks: updatedTasks,
+			},
+		});
 
-    // Save immediately
-    debouncedSaveTasks(updatedTasks);
-  };
+		// Save immediately
+		debouncedSaveTasks(updatedTasks);
+	};
 
-  return (
-    <CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-      <div className="task-list-card p-4">
-        {isEditing ? (
-          <input
-            type="text"
-            value={card.task_list_cards.title}
-            onChange={handleTitleChange}
-            className="font-semibold text-gray-900 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <h3 className="font-semibold text-gray-900 mb-3">
-            {card.task_list_cards.title}
-          </h3>
-        )}
-        
-        <div className="space-y-2">
-          {card.task_list_cards.tasks
-            .sort((a, b) => a.position - b.position)
-            .map(task => (
-            <div
-              key={task.id}
-              className="flex items-start gap-2 group"
-            >
-              <input
-                type="checkbox"
-                checked={task.completed}
-                onChange={() => handleToggleTask(task.id)}
-                className="mt-1 cursor-pointer"
-                onClick={(e) => e.stopPropagation()}
-              />
-              {isEditing && editingTaskId === task.id ? (
-                <input
-                  type="text"
-                  value={task.text}
-                  onChange={(e) => handleTaskTextChange(task.id, e.target.value)}
-                  onBlur={() => setEditingTaskId(null)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setEditingTaskId(null);
-                    }
-                  }}
-                  className="flex-1 text-sm bg-transparent border-b border-blue-500 outline-none"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : (
-                <span 
-                  className={`flex-1 text-sm ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}
-                  onDoubleClick={(e) => {
-                    if (isEditing) {
-                      e.stopPropagation();
-                      setEditingTaskId(task.id);
-                    }
-                  }}
-                >
-                  {task.text}
-                </span>
-              )}
-              {isEditing && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTask(task.id);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 text-red-500 text-xs hover:text-red-700"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+	return (
+		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+			<div className="task-list-card p-4">
+				{isEditing ? (
+					<input
+						type="text"
+						value={card.task_list_cards.title}
+						onChange={handleTitleChange}
+						className="font-semibold text-gray-900 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+						onClick={(e) => e.stopPropagation()}
+					/>
+				) : (
+					<h3 className="font-semibold text-gray-900 mb-3">
+						{card.task_list_cards.title}
+					</h3>
+				)}
+				
+				<div className="space-y-2">
+					{card.task_list_cards.tasks
+						.sort((a, b) => a.position - b.position)
+						.map(task => (
+						<div
+							key={task.id}
+							className="flex items-start gap-2 group"
+						>
+							<input
+								type="checkbox"
+								checked={task.completed}
+								onChange={() => handleToggleTask(task.id)}
+								className="mt-1 cursor-pointer"
+								onClick={(e) => e.stopPropagation()}
+							/>
+							{isEditing && editingTaskId === task.id ? (
+								<input
+									type="text"
+									value={task.text}
+									onChange={(e) => handleTaskTextChange(task.id, e.target.value)}
+									onBlur={() => setEditingTaskId(null)}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter') {
+											setEditingTaskId(null);
+										}
+									}}
+									className="flex-1 text-sm bg-transparent border-b border-blue-500 outline-none"
+									autoFocus
+									onClick={(e) => e.stopPropagation()}
+								/>
+							) : (
+								<span 
+									className={`flex-1 text-sm ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}
+									onDoubleClick={(e) => {
+										if (isEditing) {
+											e.stopPropagation();
+											setEditingTaskId(task.id);
+										}
+									}}
+								>
+									{task.text}
+								</span>
+							)}
+							{isEditing && (
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										handleDeleteTask(task.id);
+									}}
+									className="opacity-0 group-hover:opacity-100 text-red-500 text-xs hover:text-red-700"
+								>
+									×
+								</button>
+							)}
+						</div>
+					))}
+				</div>
 
-        {isEditing && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddTask();
-            }}
-            className="mt-3 text-sm text-blue-600 hover:text-blue-700"
-          >
-            + Add task
-          </button>
-        )}
-      </div>
-    </CardBase>
-  );
+				{isEditing && (
+					<button
+						onClick={(e) => {
+							e.stopPropagation();
+							handleAddTask();
+						}}
+						className="mt-3 text-sm text-blue-600 hover:text-blue-700"
+					>
+						+ Add task
+					</button>
+				)}
+			</div>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -662,123 +662,123 @@ export function TaskListCardComponent({
 // ============================================================================
 
 export function LinkCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: LinkCard; 
-  isEditing: boolean;
+	card: LinkCard; 
+	isEditing: boolean;
 }) {
-  const { updateCard } = useCanvasStore();
+	const { updateCard } = useCanvasStore();
 
-  const debouncedSave = useDebouncedCallback(
-    async (title: string, url: string, favicon_url: string | null) => {
-      try {
-        await updateCardContent(card.id, 'link', {
-          title,
-          url,
-          favicon_url,
-        });
-      } catch (error) {
-        console.error('Failed to update link card:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSave = useDebouncedCallback(
+		async (title: string, url: string, favicon_url: string | null) => {
+			try {
+				await updateCardContent(card.id, 'link', {
+					title,
+					url,
+					favicon_url,
+				});
+			} catch (error) {
+				console.error('Failed to update link card:', error);
+			}
+		},
+		1000
+	);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      link_cards: {
-        ...card.link_cards,
-        title: newTitle,
-      },
-    });
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newTitle = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			link_cards: {
+				...card.link_cards,
+				title: newTitle,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(newTitle, card.link_cards.url, card.link_cards.favicon_url);
-  };
+		// Debounced save
+		debouncedSave(newTitle, card.link_cards.url, card.link_cards.favicon_url);
+	};
 
-  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUrl = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      link_cards: {
-        ...card.link_cards,
-        url: newUrl,
-      },
-    });
+	const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newUrl = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			link_cards: {
+				...card.link_cards,
+				url: newUrl,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(card.link_cards.title, newUrl, card.link_cards.favicon_url);
-  };
+		// Debounced save
+		debouncedSave(card.link_cards.title, newUrl, card.link_cards.favicon_url);
+	};
 
-  if (isEditing) {
-    return (
-      <CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-        <div className="link-card p-4 space-y-3">
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Title</label>
-            <input
-              type="text"
-              value={card.link_cards.title}
-              onChange={handleTitleChange}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-              placeholder="Link title"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">URL</label>
-            <input
-              type="url"
-              value={card.link_cards.url}
-              onChange={handleUrlChange}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-              placeholder="https://example.com"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        </div>
-      </CardBase>
-    );
-  }
+	if (isEditing) {
+		return (
+			<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+				<div className="link-card p-4 space-y-3">
+					<div>
+						<label className="text-xs text-gray-500 block mb-1">Title</label>
+						<input
+							type="text"
+							value={card.link_cards.title}
+							onChange={handleTitleChange}
+							className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+							placeholder="Link title"
+							onClick={(e) => e.stopPropagation()}
+						/>
+					</div>
+					<div>
+						<label className="text-xs text-gray-500 block mb-1">URL</label>
+						<input
+							type="url"
+							value={card.link_cards.url}
+							onChange={handleUrlChange}
+							className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+							placeholder="https://example.com"
+							onClick={(e) => e.stopPropagation()}
+						/>
+					</div>
+				</div>
+			</CardBase>
+		);
+	}
 
-  return (
-    <CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-      <a
-        href={card.link_cards.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="link-card block p-4 hover:bg-gray-50 transition-colors"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start gap-3">
-          {card.link_cards.favicon_url && (
-            <img 
-              src={card.link_cards.favicon_url} 
-              alt="" 
-              className="w-5 h-5 mt-1 flex-shrink-0" 
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm text-gray-900 truncate">
-              {card.link_cards.title || card.link_cards.url}
-            </h3>
-            {card.link_cards.url && (
-              <p className="text-xs text-gray-400 truncate mt-1">
-                {new URL(card.link_cards.url).hostname}
-              </p>
-            )}
-          </div>
-        </div>
-      </a>
-    </CardBase>
-  );
+	return (
+		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+			<a
+				href={card.link_cards.url}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="link-card block p-4 hover:bg-gray-50 transition-colors"
+				onClick={(e) => e.stopPropagation()}
+			>
+				<div className="flex items-start gap-3">
+					{card.link_cards.favicon_url && (
+						<img 
+							src={card.link_cards.favicon_url} 
+							alt="" 
+							className="w-5 h-5 mt-1 flex-shrink-0" 
+						/>
+					)}
+					<div className="flex-1 min-w-0">
+						<h3 className="font-medium text-sm text-gray-900 truncate">
+							{card.link_cards.title || card.link_cards.url}
+						</h3>
+						{card.link_cards.url && (
+							<p className="text-xs text-gray-400 truncate mt-1">
+								{new URL(card.link_cards.url).hostname}
+							</p>
+						)}
+					</div>
+				</div>
+			</a>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -786,44 +786,44 @@ export function LinkCardComponent({
 // ============================================================================
 
 export function FileCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: FileCard; 
-  isEditing: boolean;
+	card: FileCard; 
+	isEditing: boolean;
 }) {
-  const formatFileSize = (bytes: number | null) => {
-    if (!bytes) return 'Unknown size';
-    const kb = bytes / 1024;
-    if (kb < 1024) return `${kb.toFixed(1)} KB`;
-    return `${(kb / 1024).toFixed(1)} MB`;
-  };
+	const formatFileSize = (bytes: number | null) => {
+		if (!bytes) return 'Unknown size';
+		const kb = bytes / 1024;
+		if (kb < 1024) return `${kb.toFixed(1)} KB`;
+		return `${(kb / 1024).toFixed(1)} MB`;
+	};
 
-  return (
-    <CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-      <a
-        href={card.file_cards.file_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="file-card block p-4 hover:bg-gray-50 transition-colors"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center text-blue-600 font-semibold text-xs">
-            {card.file_cards.file_type?.toUpperCase() || 'FILE'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-sm text-gray-900 truncate">
-              {card.file_cards.file_name}
-            </h3>
-            <p className="text-xs text-gray-400">
-              {formatFileSize(card.file_cards.file_size)}
-            </p>
-          </div>
-        </div>
-      </a>
-    </CardBase>
-  );
+	return (
+		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+			<a
+				href={card.file_cards.file_url}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="file-card block p-4 hover:bg-gray-50 transition-colors"
+				onClick={(e) => e.stopPropagation()}
+			>
+				<div className="flex items-center gap-3">
+					<div className="w-10 h-10 bg-blue-100 rounded flex items-center justify-center text-blue-600 font-semibold text-xs">
+						{card.file_cards.file_type?.toUpperCase() || 'FILE'}
+					</div>
+					<div className="flex-1 min-w-0">
+						<h3 className="font-medium text-sm text-gray-900 truncate">
+							{card.file_cards.file_name}
+						</h3>
+						<p className="text-xs text-gray-400">
+							{formatFileSize(card.file_cards.file_size)}
+						</p>
+					</div>
+				</div>
+			</a>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -831,201 +831,201 @@ export function FileCardComponent({
 // ============================================================================
 
 export function ColorPaletteCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: ColorPaletteCard; 
-  isEditing: boolean;
+	card: ColorPaletteCard; 
+	isEditing: boolean;
 }) {
-  const { updateCard } = useCanvasStore();
-  const [newColor, setNewColor] = useState('#000000');
+	const { updateCard } = useCanvasStore();
+	const [newColor, setNewColor] = useState('#000000');
 
-  const debouncedSave = useDebouncedCallback(
-    async (title: string, description: string | null, colors: string[]) => {
-      try {
-        await updateCardContent(card.id, 'color_palette', {
-          title,
-          description,
-          colors,
-        });
-      } catch (error) {
-        console.error('Failed to update color palette:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSave = useDebouncedCallback(
+		async (title: string, description: string | null, colors: string[]) => {
+			try {
+				await updateCardContent(card.id, 'color_palette', {
+					title,
+					description,
+					colors,
+				});
+			} catch (error) {
+				console.error('Failed to update color palette:', error);
+			}
+		},
+		1000
+	);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      color_palette_cards: {
-        ...card.color_palette_cards,
-        title: newTitle,
-      },
-    });
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newTitle = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			color_palette_cards: {
+				...card.color_palette_cards,
+				title: newTitle,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(newTitle, card.color_palette_cards.description, card.color_palette_cards.colors);
-  };
+		// Debounced save
+		debouncedSave(newTitle, card.color_palette_cards.description, card.color_palette_cards.colors);
+	};
 
-  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newDescription = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      color_palette_cards: {
-        ...card.color_palette_cards,
-        description: newDescription,
-      },
-    });
+	const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+		const newDescription = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			color_palette_cards: {
+				...card.color_palette_cards,
+				description: newDescription,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(card.color_palette_cards.title, newDescription, card.color_palette_cards.colors);
-  };
+		// Debounced save
+		debouncedSave(card.color_palette_cards.title, newDescription, card.color_palette_cards.colors);
+	};
 
-  const handleAddColor = () => {
-    const updatedColors = [...card.color_palette_cards.colors, newColor];
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      color_palette_cards: {
-        ...card.color_palette_cards,
-        colors: updatedColors,
-      },
-    });
+	const handleAddColor = () => {
+		const updatedColors = [...card.color_palette_cards.colors, newColor];
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			color_palette_cards: {
+				...card.color_palette_cards,
+				colors: updatedColors,
+			},
+		});
 
-    // Save immediately
-    debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
-    setNewColor('#000000');
-  };
+		// Save immediately
+		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
+		setNewColor('#000000');
+	};
 
-  const handleRemoveColor = (index: number) => {
-    const updatedColors = card.color_palette_cards.colors.filter((_, i) => i !== index);
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      color_palette_cards: {
-        ...card.color_palette_cards,
-        colors: updatedColors,
-      },
-    });
+	const handleRemoveColor = (index: number) => {
+		const updatedColors = card.color_palette_cards.colors.filter((_, i) => i !== index);
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			color_palette_cards: {
+				...card.color_palette_cards,
+				colors: updatedColors,
+			},
+		});
 
-    // Save immediately
-    debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
-  };
+		// Save immediately
+		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
+	};
 
-  const handleColorChange = (index: number, newColor: string) => {
-    const updatedColors = [...card.color_palette_cards.colors];
-    updatedColors[index] = newColor;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      color_palette_cards: {
-        ...card.color_palette_cards,
-        colors: updatedColors,
-      },
-    });
+	const handleColorChange = (index: number, newColor: string) => {
+		const updatedColors = [...card.color_palette_cards.colors];
+		updatedColors[index] = newColor;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			color_palette_cards: {
+				...card.color_palette_cards,
+				colors: updatedColors,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
-  };
+		// Debounced save
+		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
+	};
 
-  return (
-    <CardBase isEditing={isEditing} className="min-w-[320px] max-w-[420px]">
-      <div className="color-palette-card p-4">
-        {isEditing ? (
-          <input
-            type="text"
-            value={card.color_palette_cards.title}
-            onChange={handleTitleChange}
-            className="font-semibold text-gray-900 mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
-            placeholder="Palette name"
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <h3 className="font-semibold text-gray-900 mb-1">
-            {card.color_palette_cards.title}
-          </h3>
-        )}
-        
-        {isEditing ? (
-          <textarea
-            value={card.color_palette_cards.description || ''}
-            onChange={handleDescriptionChange}
-            className="text-xs text-gray-500 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 resize-none"
-            placeholder="Description (optional)"
-            rows={2}
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : card.color_palette_cards.description ? (
-          <p className="text-xs text-gray-500 mb-3">
-            {card.color_palette_cards.description}
-          </p>
-        ) : null}
-        
-        <div className="flex gap-2 flex-wrap">
-          {card.color_palette_cards.colors.map((color, index) => (
-            <div key={index} className="relative group">
-              {isEditing ? (
-                <div className="flex flex-col items-center gap-1">
-                  <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => handleColorChange(index, e.target.value)}
-                    className="w-12 h-12 rounded-lg border border-gray-200 shadow-sm cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveColor(index);
-                    }}
-                    className="text-xs text-red-500 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <div
-                  className="w-12 h-12 rounded-lg border border-gray-200 shadow-sm"
-                  style={{ backgroundColor: color }}
-                  title={color}
-                />
-              )}
-            </div>
-          ))}
-        </div>
+	return (
+		<CardBase isEditing={isEditing} className="min-w-[320px] max-w-[420px]">
+			<div className="color-palette-card p-4">
+				{isEditing ? (
+					<input
+						type="text"
+						value={card.color_palette_cards.title}
+						onChange={handleTitleChange}
+						className="font-semibold text-gray-900 mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+						placeholder="Palette name"
+						onClick={(e) => e.stopPropagation()}
+					/>
+				) : (
+					<h3 className="font-semibold text-gray-900 mb-1">
+						{card.color_palette_cards.title}
+					</h3>
+				)}
+				
+				{isEditing ? (
+					<textarea
+						value={card.color_palette_cards.description || ''}
+						onChange={handleDescriptionChange}
+						className="text-xs text-gray-500 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 resize-none"
+						placeholder="Description (optional)"
+						rows={2}
+						onClick={(e) => e.stopPropagation()}
+					/>
+				) : card.color_palette_cards.description ? (
+					<p className="text-xs text-gray-500 mb-3">
+						{card.color_palette_cards.description}
+					</p>
+				) : null}
+				
+				<div className="flex gap-2 flex-wrap">
+					{card.color_palette_cards.colors.map((color, index) => (
+						<div key={index} className="relative group">
+							{isEditing ? (
+								<div className="flex flex-col items-center gap-1">
+									<input
+										type="color"
+										value={color}
+										onChange={(e) => handleColorChange(index, e.target.value)}
+										className="w-12 h-12 rounded-lg border border-gray-200 shadow-sm cursor-pointer"
+										onClick={(e) => e.stopPropagation()}
+									/>
+									<button
+										onClick={(e) => {
+											e.stopPropagation();
+											handleRemoveColor(index);
+										}}
+										className="text-xs text-red-500 hover:text-red-700"
+									>
+										Remove
+									</button>
+								</div>
+							) : (
+								<div
+									className="w-12 h-12 rounded-lg border border-gray-200 shadow-sm"
+									style={{ backgroundColor: color }}
+									title={color}
+								/>
+							)}
+						</div>
+					))}
+				</div>
 
-        {isEditing && (
-          <div className="mt-3 flex gap-2 items-center">
-            <input
-              type="color"
-              value={newColor}
-              onChange={(e) => setNewColor(e.target.value)}
-              className="w-10 h-10 rounded border border-gray-200 cursor-pointer"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAddColor();
-              }}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              + Add color
-            </button>
-          </div>
-        )}
-      </div>
-    </CardBase>
-  );
+				{isEditing && (
+					<div className="mt-3 flex gap-2 items-center">
+						<input
+							type="color"
+							value={newColor}
+							onChange={(e) => setNewColor(e.target.value)}
+							className="w-10 h-10 rounded border border-gray-200 cursor-pointer"
+							onClick={(e) => e.stopPropagation()}
+						/>
+						<button
+							onClick={(e) => {
+								e.stopPropagation();
+								handleAddColor();
+							}}
+							className="text-sm text-blue-600 hover:text-blue-700"
+						>
+							+ Add color
+						</button>
+					</div>
+				)}
+			</div>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -1033,101 +1033,101 @@ export function ColorPaletteCardComponent({
 // ============================================================================
 
 export function ColumnCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: ColumnCard; 
-  isEditing: boolean;
+	card: ColumnCard; 
+	isEditing: boolean;
 }) {
-  const { updateCard } = useCanvasStore();
+	const { updateCard } = useCanvasStore();
 
-  const debouncedSave = useDebouncedCallback(
-    async (title: string, background_color: string) => {
-      try {
-        await updateCardContent(card.id, 'column', {
-          title,
-          background_color,
-        });
-      } catch (error) {
-        console.error('Failed to update column:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSave = useDebouncedCallback(
+		async (title: string, background_color: string) => {
+			try {
+				await updateCardContent(card.id, 'column', {
+					title,
+					background_color,
+				});
+			} catch (error) {
+				console.error('Failed to update column:', error);
+			}
+		},
+		1000
+	);
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      column_cards: {
-        ...card.column_cards,
-        title: newTitle,
-      },
-    });
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newTitle = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			column_cards: {
+				...card.column_cards,
+				title: newTitle,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(newTitle, card.column_cards.background_color);
-  };
+		// Debounced save
+		debouncedSave(newTitle, card.column_cards.background_color);
+	};
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newColor = e.target.value;
-    
-    // Update local state
-    updateCard(card.id, {
-      ...card,
-      column_cards: {
-        ...card.column_cards,
-        background_color: newColor,
-      },
-    });
+	const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newColor = e.target.value;
+		
+		// Update local state
+		updateCard(card.id, {
+			...card,
+			column_cards: {
+				...card.column_cards,
+				background_color: newColor,
+			},
+		});
 
-    // Debounced save
-    debouncedSave(card.column_cards.title, newColor);
-  };
+		// Debounced save
+		debouncedSave(card.column_cards.title, newColor);
+	};
 
-  return (
-    <CardBase 
-      isEditing={isEditing} 
-      className="min-w-[280px] max-w-[420px]"
-      style={{ backgroundColor: card.column_cards.background_color }}
-    >
-      <div className="column-card p-4">
-        {isEditing ? (
-          <div className="space-y-3 mb-3">
-            <input
-              type="text"
-              value={card.column_cards.title}
-              onChange={handleTitleChange}
-              className="text-sm font-semibold text-gray-700 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
-              placeholder="Column title"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-gray-500">Background:</label>
-              <input
-                type="color"
-                value={card.column_cards.background_color}
-                onChange={handleColorChange}
-                className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          </div>
-        ) : (
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">
-            {card.column_cards.title}
-          </h3>
-        )}
-        <div className="min-h-[200px] border-2 border-dashed border-gray-300 rounded p-2">
-          <p className="text-xs text-gray-400 text-center mt-8">
-            {card.column_cards.column_items?.length || 0} items
-          </p>
-        </div>
-      </div>
-    </CardBase>
-  );
+	return (
+		<CardBase 
+			isEditing={isEditing} 
+			className="min-w-[280px] max-w-[420px]"
+			style={{ backgroundColor: card.column_cards.background_color }}
+		>
+			<div className="column-card p-4">
+				{isEditing ? (
+					<div className="space-y-3 mb-3">
+						<input
+							type="text"
+							value={card.column_cards.title}
+							onChange={handleTitleChange}
+							className="text-sm font-semibold text-gray-700 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+							placeholder="Column title"
+							onClick={(e) => e.stopPropagation()}
+						/>
+						<div className="flex items-center gap-2">
+							<label className="text-xs text-gray-500">Background:</label>
+							<input
+								type="color"
+								value={card.column_cards.background_color}
+								onChange={handleColorChange}
+								className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</div>
+					</div>
+				) : (
+					<h3 className="text-sm font-semibold text-gray-700 mb-2">
+						{card.column_cards.title}
+					</h3>
+				)}
+				<div className="min-h-[200px] border-2 border-dashed border-gray-300 rounded p-2">
+					<p className="text-xs text-gray-400 text-center mt-8">
+						{card.column_cards.column_items?.length || 0} items
+					</p>
+				</div>
+			</div>
+		</CardBase>
+	);
 }
 
 // ============================================================================
@@ -1135,282 +1135,282 @@ export function ColumnCardComponent({
 // ============================================================================
 
 export function BoardCardComponent({ 
-  card, 
-  isEditing 
+	card, 
+	isEditing 
 }: { 
-  card: any; // Will be BoardCard type
-  isEditing: boolean;
+	card: any; // Will be BoardCard type
+	isEditing: boolean;
 }) {
-  const { updateCard } = useCanvasStore();
-  const [availableBoards, setAvailableBoards] = useState<Array<{id: string, title: string, color: string}>>([]);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [newBoardTitle, setNewBoardTitle] = useState('New Board');
-  const [newBoardColor, setNewBoardColor] = useState('#3B82F6');
+	const { updateCard } = useCanvasStore();
+	const [availableBoards, setAvailableBoards] = useState<Array<{id: string, title: string, color: string}>>([]);
+	const [isCreatingNew, setIsCreatingNew] = useState(false);
+	const [newBoardTitle, setNewBoardTitle] = useState('New Board');
+	const [newBoardColor, setNewBoardColor] = useState('#3B82F6');
 
-  const debouncedSave = useDebouncedCallback(
-    async (linked_board_id: string, board_title: string, board_color: string) => {
-      try {
-        await updateCardContent(card.id, 'board', {
-          linked_board_id,
-          board_title,
-          board_color,
-        });
-      } catch (error) {
-        console.error('Failed to update board card:', error);
-      }
-    },
-    1000
-  );
+	const debouncedSave = useDebouncedCallback(
+		async (linked_board_id: string, board_title: string, board_color: string) => {
+			try {
+				await updateCardContent(card.id, 'board', {
+					linked_board_id,
+					board_title,
+					board_color,
+				});
+			} catch (error) {
+				console.error('Failed to update board card:', error);
+			}
+		},
+		1000
+	);
 
-  // Fetch available boards when in edit mode
-  useEffect(() => {
-    if (isEditing) {
-      fetchAvailableBoards();
-    }
-  }, [isEditing]);
+	// Fetch available boards when in edit mode
+	useEffect(() => {
+		if (isEditing) {
+			fetchAvailableBoards();
+		}
+	}, [isEditing]);
 
-  const fetchAvailableBoards = async () => {
-    try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-      
-      const { data, error } = await supabase
-        .from('boards')
-        .select('id, title, color')
-        .order('updated_at', { ascending: false });
-      
-      if (!error && data) {
-        setAvailableBoards(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch boards:', error);
-    }
-  };
+	const fetchAvailableBoards = async () => {
+		try {
+			const { createClient } = await import('@/lib/supabase/client');
+			const supabase = createClient();
+			
+			const { data, error } = await supabase
+				.from('boards')
+				.select('id, title, color')
+				.order('updated_at', { ascending: false });
+			
+			if (!error && data) {
+				setAvailableBoards(data);
+			}
+		} catch (error) {
+			console.error('Failed to fetch boards:', error);
+		}
+	};
 
-  const handleCreateNewBoard = async () => {
-    try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
+	const handleCreateNewBoard = async () => {
+		try {
+			const { createClient } = await import('@/lib/supabase/client');
+			const supabase = createClient();
+			
+			const { data: { user } } = await supabase.auth.getUser();
+			if (!user) throw new Error('Not authenticated');
 
-      const { data: newBoard, error } = await supabase
-        .from('boards')
-        .insert({
-          title: newBoardTitle,
-          color: newBoardColor,
-          user_id: user.id,
-        })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      
-      if (newBoard) {
-        // Update card to link to new board
-        updateCard(card.id, {
-          ...card,
-          board_cards: {
-            ...card.board_cards,
-            linked_board_id: newBoard.id,
-            board_title: newBoard.title,
-            board_color: newBoard.color,
-          },
-        });
-        
-        // Save to database
-        await updateCardContent(card.id, 'board', {
-          linked_board_id: newBoard.id,
-          board_title: newBoard.title,
-          board_color: newBoard.color,
-        });
-        
-        setIsCreatingNew(false);
-      }
-    } catch (error) {
-      console.error('Failed to create board:', error);
-    }
-  };
+			const { data: newBoard, error } = await supabase
+				.from('boards')
+				.insert({
+					title: newBoardTitle,
+					color: newBoardColor,
+					user_id: user.id,
+				})
+				.select()
+				.single();
+			
+			if (error) throw error;
+			
+			if (newBoard) {
+				// Update card to link to new board
+				updateCard(card.id, {
+					...card,
+					board_cards: {
+						...card.board_cards,
+						linked_board_id: newBoard.id,
+						board_title: newBoard.title,
+						board_color: newBoard.color,
+					},
+				});
+				
+				// Save to database
+				await updateCardContent(card.id, 'board', {
+					linked_board_id: newBoard.id,
+					board_title: newBoard.title,
+					board_color: newBoard.color,
+				});
+				
+				setIsCreatingNew(false);
+			}
+		} catch (error) {
+			console.error('Failed to create board:', error);
+		}
+	};
 
-  const handleSelectBoard = async (boardId: string, boardTitle: string, boardColor: string) => {
-    // Update card
-    updateCard(card.id, {
-      ...card,
-      board_cards: {
-        ...card.board_cards,
-        linked_board_id: boardId,
-        board_title: boardTitle,
-        board_color: boardColor,
-      },
-    });
-    
-    // Save to database
-    await updateCardContent(card.id, 'board', {
-      linked_board_id: boardId,
-      board_title: boardTitle,
-      board_color: boardColor,
-    });
-  };
+	const handleSelectBoard = async (boardId: string, boardTitle: string, boardColor: string) => {
+		// Update card
+		updateCard(card.id, {
+			...card,
+			board_cards: {
+				...card.board_cards,
+				linked_board_id: boardId,
+				board_title: boardTitle,
+				board_color: boardColor,
+			},
+		});
+		
+		// Save to database
+		await updateCardContent(card.id, 'board', {
+			linked_board_id: boardId,
+			board_title: boardTitle,
+			board_color: boardColor,
+		});
+	};
 
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    
-    updateCard(card.id, {
-      ...card,
-      board_cards: {
-        ...card.board_cards,
-        board_title: newTitle,
-      },
-    });
-    
-    debouncedSave(card.board_cards.linked_board_id, newTitle, card.board_cards.board_color);
-  };
+	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const newTitle = e.target.value;
+		
+		updateCard(card.id, {
+			...card,
+			board_cards: {
+				...card.board_cards,
+				board_title: newTitle,
+			},
+		});
+		
+		debouncedSave(card.board_cards.linked_board_id, newTitle, card.board_cards.board_color);
+	};
 
-  const handleNavigateToBoard = (e: React.MouseEvent) => {
-    if (!isEditing && card.board_cards.linked_board_id) {
-      e.stopPropagation();
-      // Navigate to the linked board
-      window.location.href = `/board/${card.board_cards.linked_board_id}`;
-    }
-  };
+	const handleNavigateToBoard = (e: React.MouseEvent) => {
+		if (!isEditing && card.board_cards.linked_board_id) {
+			e.stopPropagation();
+			// Navigate to the linked board
+			window.location.href = `/board/${card.board_cards.linked_board_id}`;
+		}
+	};
 
-  if (isEditing) {
-    return (
-      <CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-        <div className="board-card p-4 space-y-3">
-          <div>
-            <label className="text-xs text-gray-500 block mb-1">Board Title</label>
-            <input
-              type="text"
-              value={card.board_cards.board_title}
-              onChange={handleTitleChange}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-              placeholder="Board name"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
+	if (isEditing) {
+		return (
+			<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+				<div className="board-card p-4 space-y-3">
+					<div>
+						<label className="text-xs text-gray-500 block mb-1">Board Title</label>
+						<input
+							type="text"
+							value={card.board_cards.board_title}
+							onChange={handleTitleChange}
+							className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+							placeholder="Board name"
+							onClick={(e) => e.stopPropagation()}
+						/>
+					</div>
 
-          {isCreatingNew ? (
-            <div className="space-y-3 p-3 bg-gray-50 rounded border border-gray-200">
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">New Board Name</label>
-                <input
-                  type="text"
-                  value={newBoardTitle}
-                  onChange={(e) => setNewBoardTitle(e.target.value)}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Color</label>
-                <input
-                  type="color"
-                  value={newBoardColor}
-                  onChange={(e) => setNewBoardColor(e.target.value)}
-                  className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreateNewBoard();
-                  }}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Create
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsCreatingNew(false);
-                  }}
-                  className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsCreatingNew(true);
-                }}
-                className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
-              >
-                + Create New Board
-              </button>
-              
-              {availableBoards.length > 0 && (
-                <div>
-                  <label className="text-xs text-gray-500 block mb-1">Or Link to Existing</label>
-                  <select
-                    value={card.board_cards.linked_board_id || ''}
-                    onChange={(e) => {
-                      const selectedBoard = availableBoards.find(b => b.id === e.target.value);
-                      if (selectedBoard) {
-                        handleSelectBoard(selectedBoard.id, selectedBoard.title, selectedBoard.color);
-                      }
-                    }}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <option value="">Select a board...</option>
-                    {availableBoards.map(board => (
-                      <option key={board.id} value={board.id}>
-                        {board.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </CardBase>
-    );
-  }
+					{isCreatingNew ? (
+						<div className="space-y-3 p-3 bg-gray-50 rounded border border-gray-200">
+							<div>
+								<label className="text-xs text-gray-500 block mb-1">New Board Name</label>
+								<input
+									type="text"
+									value={newBoardTitle}
+									onChange={(e) => setNewBoardTitle(e.target.value)}
+									className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									onClick={(e) => e.stopPropagation()}
+								/>
+							</div>
+							<div>
+								<label className="text-xs text-gray-500 block mb-1">Color</label>
+								<input
+									type="color"
+									value={newBoardColor}
+									onChange={(e) => setNewBoardColor(e.target.value)}
+									className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
+									onClick={(e) => e.stopPropagation()}
+								/>
+							</div>
+							<div className="flex gap-2">
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										handleCreateNewBoard();
+									}}
+									className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+								>
+									Create
+								</button>
+								<button
+									onClick={(e) => {
+										e.stopPropagation();
+										setIsCreatingNew(false);
+									}}
+									className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+								>
+									Cancel
+								</button>
+							</div>
+						</div>
+					) : (
+						<div className="space-y-2">
+							<button
+								onClick={(e) => {
+									e.stopPropagation();
+									setIsCreatingNew(true);
+								}}
+								className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+							>
+								+ Create New Board
+							</button>
+							
+							{availableBoards.length > 0 && (
+								<div>
+									<label className="text-xs text-gray-500 block mb-1">Or Link to Existing</label>
+									<select
+										value={card.board_cards.linked_board_id || ''}
+										onChange={(e) => {
+											const selectedBoard = availableBoards.find(b => b.id === e.target.value);
+											if (selectedBoard) {
+												handleSelectBoard(selectedBoard.id, selectedBoard.title, selectedBoard.color);
+											}
+										}}
+										className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+										onClick={(e) => e.stopPropagation()}
+									>
+										<option value="">Select a board...</option>
+										{availableBoards.map(board => (
+											<option key={board.id} value={board.id}>
+												{board.title}
+											</option>
+										))}
+									</select>
+								</div>
+							)}
+						</div>
+					)}
+				</div>
+			</CardBase>
+		);
+	}
 
-  // View mode - clickable board preview
-  return (
-    <CardBase isEditing={isEditing} className="min-w-[280px] max-w-[360px] cursor-pointer hover:shadow-lg transition-shadow">
-      <div 
-        className="board-card overflow-hidden"
-        onClick={handleNavigateToBoard}
-      >
-        <div 
-          className="h-32 flex items-center justify-center relative"
-          style={{ backgroundColor: card.board_cards.board_color }}
-        >
-          <div className="absolute inset-0 bg-black bg-opacity-10"></div>
-          <svg 
-            className="w-16 h-16 text-white opacity-80 relative z-10" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={1.5} 
-              d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" 
-            />
-          </svg>
-        </div>
-        <div className="p-4 bg-white">
-          <h3 className="font-semibold text-gray-900 truncate mb-1">
-            {card.board_cards.board_title}
-          </h3>
-          <p className="text-xs text-gray-500">
-            {card.board_cards.card_count || 0} cards
-          </p>
-        </div>
-      </div>
-    </CardBase>
-  );
+	// View mode - clickable board preview
+	return (
+		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[360px] cursor-pointer hover:shadow-lg transition-shadow">
+			<div 
+				className="board-card overflow-hidden"
+				onDoubleClick={handleNavigateToBoard}
+			>
+				<div 
+					className="h-32 flex items-center justify-center relative"
+					style={{ backgroundColor: card.board_cards.board_color }}
+				>
+					<div className="absolute inset-0 bg-black bg-opacity-10"></div>
+					<svg 
+						className="w-16 h-16 text-white opacity-80 relative z-10" 
+						fill="none" 
+						stroke="currentColor" 
+						viewBox="0 0 24 24"
+					>
+						<path 
+							strokeLinecap="round" 
+							strokeLinejoin="round" 
+							strokeWidth={1.5} 
+							d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" 
+						/>
+					</svg>
+				</div>
+				<div className="p-4 bg-white">
+					<h3 className="font-semibold text-gray-900 truncate mb-1">
+						{card.board_cards.board_title}
+					</h3>
+					<p className="text-xs text-gray-500">
+						{card.board_cards.card_count || 0} cards
+					</p>
+				</div>
+			</div>
+		</CardBase>
+	);
 }

@@ -30,7 +30,7 @@ export default function ElementToolbar({
 				file: { file_name: 'file.pdf', file_url: '', file_type: 'pdf' },
 				color_palette: { title: 'Palette', colors: ['#FF0000', '#00FF00', '#0000FF'] },
 				column: { title: 'Column', background_color: '#f3f4f6' },
-				board: { linked_board_id: '', board_title: 'New Board', board_color: '#3B82F6', card_count: 0 }
+				board: { linked_board_id: boardId, board_title: 'New Board', board_color: '#3B82F6', card_count: 0 }
 			};
 
 			// Create card in db

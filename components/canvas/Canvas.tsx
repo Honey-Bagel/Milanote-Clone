@@ -19,6 +19,7 @@ import type { Card } from '@/lib/types';
 import type { Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/element-toolbar';
 import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
+import ContextMenu from '@/app/ui/board/context-menu';
 
 interface CanvasProps {
 	/**
@@ -56,6 +57,8 @@ export function Canvas({
 }: CanvasProps) {
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
+	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
+	const [cardContextMenuPosition, setCardContextMenuPosition] = useState({ x: 0, y: 0});
 	
 	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard } = useCanvasStore();
 
@@ -99,6 +102,11 @@ export function Canvas({
 	const handleCardClick = (cardId: string) => {
 		selectCard(cardId);
 		onCardClick?.(cardId);
+	};
+
+	const handleContextMenu = (e: React.MouseEvent) => {
+		setCardContextMenuVisible(true);
+		setCardContextMenuPosition({ x: e.clientX, y: e.clientY });
 	};
 
 	const handleEditorReady = (cardId: string, editor: Editor) => {
@@ -154,6 +162,7 @@ export function Canvas({
 										boardId={boardId}
 										onCardClick={handleCardClick}
 										onCardDoubleClick={onCardDoubleClick}
+										onContextMenu={handleContextMenu}
 										onEditorReady={handleEditorReady}
 									/>
 								))}
@@ -163,6 +172,9 @@ export function Canvas({
 				
 				{/* Selection Box */}
 				<SelectionBox />
+
+				{/* Card context menu */}
+				<ContextMenu isOpen={cardContextMenuVisible} position={cardContextMenuPosition} onClose={() => setCardContextMenuVisible(false)}/>
 			</div>
 		</div>
 	);
