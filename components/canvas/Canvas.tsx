@@ -58,6 +58,7 @@ export function Canvas({
 	onCardDoubleClick,
 }: CanvasProps) {
 	const canvasRef = useRef<HTMLDivElement>(null);
+	const canvasViewportRef = useRef<HTMLDivElement>(null);
 	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
 	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
 	const [cardContextMenuPosition, setCardContextMenuPosition] = useState({ x: 0, y: 0});
@@ -94,7 +95,7 @@ export function Canvas({
 	}, [editingCardId]);
 
 	// Attach interaction hooks
-	useCanvasInteractions(canvasRef, {
+	useCanvasInteractions(canvasViewportRef, {
 		enablePan,
 		enableZoom,
 	});
@@ -148,6 +149,7 @@ export function Canvas({
 			{/* Canvas */}
 			<div
 				className={`canvas-viewport relative w-full h-full overflow-hidden bg-gray-50 select-none ${className}`}
+				ref={canvasViewportRef}
 				data-scrollable="true"
 				data-canvas-root="true"
 				onDragOver={handleDragOver}
@@ -162,8 +164,7 @@ export function Canvas({
 						ref={canvasRef}
 						data-allow-double-click-creates="true"
 						style={{
-							width: '100%',
-							height: '100%',
+							position: 'relative',
 							transform: createViewportMatrix(viewport.x, viewport.y, viewport.zoom),
 							transformOrigin: '0 0',
 							willChange: 'transform',

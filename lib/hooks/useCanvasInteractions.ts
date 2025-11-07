@@ -72,6 +72,7 @@ export function useCanvasInteractions(
 				(e.button === 1 || (e.button === 0 && spaceKeyPressedRef.current));
 
 			if (shouldPan) {
+				console.log('should pan")')
 				e.preventDefault();
 				setIsPanning(true);
 				panStartRef.current = {
