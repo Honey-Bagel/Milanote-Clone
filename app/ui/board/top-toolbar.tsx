@@ -50,7 +50,7 @@ export default function TopToolbar({
 										href="/dashboard"
 										className="flex items-center text-gray-400 hover:text-white transition-colors"
 									>
-										<Home className="w-4 h-4" />
+										<Home className="w-5 h-5" />
 									</Link>
 								</BreadcrumbLink>
 							</BreadcrumbItem>

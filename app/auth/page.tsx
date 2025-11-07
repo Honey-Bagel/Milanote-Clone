@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { redirect, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,21 @@ import Link from 'next/link';
 export default function AuthPage() {
 	const searchParams = useSearchParams();
 	const [isLogin, setIsLogin] = useState(true);
+
+	const supabase = createClient();
+
+	useEffect(() => {
+		const checkAuth = async () => {
+			const { data: { user }, error } = await supabase.auth.getUser();
+
+			if (!error && user) {
+				redirect("/dashboard");
+			}
+
+		};
+
+		checkAuth();
+	});
 
 	useEffect(() => {
 		// Check if url has ?mode=signup

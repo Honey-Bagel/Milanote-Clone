@@ -20,6 +20,8 @@ import type { Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/element-toolbar';
 import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
 import ContextMenu from '@/app/ui/board/context-menu';
+import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
+import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
 
 interface CanvasProps {
 	/**
@@ -30,7 +32,7 @@ interface CanvasProps {
 	/**
 	 * Board ID for saving updates
 	 */
-	boardId?: string;
+	boardId: string | null;
 	
 	className?: string;
 	enablePan?: boolean;
@@ -59,8 +61,14 @@ export function Canvas({
 	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
 	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
 	const [cardContextMenuPosition, setCardContextMenuPosition] = useState({ x: 0, y: 0});
+	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
 	
 	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard } = useCanvasStore();
+
+	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop({
+		boardId,
+		viewport
+	});
 
 	const mouseDownHandler = (e: React.MouseEvent) => {
 		if (e.button !== 0) return;
@@ -104,10 +112,20 @@ export function Canvas({
 		onCardClick?.(cardId);
 	};
 
-	const handleContextMenu = (e: React.MouseEvent) => {
+	const handleCardContextMenu = (e: React.MouseEvent) => {
 		setCardContextMenuVisible(true);
 		setCardContextMenuPosition({ x: e.clientX, y: e.clientY });
 	};
+
+	const handleCanvasContextMenu = (e: React.MouseEvent) => {
+		e.preventDefault();
+
+		if (e.target !== canvasRef.current) {
+			return;
+		}
+
+		setCanvasContextMenuData({ open: true, position: {x: e.clientX, y: e.clientY } });
+	}
 
 	const handleEditorReady = (cardId: string, editor: Editor) => {
 		// Only set editor if this card is being edited
@@ -129,15 +147,19 @@ export function Canvas({
 			
 			{/* Canvas */}
 			<div
-				ref={canvasRef}
 				className={`canvas-viewport relative w-full h-full overflow-hidden bg-gray-50 select-none ${className}`}
 				data-scrollable="true"
 				data-canvas-root="true"
+				onDragOver={handleDragOver}
+				onDragLeave={handleDragLeave}
+				onDrop={handleDrop}
+				onContextMenu={handleCanvasContextMenu}
 			>
 				<div className="canvas-scroll-area w-full h-full">
 					<div
 						className="canvas-document"
 						id="canvas-root"
+						ref={canvasRef}
 						data-allow-double-click-creates="true"
 						style={{
 							width: '100%',
@@ -162,7 +184,7 @@ export function Canvas({
 										boardId={boardId}
 										onCardClick={handleCardClick}
 										onCardDoubleClick={onCardDoubleClick}
-										onContextMenu={handleContextMenu}
+										onContextMenu={handleCardContextMenu}
 										onEditorReady={handleEditorReady}
 									/>
 								))}
@@ -175,6 +197,13 @@ export function Canvas({
 
 				{/* Card context menu */}
 				<ContextMenu isOpen={cardContextMenuVisible} position={cardContextMenuPosition} onClose={() => setCardContextMenuVisible(false)}/>
+				
+				{/* Canvas Context Menu */}
+				<CanvasContextMenu
+					isOpen={canvasContextMenuData.open}
+					position={canvasContextMenuData.position}
+					onClose={() => setCanvasContextMenuData({open: false, position: { x: 0, y: 0 } } )}
+				/>
 			</div>
 		</div>
 	);

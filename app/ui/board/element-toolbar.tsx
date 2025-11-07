@@ -6,6 +6,9 @@ import { createCard } from '@/lib/data/cards-client';
 import { createClient } from '@/lib/supabase/client';
 import { useParams } from "next/navigation";
 import type { Card } from "@/lib/types";
+import AddElementModal from './add-element-modal';
+import { useState } from 'react';
+import { DraggableToolbarButton } from '@/components/ui/draggable-toolbar-button';
 
 export default function ElementToolbar({ 
 	onCreateCard 
@@ -13,6 +16,7 @@ export default function ElementToolbar({
 	onCreateCard: (cardType: Card["card_type"]) => void;
 }
 ) {
+	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
 	const { addCard } = useCanvasStore();
 	const params = useParams();
 	const boardId = params.id as string;
@@ -67,12 +71,16 @@ export default function ElementToolbar({
 			console.error("Failed to create card:", error);
 		}
 	}
+
+	const handleDragStart = (cardType: Card["card_type"], e: React.DragEvent) => {
+		e.dataTransfer.effectAllowed = 'copy';
+	}
 	
 	return (
 		<div className="bg-gray-800 border-b border-gray-700 px-6 py-3 h-full flex items-center">
 			<div className="flex items-center space-x-2">
 				{/* Add Elements */}
-				<button className="px-4 py-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 font-medium text-sm flex items-center space-x-2 transition-colors">
+				<button onClick={() => {setIsElementModalOpen(true)}} className="px-4 py-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 font-medium text-sm flex items-center space-x-2 transition-colors">
 					<Plus className="w-4 h-4" />
 					<span>Add</span>
 					<ChevronDown className="w-3 h-3" />
@@ -81,69 +89,69 @@ export default function ElementToolbar({
 				<div className="w-px h-6 bg-gray-700"></div>
 
 				{/* Element Types */}
-				<button 
-					onClick={() => handleCreateCard('note')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors" 
+				<DraggableToolbarButton 
+					icon={StickyNote}
 					title="Add Note"
-				>
-					<StickyNote className="w-4 h-4" />
-				</button>
+					cardType="note"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
 
-				<button
-					onClick={() => handleCreateCard('board')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors"
+				<DraggableToolbarButton 
+					icon={Book}
 					title="Add Board"
-				>
-					<Book className="w-4 h-4" />
-				</button>
-				
-				<button 
-					onClick={() => handleCreateCard('text')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors" 
+					cardType="board"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
+
+				<DraggableToolbarButton 
+					icon={Type}
 					title="Add Text"
-				>
-					<Type className="w-4 h-4" />
-				</button>
+					cardType="text"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
 				
-				<button 
-					onClick={() => handleCreateCard('image')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors" 
+				<DraggableToolbarButton 
+					icon={Image}
 					title="Add Image"
-				>
-					<Image className="w-4 h-4" />
-				</button>
+					cardType="image"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
 				
-				<button 
-					onClick={() => handleCreateCard('link')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors" 
+				<DraggableToolbarButton 
+					icon={Link}
 					title="Add Link"
-				>
-					<Link className="w-4 h-4" />
-				</button>
+					cardType="link"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
 				
-				<button 
-					onClick={() => handleCreateCard('task_list')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors" 
+				<DraggableToolbarButton 
+					icon={CheckSquare}
 					title="Add Task List"
-				>
-					<CheckSquare className="w-4 h-4" />
-				</button>
+					cardType="task_list"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
 				
-				<button 
-					onClick={() => handleCreateCard('column')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors" 
+				<DraggableToolbarButton 
+					icon={Columns}
 					title="Add Column"
-				>
-					<Columns className="w-4 h-4" />
-				</button>
+					cardType="column"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
 				
-				<button 
-					onClick={() => handleCreateCard('file')}
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors" 
-					title="Upload File"
-				>
-					<Paperclip className="w-4 h-4" />
-				</button>
+				<DraggableToolbarButton 
+					icon={Paperclip}
+					title="Add File"
+					cardType="file"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
 
 				<div className="w-px h-6 bg-gray-700"></div>
 
@@ -165,6 +173,8 @@ export default function ElementToolbar({
 					<Filter className="w-4 h-4" />
 				</button>
 			</div>
+
+			<AddElementModal isOpen={isElementModalOpen} onClose={() => setIsElementModalOpen(false)} />
 		</div>
 	);
 }

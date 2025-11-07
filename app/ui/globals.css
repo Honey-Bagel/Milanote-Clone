@@ -610,3 +610,87 @@ input[type="checkbox"] {
 .editing .note-card {
   pointer-events: auto !important;
 }
+
+/* Add these styles to your app/ui/globals.css */
+
+/* Drag and Drop Styles */
+
+/* Dragging cursor for toolbar buttons */
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
+}
+
+/* Canvas drop zone indicator */
+.canvas-viewport[data-dragging-over="true"] {
+  background-color: rgba(59, 130, 246, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+/* Animated border when dragging over canvas */
+@keyframes drop-zone-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.8);
+  }
+}
+
+.canvas-viewport.drop-zone-active {
+  animation: drop-zone-pulse 1.5s ease-in-out infinite;
+}
+
+/* Drag preview styling (if you want to customize further) */
+.drag-preview {
+  opacity: 0.8;
+  transform: rotate(2deg);
+}
+
+/* Smooth transitions for cards being created */
+.canvas-element {
+  transition: opacity 0.2s ease-in-out;
+}
+
+.canvas-element.just-created {
+  animation: card-appear 0.3s ease-out;
+}
+
+@keyframes card-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Drop indicator overlay */
+.drop-indicator {
+  position: absolute;
+  pointer-events: none;
+  z-index: 9999;
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed rgba(59, 130, 246, 0.5);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+/* Toolbar button states during drag */
+.toolbar-button-dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+/* Prevent text selection during drag operations */
+body.dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
