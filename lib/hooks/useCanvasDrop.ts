@@ -25,9 +25,9 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 			case 'image':
 				return { image_url: '', caption: '' };
 			case 'task_list':
-				return { title: 'Task List', tasks: [] };
+				return { title: 'Task List' };
 			case 'link':
-				return { title: 'New Link', url: 'https://example.com', description: '' };
+				return { title: 'New Link', url: 'https://example.com' };
 			case 'file':
 				return { file_name: 'file.pdf', file_url: '', file_type: 'pdf', file_size: 0 };
 			case 'color_palette':
@@ -40,6 +40,147 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 				return {};
 		}
 	};
+	
+	/**
+	 * Upload file to Supabase Storage
+	 * Images go to 'board-images' bucket, others to 'board-files' bucket
+	 */
+	const uploadFileToStorage = async (file: File, boardId: string): Promise<string> => {
+		// Determine which bucket to use based on file type
+		const isImage = file.type.startsWith('image/');
+		const bucketName = isImage ? 'board-images' : 'board-files';
+
+		// Generate unique filename with timestamp
+		const timestamp = Date.now();
+		const fileExt = file.name.split('.').pop();
+		const fileName = `${boardId}/${timestamp}-${file.name}`;
+		
+		// Upload to appropriate Supabase storage bucket
+		const { data, error } = await supabase.storage
+			.from(bucketName)
+			.upload(fileName, file, {
+				cacheControl: '3600',
+				upsert: false
+			});
+
+		if (error) {
+			console.error(`Error uploading file to ${bucketName}:`, error);
+			throw error;
+		}
+
+		// Get public URL
+		const { data: urlData, } = supabase.storage
+			.from(bucketName)
+			.getPublicUrl(fileName);
+
+		return urlData.publicUrl;
+	};
+
+	/**
+	 * Determine card type based on file mime type
+	 */
+	const getCardTypeFromFile = (file: File): 'image' | 'file' => {
+		if (file.type.startsWith('image/')) {
+			return 'image';
+		}
+		return 'file';
+	};
+
+	/**
+	 * Get file type extension for display
+	 */
+	const getFileTypeExtension = (file: File): string => {
+		const ext = file.name.split('.').pop()?.toLowerCase();
+		return ext || 'file'
+	}
+
+	/**
+	 * Handle file drop from computer
+	 */
+	const handleFileDrop = useCallback(async (e: React.DragEvent, files: FileList) => {
+		if (!boardId) return;
+
+		// Get the canvas element to calculate relative position
+		const canvasElement = e.currentTarget as HTMLElement;
+		const rect = canvasElement.getBoundingClientRect();
+
+		// Calculate position relative to canvas, accounting for viewport transform
+		const clientX = e.clientX - rect.left;
+		const clientY = e.clientY - rect.top;
+
+		// Transform client coordinates to canvas coordinates
+		const canvasX = (clientX - viewport.x) / viewport.zoom;
+		const canvasY = (clientY - viewport.y) /viewport.zoom;
+
+		// Calculate max z-index
+		const maxZIndex = Array.from(cards.values()).reduce(
+			(max, card) => Math.max(max, card.z_index || 0),
+			0
+		);
+
+		// Process each dropped file
+		let yOffset = 0;
+		for (let i = 0; i < files.length; i++) {
+			const file = files[i];
+			
+			try {
+				// Upload file to supabase
+				const fileUrl = await uploadFileToStorage(file, boardId);
+
+				// Determine the file type
+				const cardType = getCardTypeFromFile(file);
+
+				// Prepare card data based on type
+				let cardData: any;
+				if (cardType === 'image') {
+					cardData = {
+						image_url: fileUrl,
+						caption: file.name
+					};
+				} else {
+					cardData = {
+						file_name: file.name,
+						file_url: fileUrl,
+						file_type: getFileTypeExtension(file),
+						file_size: file.size
+					};
+				}
+
+				// Create card in database with stacked positioning
+				const cardId = await createCard(
+					boardId,
+					cardType,
+					{
+						position_x: canvasX,
+						position_y: canvasY + yOffset,
+						width: cardType === 'image' ? 300 : 250,
+						height: cardType === 'image' ? 300 : undefined,
+						z_index: maxZIndex + 1 + i,
+					},
+					cardData
+				);
+
+				// Fetch the created card with all related data
+				const { data } = await supabase
+					.from('cards')
+					.select(`
+						*,
+						${cardType}_cards(*)
+					`)
+					.eq('id', cardId)
+					.single();
+
+				if (data) {
+					addCard(data as Card);
+				}
+
+				// Offset next file drop positioning
+				yOffset += 50;
+			} catch (error) {
+				console.error(`Failed to upload and create card for ${file.name}:`, error);
+			}
+		}
+	}, [boardId, viewport, cards, addCard]);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
@@ -57,6 +198,14 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 	const handleDrop = useCallback(async (e: React.DragEvent) => {
 		e.preventDefault();
 		setIsDraggingOver(false);
+
+		// Check if the files are being dropped from computer
+		const files = e.dataTransfer.files;
+		if (files && files.length > 0) {
+			// Handle file drop from computer
+			await handleFileDrop(e, files);
+			return;
+		}
 
 		const cardType = e.dataTransfer.getData('cardType') as Card['card_type'];
 		if (!cardType) return;
@@ -112,7 +261,7 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 		} catch (error) {
 			console.error('Failed to create card on drop:', error);
 		}
-	}, [boardId, viewport, cards, addCard, supabase, getDefaultCardData]);
+	}, [boardId, viewport, cards, addCard, supabase, getDefaultCardData, handleFileDrop]);
 
 	return {
 		isDraggingOver,

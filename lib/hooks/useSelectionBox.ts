@@ -128,7 +128,7 @@ export function useSelectionBox(
 					x: card.position_x,
 					y: card.position_y,
 					width: card.width,
-					height: card.height || 150, // Use default height if not set
+					height: card.height, // Use default height if not set
 				};
 
 				if (boxesIntersect(selectionBounds, cardBounds)) {
@@ -169,5 +169,6 @@ export function useSelectionBox(
 		setSelectionBox,
 		selectCards,
 		clearSelection,
+		canvasRef
 	]);
 }

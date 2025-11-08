@@ -95,7 +95,7 @@ export function Canvas({
 	}, [editingCardId]);
 
 	// Attach interaction hooks
-	useCanvasInteractions(canvasViewportRef, {
+	useCanvasInteractions(canvasRef, {
 		enablePan,
 		enableZoom,
 	});
@@ -152,16 +152,16 @@ export function Canvas({
 				ref={canvasViewportRef}
 				data-scrollable="true"
 				data-canvas-root="true"
+				data-dragging-over={isDraggingOver}
 				onDragOver={handleDragOver}
 				onDragLeave={handleDragLeave}
 				onDrop={handleDrop}
 				onContextMenu={handleCanvasContextMenu}
 			>
-				<div className="canvas-scroll-area w-full h-full">
+				<div ref={canvasRef} className="canvas-scroll-area w-full h-full">
 					<div
 						className="canvas-document"
 						id="canvas-root"
-						ref={canvasRef}
 						data-allow-double-click-creates="true"
 						style={{
 							position: 'relative',

@@ -52,7 +52,7 @@ export function useCanvasInteractions(
 		zoomSensitivity = 0.001,
 	} = options;
 
-	const { viewport, setViewport, isPanning, setIsPanning, clearSelection } = useCanvasStore();
+	const { viewport, setViewport, isPanning, setIsPanning, clearSelection, setEditingCardId } = useCanvasStore();
 
 	const panStartRef = useRef({ x: 0, y: 0 });
 	const spaceKeyPressedRef = useRef(false);
@@ -72,7 +72,6 @@ export function useCanvasInteractions(
 				(e.button === 1 || (e.button === 0 && spaceKeyPressedRef.current));
 
 			if (shouldPan) {
-				console.log('should pan")')
 				e.preventDefault();
 				setIsPanning(true);
 				panStartRef.current = {
@@ -86,6 +85,7 @@ export function useCanvasInteractions(
 			// Click on empty canvas to deselect all
 			if (e.button === 0 && e.target === canvas && !e.shiftKey) {
 				clearSelection();
+				setEditingCardId(null);
 			}
 		};
 
