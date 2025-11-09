@@ -2,6 +2,8 @@
 
 A full-stack collaborative note-taking and creative organization app inspired by Milanote — featuring an infinite canvas, boards within boards, and real-time collaboration. Built with **Next.js 14**, **Supabase**, and **TypeScript**.
 
+*If you are looking for the Clone using MERN, that has been replaced with this new version. The MERN Clone files can be found [here](https://github.com/Honey-Bagel/Milanote-Clone/tree/e95bd53e48f333e46c4129850e4f8f3e5ee71c9a)*
+
 ![Next.js](https://img.shields.io/badge/next.js-14.2.0-black.svg)
 ![Supabase](https://img.shields.io/badge/supabase-live-green.svg)
 ![TypeScript](https://img.shields.io/badge/typescript-5-blue.svg)
