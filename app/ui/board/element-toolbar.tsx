@@ -104,22 +104,6 @@ export default function ElementToolbar({
 					onDragStart={handleDragStart}
 					onClick={() => {}}
 				/>
-
-				<DraggableToolbarButton 
-					icon={Type}
-					title="Add Text"
-					cardType="text"
-					onDragStart={handleDragStart}
-					onClick={() => {}}
-				/>
-				
-				<DraggableToolbarButton 
-					icon={Image}
-					title="Add Image"
-					cardType="image"
-					onDragStart={handleDragStart}
-					onClick={() => {}}
-				/>
 				
 				<DraggableToolbarButton 
 					icon={Link}
@@ -141,14 +125,6 @@ export default function ElementToolbar({
 					icon={Columns}
 					title="Add Column"
 					cardType="column"
-					onDragStart={handleDragStart}
-					onClick={() => {}}
-				/>
-				
-				<DraggableToolbarButton 
-					icon={Paperclip}
-					title="Add File"
-					cardType="file"
 					onDragStart={handleDragStart}
 					onClick={() => {}}
 				/>

@@ -17,7 +17,7 @@ interface CanvasElementProps {
 	boardId?: string;
 	onCardClick?: (cardId: string) => void;
 	onCardDoubleClick?: (cardId: string) => void;
-	onContextMenu?: (e: React.MouseEvent) => void;
+	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 	onEditorReady?: (cardId: string, editor: Editor) => void;
 }
 
@@ -68,7 +68,7 @@ export function CanvasElement({
 	const handleContextMenu = (e: React.MouseEvent) => {
 		e.preventDefault();
 		
-		onContextMenu?.(e);
+		onContextMenu?.(e, card);
 	}
 
 	const handleEditorReady = (editor: Editor) => {

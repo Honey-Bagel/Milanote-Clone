@@ -3,9 +3,11 @@
 import { ContextMenuProps } from '@/lib/types';
 import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { useCanvasStore } from '@/lib/stores/canvas-store';
 
-export default function ContextMenu({ isOpen, position, onClose }: ContextMenuProps) {
+export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
+	const { setEditingCardId, deleteCard } = useCanvasStore();
 
 	useEffect(() => {
 		const handleClickOutside = (ev: MouseEvent) => {
@@ -21,6 +23,16 @@ export default function ContextMenu({ isOpen, position, onClose }: ContextMenuPr
 		};
 	}, [onClose]);
 
+	const handleEditButton = () => {
+		setEditingCardId(data?.card?.id);
+		onClose();
+	};
+
+	const handleDeleteButton = () => {
+		deleteCard(data?.card?.id);
+		onClose();
+	}
+
 	if (!isOpen) return null;
 
 	return (
@@ -28,15 +40,15 @@ export default function ContextMenu({ isOpen, position, onClose }: ContextMenuPr
 			ref={contextMenuRef}
 			className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[200px]"
 			style={{ 
-				top: `${position.y}px`, 
-				left: `${position.x}px` 
+				top: `${data.position.y}px`, 
+				left: `${data.position.x}px` 
 			}}
 		>
 			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
 				<Copy className="w-4 h-4" />
 				<span>Duplicate</span>
 			</button>
-			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
+			<button onClick={handleEditButton} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
 				<Edit className="w-4 h-4" />
 				<span>Edit</span>
 			</button>
@@ -54,7 +66,7 @@ export default function ContextMenu({ isOpen, position, onClose }: ContextMenuPr
 				<span>Send Backward</span>
 			</button>
 			<div className="border-t border-gray-200 my-2"></div>
-			<button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3">
+			<button onClick={handleDeleteButton} className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3">
 				<Trash2 className="w-4 h-4" />
 				<span>Delete</span>
 			</button>

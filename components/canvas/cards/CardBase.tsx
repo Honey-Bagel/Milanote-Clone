@@ -52,6 +52,7 @@ export function CardBase({
         shadow-sm
         transition-shadow
         hover:shadow-md
+		text-black
         ${isEditing ? 'ring-2 ring-blue-500 editing-active' : ''}
         ${className}
       `}

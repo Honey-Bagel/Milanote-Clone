@@ -525,6 +525,7 @@ export function TaskListCardComponent({
 	};
 
 	const handleAddTask = () => {
+		console.log(card.task_list_cards.tasks.length)
 		const newTask = {
 			id: `task-${Date.now()}`,
 			text: 'New task',
@@ -584,7 +585,7 @@ export function TaskListCardComponent({
 				)}
 				
 				<div className="space-y-2">
-					{card.task_list_cards.tasks
+					{[...card.task_list_cards.tasks]
 						.sort((a, b) => a.position - b.position)
 						.map(task => (
 						<div
@@ -720,7 +721,7 @@ export function LinkCardComponent({
 	if (isEditing) {
 		return (
 			<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-				<div className="link-card p-4 space-y-3">
+				<div className="link-card p-4 space-y-3 text-black">
 					<div>
 						<label className="text-xs text-gray-500 block mb-1">Title</label>
 						<input
@@ -748,10 +749,14 @@ export function LinkCardComponent({
 		);
 	}
 
+	const full_url = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
+		card.link_cards.url :
+		"https://" + card.link_cards.url
+
 	return (
 		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
 			<a
-				href={card.link_cards.url}
+				href={full_url}
 				target="_blank"
 				rel="noopener noreferrer"
 				className="link-card block p-4 hover:bg-gray-50 transition-colors"
@@ -759,7 +764,7 @@ export function LinkCardComponent({
 			>
 				<div className="flex items-start gap-3">
 					{card.link_cards.favicon_url && (
-						<img 
+						<Image 
 							src={card.link_cards.favicon_url} 
 							alt="" 
 							className="w-5 h-5 mt-1 flex-shrink-0" 
@@ -771,7 +776,7 @@ export function LinkCardComponent({
 						</h3>
 						{card.link_cards.url && (
 							<p className="text-xs text-gray-400 truncate mt-1">
-								{new URL(card.link_cards.url).hostname}
+								{new URL(full_url).hostname}
 							</p>
 						)}
 					</div>
@@ -1278,7 +1283,7 @@ export function BoardCardComponent({
 	if (isEditing) {
 		return (
 			<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-				<div className="board-card p-4 space-y-3">
+				<div className="board-card p-4 space-y-3 text-black">
 					<div>
 						<label className="text-xs text-gray-500 block mb-1">Board Title</label>
 						<input

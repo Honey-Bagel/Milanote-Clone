@@ -61,7 +61,7 @@ export function Canvas({
 	const canvasViewportRef = useRef<HTMLDivElement>(null);
 	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
 	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
-	const [cardContextMenuPosition, setCardContextMenuPosition] = useState({ x: 0, y: 0});
+	const [cardContextMenuData, setCardContextMenuData] = useState({card: null, position: { x: 0, y: 0}});
 	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
 	
 	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard } = useCanvasStore();
@@ -113,9 +113,9 @@ export function Canvas({
 		onCardClick?.(cardId);
 	};
 
-	const handleCardContextMenu = (e: React.MouseEvent) => {
+	const handleCardContextMenu = (e: React.MouseEvent, card: Card) => {
 		setCardContextMenuVisible(true);
-		setCardContextMenuPosition({ x: e.clientX, y: e.clientY });
+		setCardContextMenuData({ card, position: { x: e.clientX, y: e.clientY } });
 	};
 
 	const handleCanvasContextMenu = (e: React.MouseEvent) => {
@@ -197,7 +197,7 @@ export function Canvas({
 				<SelectionBox />
 
 				{/* Card context menu */}
-				<ContextMenu isOpen={cardContextMenuVisible} position={cardContextMenuPosition} onClose={() => setCardContextMenuVisible(false)}/>
+				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)}/>
 				
 				{/* Canvas Context Menu */}
 				<CanvasContextMenu

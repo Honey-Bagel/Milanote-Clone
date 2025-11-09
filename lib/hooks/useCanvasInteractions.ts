@@ -52,7 +52,7 @@ export function useCanvasInteractions(
 		zoomSensitivity = 0.001,
 	} = options;
 
-	const { viewport, setViewport, isPanning, setIsPanning, clearSelection, setEditingCardId } = useCanvasStore();
+	const { viewport, setViewport, isPanning, setIsPanning, clearSelection, setEditingCardId, editingCardId } = useCanvasStore();
 
 	const panStartRef = useRef({ x: 0, y: 0 });
 	const spaceKeyPressedRef = useRef(false);
@@ -141,7 +141,7 @@ export function useCanvasInteractions(
 		// ============================================================================
 
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.code === 'Space' && !e.repeat && enablePan) {
+			if (e.code === 'Space' && !e.repeat && enablePan && editingCardId === null) {
 				e.preventDefault();
 				spaceKeyPressedRef.current = true;
 				if (!isPanning) {
@@ -206,6 +206,8 @@ export function useCanvasInteractions(
 		minZoom,
 		maxZoom,
 		zoomSensitivity,
-	canvasRef
+		canvasRef,
+		editingCardId,
+		setEditingCardId
 	]);
 }
