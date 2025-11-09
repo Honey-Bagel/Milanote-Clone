@@ -5,6 +5,7 @@ import ShareModal from './share-modal';
 import { Fragment, useState } from 'react';
 import SettingsModal from '../home/settings-modal';
 import Link from 'next/link';
+import { useCanvasStore } from '@/lib/stores/canvas-store';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -35,6 +36,9 @@ export default function TopToolbar({
 }: TopToolbarProps) {
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+	const { viewport, zoomIn, zoomOut, zoomToFit } = useCanvasStore();
+
+	console.log(viewport);
 
 	return (
 		<>
@@ -107,17 +111,17 @@ export default function TopToolbar({
 				<div className="flex items-center space-x-3">
 					{/* Zoom Controls */}
 					<div className="flex items-center space-x-1 bg-gray-900 rounded-lg px-2 py-1">
-						<button className="p-1.5 hover:bg-gray-700 rounded text-gray-400">
+						<button onClick={zoomOut} className="p-1.5 hover:bg-gray-700 rounded text-gray-400">
 							<Minus className="w-3 h-3" />
 						</button>
-						<span className="px-3 text-sm text-gray-300 font-medium">100%</span>
-						<button className="p-1.5 hover:bg-gray-700 rounded text-gray-400">
+						<span className="px-3 text-sm text-gray-300 font-medium">{(viewport.zoom * 100).toPrecision(4)}%</span>
+						<button onClick={zoomIn} className="p-1.5 hover:bg-gray-700 rounded text-gray-400">
 							<Plus className="w-3 h-3" />
 						</button>
 					</div>
 
 					{/* View Mode */}
-					<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400">
+					<button onClick={zoomToFit} className="p-2 hover:bg-gray-700 rounded-lg text-gray-400">
 						<Maximize2 className="w-4 h-4" />
 					</button>
 					

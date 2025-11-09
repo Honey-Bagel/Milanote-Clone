@@ -269,13 +269,13 @@ export const useCanvasStore = create<CanvasState>()(
 
 			zoomIn: () =>
 				set((state) => {
-					const newZoom = Math.min(state.viewport.zoom * 1.2, 3);
+					const newZoom = Math.min(1.9, state.viewport.zoom + 0.15);
 					state.viewport.zoom = newZoom;
 				}),
 
 			zoomOut: () =>
 				set((state) => {
-					const newZoom = Math.max(state.viewport.zoom / 1.2, 0.1);
+					const newZoom = Math.max(0.1, state.viewport.zoom - 0.15);
 					state.viewport.zoom = newZoom;
 				}),
 

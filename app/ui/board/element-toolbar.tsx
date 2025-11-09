@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Book, ChevronDown, StickyNote, Type, Image, Link, CheckSquare, Columns, Paperclip, Minus, ArrowRight, Grid3x3, Filter } from 'lucide-react';
+import { Plus, Book, ChevronDown, StickyNote, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, Filter } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { createCard } from '@/lib/data/cards-client';
 import { createClient } from '@/lib/supabase/client';
@@ -125,6 +125,14 @@ export default function ElementToolbar({
 					icon={Columns}
 					title="Add Column"
 					cardType="column"
+					onDragStart={handleDragStart}
+					onClick={() => {}}
+				/>
+
+				<DraggableToolbarButton
+					icon={Palette}
+					title="Add Color Palette"
+					cardType="color_palette"
 					onDragStart={handleDragStart}
 					onClick={() => {}}
 				/>
