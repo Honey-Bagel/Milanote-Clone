@@ -13,7 +13,7 @@ interface UseCanvasDropParams {
 
 export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
-	const { addCard, cards, getNewCardZIndex } = useCanvasStore();
+	const { addCard, getNewCardZIndex } = useCanvasStore();
 	const supabase = createClient();
 
 	const getDefaultCardData = (cardType: Card['card_type']) => {
@@ -45,7 +45,7 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 	 * Upload file to Supabase Storage
 	 * Images go to 'board-images' bucket, others to 'board-files' bucket
 	 */
-	const uploadFileToStorage = async (file: File, boardId: string): Promise<string> => {
+	const uploadFileToStorage = useCallback(async (file: File, boardId: string): Promise<string> => {
 		// Determine which bucket to use based on file type
 		const isImage = file.type.startsWith('image/');
 		const bucketName = isImage ? 'board-images' : 'board-files';
@@ -74,7 +74,7 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 			.getPublicUrl(fileName);
 
 		return urlData.publicUrl;
-	};
+	}, [supabase]);
 
 	/**
 	 * Determine card type based on file mime type

@@ -44,9 +44,9 @@ export default function TopToolbar({
 	useEffect(() => {
 
 		const checkLength = async () => {
-			if (breadcrumbs.length > 3) {
+			if (breadcrumbs.length > 4) {
 				const temp = [...breadcrumbs];
-				temp.splice(1, temp.length - 3)
+				temp.splice(1, temp.length - 4)
 				setNewBreadcrumbs(temp);
 				setIsBreadcrumbsCondensed(true);
 			}
