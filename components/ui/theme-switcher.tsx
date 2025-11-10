@@ -116,6 +116,86 @@ export function ThemeSwitcher() {
 	);
 }
 
+// List version for preferences settings
+export function ThemeSwitcherList() {
+	const { currentTheme, setTheme, availableThemes } = useTheme();
+	
+	return (
+		<div className="p-3 max-h-96 overflow-y-auto">
+			<div className="grid grid-cols-2 gap-3">
+				{availableThemes.map((theme) => (
+					<button
+						key={theme.name}
+						onClick={() => {
+							setTheme(theme.name as ThemeName);
+						}}
+						className={`relative group p-3 rounded-lg border-2 transition-all duration-200 ${
+							currentTheme.name === theme.name
+								? 'border-[var(--primary)] shadow-lg'
+								: 'border-transparent hover:border-[var(--border)]'
+						}`}
+						style={{
+							backgroundColor: theme.colors.background,
+						}}
+					>
+						{/* Theme Preview */}
+						<div className="space-y-2">
+							<div className="flex items-center justify-between mb-2">
+								<span
+									className="text-sm font-medium"
+									style={{ color: theme.colors.foreground }}
+								>
+									{theme.displayName}
+								</span>
+								{currentTheme.name === theme.name && (
+									<Check
+										className="w-4 h-4"
+										style={{ color: theme.colors.primary }}
+									/>
+								)}
+							</div>
+
+							{/* Color Palette Preview */}
+							<div className="flex space-x-1">
+								<div
+									className="w-full h-2 rounded"
+									style={{ backgroundColor: theme.colors.primary }}
+								/>
+								<div 
+									className="w-full h-2 rounded"
+									style={{ backgroundColor: theme.colors.accent }}
+								/>
+								<div
+									className="w-full h-2 rounded"
+									style={{ backgroundClip: theme.colors.secondary }}
+								/>
+							</div>
+
+							{/* Mini UI Preview */}
+							<div className="space-y-1 mt-2">
+								<div
+									className="h-4 rounded"
+									style={{ backgroundColor: theme.colors.card }}
+								/>
+								<div
+									className="h-4 rounded"
+									style={{ backgroundColor: theme.colors.muted }}
+								/>
+							</div>
+						</div>
+
+						{/* Hover Effect */}
+						<div
+							className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-10 transition-opacity"
+							style={{ backgroundColor: theme.colors.foreground }}
+						/>
+					</button>
+				))}
+			</div>
+		</div>
+	)
+}
+
 // Compact version for toolbar
 export function ThemeSwitcherCompact() {
 	const { currentTheme, setTheme, availableThemes } = useTheme();

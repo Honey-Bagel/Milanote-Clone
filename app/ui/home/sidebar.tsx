@@ -46,55 +46,68 @@ export default function Sidebar() {
 	// Helper function to get link classes
 	const getLinkClasses = (path: string) => {
 		const baseClasses = "flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors";
-		const activeClasses = "bg-blue-600 text-white font-medium";
-		const inactiveClasses = "text-gray-300 hover:bg-gray-700";
-		
+		const activeClasses = "bg-[var(--primary)] text-[var(--foreground)] font-medium";
+		const inactiveClasses = "text-[var(--foreground)] hover:bg-[var(--card-hover)]";
+
 		return `${baseClasses} ${isActive(path) ? activeClasses : inactiveClasses}`;
 	};
 
 	return (
-		<aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+		<aside className="w-64 bg-[var(--card)] border-r border-[var(--border)] flex flex-col">
 			{/* Logo & User */}
-			<div className="p-4 border-b border-gray-700">
+			<div className="p-4 border-b border-[var(--border)]">
 				<div className="flex items-center justify-between mb-4">
-					<h1 className="text-2xl font-bold text-white">Milanote</h1>
-					<button className="text-gray-400 hover:text-gray-200">
+					<h1 className="text-2xl font-bold text-[var(--foreground)]">Milanote</h1>
+					<button className="text-[var(--muted)] hover:text-[var(--foreground)]">
 						<Menu className="w-5 h-5" />
 					</button>
 				</div>
 
 				{/* User Profile */}
-				<div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-700 cursor-pointer">
-					<div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+				<div className="flex items-center space-x-3 p-2 rounded-lg hover:bg-[var(--card-hover)] cursor-pointer">
+					<div className="w-10 h-10 rounded-full flex items-center justify-center font-semibold" style={{
+						background: `linear-gradient(to bottom right, var(--primary), var(--accent))`
+					}}>
 						JD
 					</div>
-					<p className="text-sm font-semibold text-white">{user?.user_metadata?.display_name}</p>
-					<ChevronDown className="text-gray-400 w-3 h-3 ml-auto" />
+					<p className="text-sm font-semibold text-[var(--foreground)]">{user?.user_metadata?.display_name}</p>
+					<ChevronDown className="text-[var(--muted)] w-3 h-3 ml-auto" />
 				</div>
 			</div>
-			
+
 			{/* Navigation */}
 			<nav className="flex-1 overflow-y-auto sidebar-scrollbar custom-scrollbar p-4">
 				{/* Quick Actions */}
 				<div className="mb-6">
-					<button onClick={createBoard} disabled={createBoardIsLoading} className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors">
+					<button
+						onClick={createBoard}
+						disabled={createBoardIsLoading}
+						className="w-full px-4 py-2.5 rounded-lg font-medium flex items-center justify-center space-x-2 transition-colors hover:opacity-90 disabled:opacity-50"
+						style={{
+							background: `linear-gradient(to right, var(--primary), var(--accent))`,
+							color: 'var(--foreground)'
+						}}
+					>
 						<Plus className="w-4 h-4" />
 						<span>{createBoardIsLoading ? "Creating..." : "New board"}</span>
 					</button>
 				</div>
-				
+
 				{/* Search */}
 				<div className="mb-6">
 					<div className="relative">
-						<input 
-							type="text" 
-							placeholder="Search boards..." 
-							className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+						<input
+							type="text"
+							placeholder="Search boards..."
+							className="w-full pl-10 pr-4 py-2 bg-[var(--input)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent"
+							style={{
+								'::placeholder': { color: 'var(--muted)' }
+							} as React.CSSProperties}
 						/>
-						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--muted)] w-4 h-4" />
 					</div>
 				</div>
-				
+
 				{/* Menu Items */}
 				<div className="space-y-1 mb-6">
 					<Link href="/dashboard" className={getLinkClasses('/dashboard')}>
@@ -114,69 +127,69 @@ export default function Sidebar() {
 						<span>Trash</span>
 					</Link>
 				</div>
-				
+
 				{/* Boards Section */}
 				<div>
 					<div className="flex items-center justify-between mb-3">
-						<h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">My Boards</h3>
-						<button className="text-gray-400 hover:text-gray-300">
+						<h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">My Boards</h3>
+						<button className="text-[var(--muted)] hover:text-[var(--foreground)]">
 							<Plus className="w-3 h-3" />
 						</button>
 					</div>
-					
+
 					<div className="space-y-1">
-						<a href="/board" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 group">
-							<div className="w-5 h-5 bg-red-500 rounded flex-shrink-0"></div>
+						<a href="/board" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
+							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#ef4444' }}></div>
 							<span className="flex-1 truncate">Design System</span>
-							<MoreHorizontal className="text-gray-400 opacity-0 group-hover:opacity-100 w-4 h-4" />
+							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
 						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 group">
-							<div className="w-5 h-5 bg-blue-500 rounded flex-shrink-0"></div>
+						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
+							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: 'var(--primary)' }}></div>
 							<span className="flex-1 truncate">Marketing Campaign</span>
-							<MoreHorizontal className="text-gray-400 opacity-0 group-hover:opacity-100 w-4 h-4" />
+							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
 						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 group">
-							<div className="w-5 h-5 bg-green-500 rounded flex-shrink-0"></div>
+						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
+							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#10b981' }}></div>
 							<span className="flex-1 truncate">Product Roadmap</span>
-							<MoreHorizontal className="text-gray-400 opacity-0 group-hover:opacity-100 w-4 h-4" />
+							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
 						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 group">
-							<div className="w-5 h-5 bg-purple-500 rounded flex-shrink-0"></div>
+						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
+							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: 'var(--accent)' }}></div>
 							<span className="flex-1 truncate">UX Research</span>
-							<MoreHorizontal className="text-gray-400 opacity-0 group-hover:opacity-100 w-4 h-4" />
+							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
 						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 group">
-							<div className="w-5 h-5 bg-yellow-500 rounded flex-shrink-0"></div>
+						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
+							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#f59e0b' }}></div>
 							<span className="flex-1 truncate">Brand Guidelines</span>
-							<MoreHorizontal className="text-gray-400 opacity-0 group-hover:opacity-100 w-4 h-4" />
+							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
 						</a>
 					</div>
 				</div>
-				
+
 				{/* Shared Section */}
 				<div className="mt-6">
 					<div className="flex items-center justify-between mb-3">
-						<h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Shared with me</h3>
+						<h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Shared with me</h3>
 					</div>
-					
+
 					<div className="space-y-1">
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 group">
-							<div className="w-5 h-5 bg-pink-500 rounded flex-shrink-0"></div>
+						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
+							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#ec4899' }}></div>
 							<span className="flex-1 truncate">Team Workshop</span>
-							<Users className="text-gray-400 w-4 h-4" />
+							<Users className="text-[var(--muted)] w-4 h-4" />
 						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:bg-gray-700 group">
-							<div className="w-5 h-5 bg-indigo-500 rounded flex-shrink-0"></div>
+						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
+							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#6366f1' }}></div>
 							<span className="flex-1 truncate">Client Projects</span>
-							<Users className="text-gray-400 w-4 h-4" />
+							<Users className="text-[var(--muted)] w-4 h-4" />
 						</a>
 					</div>
 				</div>
 			</nav>
-			
+
 			{/* Bottom Actions */}
-			<div className="p-4 border-t border-gray-700">
-				<button className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-gray-300 hover:bg-gray-700 rounded-lg transition-colors">
+			<div className="p-4 border-t border-[var(--border)]">
+				<button className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 text-[var(--foreground)] hover:bg-[var(--card-hover)] rounded-lg transition-colors">
 					<Settings className="w-4 h-4" />
 					<span className="text-sm">Settings</span>
 				</button>

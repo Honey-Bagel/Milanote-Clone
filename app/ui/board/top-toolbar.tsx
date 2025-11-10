@@ -56,7 +56,7 @@ export default function TopToolbar({
 
 	return (
 		<>
-			<header className="bg-gray-800 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
+			<header className="bg-[var(--card)] border-b border-[var(--border)] px-6 py-3 flex items-center justify-between">
 				{/* Left Side */}
 				<div className="flex items-center space-x-4 flex-1 min-w-0">
 					{/* Breadcrumb Navigation */}
@@ -66,7 +66,7 @@ export default function TopToolbar({
 								<BreadcrumbLink	asChild>
 									<Link
 										href="/dashboard"
-										className="flex items-center text-gray-400 hover:text-white transition-colors"
+										className="flex items-center text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
 									>
 										<Home className="w-5 h-5" />
 									</Link>
@@ -90,7 +90,7 @@ export default function TopToolbar({
 															style={{ backgroundColor: crumb.color }}
 														/>
 													)}
-													<span className="text-white font-semibold truncate max-w-[200px]">
+													<span className="text-[var(--foreground)] font-semibold truncate max-w-[200px]">
 														{crumb.title}
 													</span>
 												</BreadcrumbPage>
@@ -99,7 +99,7 @@ export default function TopToolbar({
 												<BreadcrumbLink asChild>
 													<Link
 														href={`/board/${crumb.id}`}
-														className="flex items-center space-x-2 text-gray-400 hover:text-white transition-colors"
+														className="flex items-center space-x-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
 													>
 														{crumb.color && (
 															<div
@@ -130,46 +130,62 @@ export default function TopToolbar({
 				{/* Right Side */}
 				<div className="flex items-center space-x-3">
 					{/* Zoom Controls */}
-					<div className="flex items-center space-x-1 bg-gray-900 rounded-lg px-2 py-1">
-						<button onClick={zoomOut} className="p-1.5 hover:bg-gray-700 rounded text-gray-400">
+					<div className="flex items-center space-x-1 bg-[var(--input)] rounded-lg px-2 py-1">
+						<button onClick={zoomOut} className="p-1.5 hover:bg-[var(--card-hover)] rounded text-[var(--muted)]">
 							<Minus className="w-3 h-3" />
 						</button>
-						<span className="px-3 text-sm text-gray-300 font-medium">{(viewport.zoom * 100).toPrecision(4)}%</span>
-						<button onClick={zoomIn} className="p-1.5 hover:bg-gray-700 rounded text-gray-400">
+						<span className="px-3 text-sm text-[var(--foreground)] font-medium">{(viewport.zoom * 100).toPrecision(4)}%</span>
+						<button onClick={zoomIn} className="p-1.5 hover:bg-[var(--card-hover)] rounded text-[var(--muted)]">
 							<Plus className="w-3 h-3" />
 						</button>
 					</div>
 
 					{/* View Mode */}
-					<button onClick={zoomToFit} className="p-2 hover:bg-gray-700 rounded-lg text-gray-400">
+					<button onClick={zoomToFit} className="p-2 hover:bg-[var(--card-hover)] rounded-lg text-[var(--muted)]">
 						<Maximize2 className="w-4 h-4" />
 					</button>
-					
+
 					{/* Collaborators */}
 					<div className="flex items-center -space-x-2">
-						<div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full border-2 border-gray-800 flex items-center justify-center text-white text-xs font-semibold">
+						<div className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold" style={{
+							background: `linear-gradient(to bottom right, var(--primary), var(--accent))`,
+							borderColor: 'var(--card)'
+						}}>
 							JD
 						</div>
-						<div className="w-8 h-8 bg-gradient-to-br from-green-400 to-blue-500 rounded-full border-2 border-gray-800 flex items-center justify-center text-white text-xs font-semibold">
+						<div className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold" style={{
+							background: `linear-gradient(to bottom right, var(--accent), var(--primary))`,
+							borderColor: 'var(--card)'
+						}}>
 							AM
 						</div>
-						<div className="w-8 h-8 bg-gradient-to-br from-pink-400 to-red-500 rounded-full border-2 border-gray-800 flex items-center justify-center text-white text-xs font-semibold">
+						<div className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold" style={{
+							background: `linear-gradient(to bottom right, var(--primary), var(--accent))`,
+							borderColor: 'var(--card)'
+						}}>
 							SK
 						</div>
 					</div>
 
 					{/* Share Button */}
-					<button onClick={() => setIsShareModalOpen(true)} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium text-sm transition-colors inline-flex items-center">
+					<button
+						onClick={() => setIsShareModalOpen(true)}
+						className="px-4 py-2 rounded-lg font-medium text-sm transition-colors inline-flex items-center hover:opacity-90"
+						style={{
+							background: `linear-gradient(to right, var(--primary), var(--accent))`,
+							color: 'var(--foreground)'
+						}}
+					>
 						<Share2 className="w-4 h-4 mr-2" />
 						Share
 					</button>
 
 					{/* More Options */}
-					<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400">
+					<button className="p-2 hover:bg-[var(--card-hover)] rounded-lg text-[var(--muted)]">
 						<MoreHorizontal className="w-4 h-4" />
 					</button>
 
-					<button onClick={() => setIsSettingsModalOpen(true)} className="flex items-center gap-2 px-3 py-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg transition-colors">
+					<button onClick={() => setIsSettingsModalOpen(true)} className="flex items-center gap-2 px-3 py-2 text-[var(--foreground)] hover:bg-[var(--card-hover)] rounded-lg transition-colors">
 						<Settings className="w-5 h-5" />
 						<span className="text-sm">Settings</span>
 					</button>

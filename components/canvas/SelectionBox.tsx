@@ -30,8 +30,8 @@ export function SelectionBox() {
         top: box.y,
         width: box.width,
         height: box.height,
-        border: '2px solid #3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        border: '2px solid var(--primary)',
+        backgroundColor: 'color-mix(in srgb, var(--primary) 10%, transparent)',
         pointerEvents: 'none',
         zIndex: 10000,
       }}

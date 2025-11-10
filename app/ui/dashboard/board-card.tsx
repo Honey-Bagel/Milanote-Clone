@@ -23,9 +23,9 @@ interface BoardCardProps {
 	iconType?: 'palette' | 'book' | 'briefcase';
 }
 
-export function BoardCard({ 
-	board, 
-	isFavorite = false, 
+export function BoardCard({
+	board,
+	isFavorite = false,
 	isShared = false,
 	sharedBy,
 	iconType = 'palette'
@@ -50,15 +50,15 @@ export function BoardCard({
 	const handleFavoriteClick = async (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		
+
 		if (isUpdating) return; // Prevent double clicks
-		
+
 		const newFavoriteState = !isFavorited;
-		
+
 		// Optimistically update UI
 		setIsFavorited(newFavoriteState);
 		setIsUpdating(true);
-		
+
 		try {
 			const supabase = createClient();
 			const { error } = await supabase
@@ -67,7 +67,7 @@ export function BoardCard({
 				.eq('id', board.id);
 
 			if (error) throw error;
-			
+
 			// Refresh the page to update the favorites list
 			router.refresh();
 		} catch (error) {
@@ -79,23 +79,23 @@ export function BoardCard({
 		}
 	};
 
-	const gradientStyle = board.color 
-		? { background: `linear-gradient(135deg, ${board.color}15, ${board.color}35)` }
-		: { background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.35))' };
+	const gradientStyle = board.color
+		? { background: `linear-gradient(135deg, color-mix(in srgb, ${board.color} 15%, transparent), color-mix(in srgb, ${board.color} 35%, transparent))` }
+		: { background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--primary) 35%, transparent))' };
 
-	const iconColor = board.color || '#6366f1';
+	const iconColor = board.color || 'var(--primary)';
 
 	const IconComponent = iconType === 'book' ? Book : iconType === 'briefcase' ? Briefcase : Palette;
 
 	return (
 		<>
-			<Link 
-				href={`/board/${board.id}`} 
+			<Link
+				href={`/board/${board.id}`}
 				className="block group"
 				onMouseEnter={() => setIsHovered(true)}
 				onMouseLeave={() => setIsHovered(false)}
 			>
-				<div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:border-gray-600 transition-all relative">
+				<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden hover:border-[var(--primary)] transition-all relative">
 					{/* Action Buttons */}
 					<div className={`absolute top-2 right-2 z-10 flex gap-1 transition-all ${
 						isHovered ? 'opacity-100' : 'opacity-0'
@@ -104,24 +104,24 @@ export function BoardCard({
 						<button
 							onClick={handleFavoriteClick}
 							disabled={isUpdating}
-							className={`w-8 h-8 bg-gray-900/80 hover:bg-gray-900 rounded-lg flex items-center justify-center transition-all ${
-								isFavorited ? 'text-yellow-400' : 'text-gray-300'
+							className={`w-8 h-8 bg-[var(--background)]/80 hover:bg-[var(--background)] rounded-lg flex items-center justify-center transition-all ${
+								isFavorited ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
 							} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
 							aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
 						>
-							<Star 
+							<Star
 								className={`w-4 h-4 ${isUpdating ? 'animate-pulse' : ''}`}
 								fill={isFavorited ? "currentColor" : "none"}
 							/>
 						</button>
-						
+
 						{/* Settings Button */}
 						<button
 							onClick={handleSettingsClick}
-							className="w-8 h-8 bg-gray-900/80 hover:bg-gray-900 rounded-lg flex items-center justify-center transition-all"
+							className="w-8 h-8 bg-[var(--background)]/80 hover:bg-[var(--background)] rounded-lg flex items-center justify-center transition-all"
 							aria-label="Board settings"
 						>
-							<Settings className="text-gray-300 w-4 h-4" />
+							<Settings className="text-[var(--foreground)] w-4 h-4" />
 						</button>
 					</div>
 
@@ -130,13 +130,13 @@ export function BoardCard({
 					</div>
 					<div className="p-4">
 						<div className="flex items-start justify-between mb-1">
-							<h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors flex-1">
+							<h3 className="font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors flex-1">
 								{board.title}
 							</h3>
-							{isFavorite && <Star className="text-yellow-400 w-4 h-4 fill-yellow-400" />}
-							{isShared && <Users className="text-gray-400 w-4 h-4" />}
+							{isFavorite && <Star className="text-[var(--accent)] w-4 h-4 fill-[var(--accent)]" />}
+							{isShared && <Users className="text-[var(--muted)] w-4 h-4" />}
 						</div>
-						<p className="text-xs text-gray-400">
+						<p className="text-xs text-[var(--muted)]">
 							{isShared && sharedBy ? `Shared by ${sharedBy}` : getTimeAgo(board.updated_at)}
 						</p>
 					</div>

@@ -33,8 +33,8 @@ export default function ElementToolbar({
 				link: { title: 'New Link', url: 'https://example.com' },
 				file: { file_name: 'file.pdf', file_url: '', file_type: 'pdf' },
 				color_palette: { title: 'Palette', colors: ['#FF0000', '#00FF00', '#0000FF'] },
-				column: { title: 'Column', background_color: '#f3f4f6' },
-				board: { linked_board_id: boardId, board_title: 'New Board', board_color: '#3B82F6', card_count: 0 }
+				column: { title: 'Column', background_color: 'var(--secondary)' },
+				board: { linked_board_id: boardId, board_title: 'New Board', board_color: 'var(--primary)', card_count: 0 }
 			};
 
 			// Create card in db
