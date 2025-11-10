@@ -7,7 +7,7 @@ import { useCanvasStore } from '@/lib/stores/canvas-store';
 
 export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
-	const { setEditingCardId, deleteCard } = useCanvasStore();
+	const { setEditingCardId, deleteCard, bringToFront, sendToBack } = useCanvasStore();
 
 	useEffect(() => {
 		const handleClickOutside = (ev: MouseEvent) => {
@@ -31,7 +31,17 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 	const handleDeleteButton = () => {
 		deleteCard(data?.card?.id);
 		onClose();
-	}
+	};
+
+	const handleBringToFront = () => {
+		bringToFront(data?.card?.id);
+		onClose();
+	};
+
+	const handleSendToBack = () => {
+		sendToBack(data?.card?.id);
+		onClose();
+	};
 
 	if (!isOpen) return null;
 
@@ -57,11 +67,11 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 				<span>Change Color</span>
 			</button>
 			<div className="border-t border-gray-200 my-2"></div>
-			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
+			<button onClick={handleBringToFront} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
 				<ArrowUp className="w-4 h-4" />
 				<span>Bring Forward</span>
 			</button>
-			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
+			<button onClick={handleSendToBack} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
 				<ArrowDown className="w-4 h-4" />
 				<span>Send Backward</span>
 			</button>

@@ -2,7 +2,7 @@
 
 import { ChevronDown, Minus, Plus, Maximize2, Share2, MoreHorizontal, Settings, Home } from 'lucide-react';
 import ShareModal from './share-modal';
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import SettingsModal from '../home/settings-modal';
 import Link from 'next/link';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
@@ -12,9 +12,9 @@ import {
 	BreadcrumbLink,
 	BreadcrumbList,
 	BreadcrumbPage,
-	BreadcrumbSeparator
+	BreadcrumbSeparator,
+	BreadcrumbEllipsis
 } from "@/components/ui/breadcrumb";
-import { ZIndexDebuggerMini } from '@/components/debug/ZIndexDebugger';
 
 type BreadcrumbItemType = {
 	id: string,
@@ -38,8 +38,21 @@ export default function TopToolbar({
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 	const { viewport, zoomIn, zoomOut, zoomToFit } = useCanvasStore();
+	const [newBreadcrumbs, setNewBreadcrumbs] = useState<BreadcrumbItemType[]>(breadcrumbs);
+	const [isBreadcrumbsCondensed, setIsBreadcrumbsCondensed] = useState(false);
 
-	console.log(viewport);
+	useEffect(() => {
+
+		const checkLength = async () => {
+			if (breadcrumbs.length > 3) {
+				const temp = [...breadcrumbs];
+				temp.splice(1, temp.length - 3)
+				setNewBreadcrumbs(temp);
+				setIsBreadcrumbsCondensed(true);
+			}
+		}
+		checkLength();
+	}, [breadcrumbs, setNewBreadcrumbs]);
 
 	return (
 		<>
@@ -61,8 +74,8 @@ export default function TopToolbar({
 							</BreadcrumbItem>
 
 							{/* Parent Boards */}
-							{breadcrumbs.map((crumb, index) => {
-								const isLast = index === breadcrumbs.length - 1;
+							{newBreadcrumbs.map((crumb, index) => {
+								const isLast = index === newBreadcrumbs.length - 1;
 
 								return (
 									<Fragment key={`bc-${crumb.id}`}>
@@ -101,6 +114,12 @@ export default function TopToolbar({
 												</BreadcrumbLink>
 											)}
 										</BreadcrumbItem>
+										{isBreadcrumbsCondensed && index === 0 && (
+											<>
+												<BreadcrumbSeparator />
+												<BreadcrumbEllipsis />
+											</>
+										)}
 									</Fragment>
 								);
 							})}
@@ -159,7 +178,6 @@ export default function TopToolbar({
 
 			<SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
 			<ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
-			<ZIndexDebuggerMini />
 		</>
 	);
 }
