@@ -4,6 +4,12 @@ import { devtools } from 'zustand/middleware';
 import { enableMapSet } from 'immer';
 import type { Card } from '@/lib/types';
 import { deleteCard as deleteCardFromDB } from '@/lib/data/cards-client';
+import {
+	bringToFront as zIndexBringToFront,
+	sendToBack as zIndexSendToBack,
+	cardsToZIndexList,
+	getZIndexForNewCard,
+} from "@/lib/utils/z-index-manager";
 
 // Enable Immer's Map and Set support
 enableMapSet();
@@ -107,6 +113,23 @@ interface CanvasState {
 	getSelectedCards: () => Card[];
 	bringToFront: (id: string) => void;
 	sendToBack: (id: string) => void;
+	bringSelectedToFront: () => void;
+	sendSelectedToBack: () => void;
+
+	// ============================================================================
+	// Z-Index Management
+	// ============================================================================
+
+	/**
+	 * Automatically bring cards to front when they're moved or clicked
+	 * This should be called whenever a card interaction begins
+	 */
+	bringCardsToFrontOnInteraction: (cardIds: string[]) => Map<string, number>;
+
+	/**
+	 * Get the z-index for a new card
+	 */
+	getNewCardZIndex: () => number;
 }
 
 // ============================================================================
@@ -356,27 +379,89 @@ export const useCanvasStore = create<CanvasState>()(
 
 			bringToFront: (id) =>
 				set((state) => {
-					const maxZIndex = Math.max(
-						...Array.from(state.cards.values()).map((c) => c.z_index),
-						0
-					);
-					const card = state.cards.get(id);
-					if (card) {
-						state.cards.set(id, { ...card, z_index: maxZIndex + 1 });
-					}
+					const allCards = Array.from(state.cards.values());
+					const updates = zIndexBringToFront([id], cardsToZIndexList(allCards));
+
+					updates.forEach((zIndex, cardId) => {
+						const card = state.cards.get(cardId);
+						if (card) {
+							state.cards.set(cardId, { ...card, z_index: zIndex });
+						}
+					});
 				}),
 
 			sendToBack: (id) =>
 				set((state) => {
-					const minZIndex = Math.min(
-						...Array.from(state.cards.values()).map((c) => c.z_index),
-						0
-					);
-					const card = state.cards.get(id);
-					if (card) {
-						state.cards.set(id, { ...card, z_index: minZIndex - 1 });
-					}
+					const allCards = Array.from(state.cards.values());
+					const updates = zIndexSendToBack([id], cardsToZIndexList(allCards));
+
+					updates.forEach((zIndex, cardId) => {
+						const card = state.cards.get(cardId);
+						if (card) {
+							state.cards.set(cardId, { ...card, z_index: zIndex });
+						}
+					});
 				}),
+
+			bringSelectedToFront: () =>
+				set((state) => {
+					const selectedIds = Array.from(state.selectedCardIds);
+					if (selectedIds.length === 0) return;
+
+					const allCards = Array.from(state.cards.values());
+					const updates = zIndexBringToFront(selectedIds, cardsToZIndexList(allCards));
+
+					updates.forEach((zIndex, cardId) => {
+						const card = state.cards.get(cardId);
+						if (card) {
+							state.cards.set(cardId, { ...card, z_index: zIndex });
+						}
+					});
+				}),
+
+			sendSelectedToBack: () =>
+				set((state) => {
+					const selectedIds = Array.from(state.selectedCardIds);
+					if (selectedIds.length === 0) return;
+
+					const allCards = Array.from(state.cards.values());
+					const updates = zIndexSendToBack(selectedIds, cardsToZIndexList(allCards));
+
+					updates.forEach((zIndex, cardId) => {
+						const card = state.cards.get(cardId);
+						if (card) {
+							state.cards.set(cardId, { ...card, z_index: zIndex });
+						}
+					});
+				}),
+
+			// ============================================================================
+			// UTILITY ACTIONS
+			// ============================================================================
+
+			bringCardsToFrontOnInteraction: (cardIds) => {
+				const state = get();
+				const allCards = Array.from(state.cards.values());
+				const updates = zIndexBringToFront(cardIds, cardsToZIndexList(allCards));
+
+				set((state) => {
+					updates.forEach((zIndex, cardId) => {
+						const card = state.cards.get(cardId);
+						if (card) {
+							state.cards.set(cardId, { ...card, z_index: zIndex });
+						}
+					});
+				});
+
+				return updates;
+			},
+
+			getNewCardZIndex: () => {
+				const state = get();
+				const allCards = Array.from(state.cards.values());
+				return getZIndexForNewCard(cardsToZIndexList(allCards));
+			},
+
 		})),
 		{ name: 'CanvasStore' }
 	)

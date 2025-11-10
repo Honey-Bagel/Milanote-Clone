@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/lib/types";
+import {
+	bringToFront as zIndexBringToFront,
+	sendToBack as zIndexSendToBack,
+	cardsToZIndexList,
+} from "@/lib/utils/z-index-manager";
 
 /**
  * Client-side version: Fetch all cards for a specific board with their type-specific data
@@ -221,53 +226,57 @@ export async function duplicateCard(cardId: string, offsetX = 20, offsetY = 20) 
 			position_y: card.position_y + offsetY,
 			width: card.width,
 			height: card.height || undefined,
-			z_index: card.z_index + 1,
+			z_index: card.z_index + 10,
 		},
 		typeData
 	);
 }
 
 /**
- * Bring card to front
+ * Bring card to front using z-index manager
  */
 export async function bringCardToFront(boardId: string, cardId: string) {
 	const supabase = createClient();
 
-	// Get max z-index
-	const { data: maxCard } = await supabase
-		.from("cards")
-		.select("z_index")
-		.eq("board_id", boardId)
-		.order("z_index", { ascending: false })
-		.limit(1)
-		.single();
+	// Get all cards in the board
+	const { data: allCards, error: fetchError } = await supabase
+		.from('cards')
+		.select('id, z_index')
+		.eq('board_id', boardId);
 
-	if (maxCard) {
-		await updateCardTransform(cardId, {
-			z_index: maxCard.z_index + 1,
-		});
+	if (fetchError || !allCards) {
+		console.error('Error fetching cards for z-index update:', fetchError);
+	}
+
+	// Use z-index manager to calculate updates
+	const updates = zIndexBringToFront([cardId], cardsToZIndexList(allCards || []));
+
+	// Apply all updates to the database
+	for (const [id, z_index] of updates.entries()) {
+		await updateCardTransform(id, { z_index });
 	}
 }
 
 /**
- * Send card to back (lowest z-index)
+ * Send card to back using z-index manager
  */
 export async function sendCardToBack(boardId: string, cardId: string) {
 	const supabase = createClient();
 
-	// Get min z-index
-	const { data: minCard } = await supabase
-		.from("cards")
-		.select("z_index")
-		.eq("board_id", boardId)
-		.order("z_index", { ascending: true })
-		.limit(1)
-		.single();
+	// Get all cards in the board
+	const { data: allCards, error: fetchError } = await supabase
+		.from('cards')
+		.select('id, z_index')
+		.eq('board_id', boardId);
 
-	if (minCard) {
-		await updateCardTransform(cardId, {
-			z_index: minCard.z_index - 1,
-		});
+	if (fetchError || !allCards) {
+		console.error('Error fetching cards for z-index update:', fetchError);
+	}
+
+	const updates = zIndexSendToBack([cardId], cardsToZIndexList(allCards || []));
+
+	for (const [id, z_index] of updates.entries()) {
+		await updateCardTransform(id, { z_index });
 	}
 }
 

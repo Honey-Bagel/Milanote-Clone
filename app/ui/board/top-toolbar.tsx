@@ -14,6 +14,7 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator
 } from "@/components/ui/breadcrumb";
+import { ZIndexDebuggerMini } from '@/components/debug/ZIndexDebugger';
 
 type BreadcrumbItemType = {
 	id: string,
@@ -158,6 +159,7 @@ export default function TopToolbar({
 
 			<SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
 			<ShareModal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
+			<ZIndexDebuggerMini />
 		</>
 	);
 }

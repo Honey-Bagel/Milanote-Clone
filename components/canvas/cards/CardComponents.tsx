@@ -6,8 +6,8 @@
 
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import type { NoteCard, ImageCard, TextCard, TaskListCard, LinkCard, FileCard, ColorPaletteCard, ColumnCard } from '@/lib/types';
+import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
+import type { NoteCard, ImageCard, TextCard, TaskListCard, LinkCard, FileCard, ColorPaletteCard, ColumnCard, Card } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { updateCardContent } from '@/lib/data/cards-client';
 import { CardBase } from './CardBase';
@@ -1044,15 +1044,22 @@ export function ColumnCardComponent({
 	card: ColumnCard; 
 	isEditing: boolean;
 }) {
-	const { updateCard } = useCanvasStore();
+	const { updateCard, cards, isDragging } = useCanvasStore();
+	const [isDropTarget, setIsDropTarget] = useState(false);
+	const dropZoneRef = useRef<HTMLDivElement>(null);
 
 	const debouncedSave = useDebouncedCallback(
-		async (title: string, background_color: string) => {
+		async (title: string, background_color: string, column_items?: Array<{card_id: string, position: number}> ) => {
 			try {
-				await updateCardContent(card.id, 'column', {
+				const updateData: any = {
 					title,
 					background_color,
-				});
+				};
+				if (column_items !== undefined) {
+					updateData.column_items = column_items;
+				}
+
+				await updateCardContent(card.id, 'column', updateData);
 			} catch (error) {
 				console.error('Failed to update column:', error);
 			}

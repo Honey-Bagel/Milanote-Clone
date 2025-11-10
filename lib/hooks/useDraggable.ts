@@ -37,6 +37,7 @@ export function useDraggable({
 		setIsDragging: setGlobalDragging,
 		getCard,
 		selectCard,
+		bringCardsToFrontOnInteraction,
 	} = useCanvasStore();
 
 	const [isDragging, setIsDragging] = useState(false);
@@ -49,6 +50,7 @@ export function useDraggable({
 	const lastCanvasPosRef = useRef<Position>({ x: 0, y: 0 });
 	const initialPositionsRef = useRef<Map<string, Position>>(new Map());
 	const cardsToMoveRef = useRef<string[]>([]);
+	const zIndexUpdatesRef = useRef<Map<string, number>>(new Map());
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
@@ -71,6 +73,10 @@ export function useDraggable({
 				// Card is already selected, use all selected cards
 				cardsToMoveRef.current = Array.from(selectedCardIds);
 			}
+
+			// Brings cards to front when drag starts
+			// This returns z-index updates that we'll sync to database later
+			zIndexUpdatesRef.current = bringCardsToFrontOnInteraction(cardsToMoveRef.current);
 
 			isDraggingRef.current = false;
 			hasMovedRef.current = false;
@@ -158,7 +164,7 @@ export function useDraggable({
 				hasMovedRef.current = false;
 
 				setIsDragging(false);
-		setGlobalDragging(false);
+				setGlobalDragging(false);
 
 				if (wasDragging) {
 					const card = getCard(cardId);
@@ -170,12 +176,32 @@ export function useDraggable({
 							const movedCard = getCard(id);
 							if (movedCard) {
 								try {
+									// Get the z-index update for this card (if any)
+									const newZIndex = zIndexUpdatesRef.current.get(id);
+
 									await updateCardTransform(id, {
 										position_x: movedCard.position_x,
 										position_y: movedCard.position_y,
+										z_index: newZIndex !== undefined ? newZIndex : movedCard.z_index,
 									});
 								} catch (error) {
 									console.error('Failed to sync card position:', error);
+								}
+							}
+						});
+
+						// Also sync z-index updates for cards that weren't moved but had their z-index changed
+						zIndexUpdatesRef.current.forEach(async (zIndex, id) => {
+							if (!cardsToMoveRef.current.includes(id)) {
+								const card = getCard(id);
+								if (card) {
+									try {
+										await updateCardTransform(id, {
+											z_index: zIndex,
+										});
+									} catch (error) {
+										console.error('Failed to sync card z-index:', error);
+									}
 								}
 							}
 						});
@@ -198,9 +224,10 @@ export function useDraggable({
 			selectedCardIds,
 			updateCards,
 			setIsDragging,
-		setGlobalDragging,
+			setGlobalDragging,
 			getCard,
 			selectCard,
+			bringCardsToFrontOnInteraction,
 			onDragStart,
 			onDrag,
 			onDragEnd,

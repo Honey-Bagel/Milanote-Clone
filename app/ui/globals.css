@@ -1,28 +1,41 @@
 @import "tailwindcss";
 
 :root {
+  /* Default theme colors - will be overridden by ThemeProvider */
   --background: #111827;
   --foreground: #ffffff;
+  --primary: #3b82f6;
+  --secondary: #1f2937;
+  --accent: #8b5cf6;
+  --muted: #6b7280;
+  --border: #4b5563;
+  --card: #1f2937;
+  --card-hover: #374151;
+  --input: #374151;
+  --ring: #3b82f6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-hover: var(--card-hover);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #111827;
-    --foreground: #ffffff;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Restore pointer cursor for interactive elements */
@@ -39,18 +52,41 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* Dark Theme Auth Page Styles */
+/* Theme-aware color classes */
+.bg-themed {
+  background-color: var(--background);
+}
 
-/* Root dark theme variables */
-:root {
-	--bg-primary: #111827;
-	--bg-secondary: #1f2937;
-	--bg-tertiary: #374151;
-	--text-primary: #ffffff;
-	--text-secondary: #9ca3af;
-	--border-color: #4b5563;
-	--accent-blue: #3b82f6;
-	--accent-purple: #8b5cf6;
+.bg-card {
+  background-color: var(--card);
+}
+
+.bg-card-hover:hover {
+  background-color: var(--card-hover);
+}
+
+.text-themed {
+  color: var(--foreground);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.border-themed {
+  border-color: var(--border);
+}
+
+.bg-primary {
+  background-color: var(--primary);
+}
+
+.text-primary {
+  color: var(--primary);
+}
+
+.bg-accent {
+  background-color: var(--accent);
 }
 
 /* Floating animation for decorative elements */
@@ -104,13 +140,13 @@ button:disabled,
 /* Pulse animation for focus states */
 @keyframes pulse-ring {
 	0% {
-		box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+		box-shadow: 0 0 0 0 rgba(var(--primary), 0.5);
 	}
 	70% {
-		box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+		box-shadow: 0 0 0 10px rgba(var(--primary), 0);
 	}
 	100% {
-		box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+		box-shadow: 0 0 0 0 rgba(var(--primary), 0);
 	}
 }
 
@@ -131,32 +167,16 @@ button:disabled,
 .shimmer {
 	background: linear-gradient(
 		to right,
-		#1f2937 0%,
-		#374151 20%,
-		#1f2937 40%,
-		#1f2937 100%
+		var(--card) 0%,
+		var(--card-hover) 20%,
+		var(--card) 40%,
+		var(--card) 100%
 	);
 	background-size: 1000px 100%;
 	animation: shimmer 2s infinite;
 }
 
-/* Slide in from right animation */
-@keyframes slideInRight {
-	from {
-		opacity: 0;
-		transform: translateX(50px);
-	}
-	to {
-		opacity: 1;
-		transform: translateX(0);
-	}
-}
-
-.slide-in-right {
-	animation: slideInRight 0.8s ease-out;
-}
-
-/* Button hover glow effect - Dark theme */
+/* Button hover glow effect */
 .glow-on-hover {
 	position: relative;
 	transition: all 0.3s ease;
@@ -167,318 +187,35 @@ button:disabled,
 				0 0 40px rgba(139, 92, 246, 0.2);
 }
 
-/* Input focus glow - Dark theme */
-.input-glow:focus {
-	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2),
-				0 4px 6px -1px rgba(0, 0, 0, 0.3);
-}
-
-/* Smooth transitions */
-.smooth-transition {
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Social button hover effects - Dark theme */
-.social-btn {
-	position: relative;
-	overflow: hidden;
-	transition: all 0.3s ease;
-}
-
-.social-btn::before {
-	content: '';
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	width: 0;
-	height: 0;
-	border-radius: 50%;
-	background: rgba(59, 130, 246, 0.15);
-	transform: translate(-50%, -50%);
-	transition: width 0.6s, height 0.6s;
-}
-
-.social-btn:hover::before {
-	width: 300px;
-	height: 300px;
-}
-
-/* Dark theme checkbox styling */
-input[type="checkbox"]:checked {
-	background-color: #3b82f6;
-	border-color: #3b82f6;
-}
-
-input[type="checkbox"] {
-	background-color: #1f2937;
-	border-color: #4b5563;
-}
-
-/* Custom scrollbar - Dark theme */
-.custom-scrollbar::-webkit-scrollbar {
-	width: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-	background: rgba(31, 41, 55, 0.5);
-	border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-	background: rgba(75, 85, 99, 0.8);
-	border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-	background: rgba(107, 114, 128, 0.9);
-}
-
-/* Error state styles - Dark theme */
-.input-error {
-	border-color: #ef4444;
-	background-color: #1f1416;
-}
-
-.input-error:focus {
-	ring-color: #ef4444;
-	border-color: #ef4444;
-}
-
-/* Success state styles - Dark theme */
-.input-success {
-	border-color: #10b981;
-	background-color: #14211d;
-}
-
-.input-success:focus {
-	ring-color: #10b981;
-	border-color: #10b981;
-}
-
-/* Loading spinner - Dark theme */
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
-
-.spinner {
-	border: 2px solid rgba(59, 130, 246, 0.2);
-	border-top-color: #3b82f6;
-	border-radius: 50%;
-	width: 20px;
-	height: 20px;
-	animation: spin 0.6s linear infinite;
-}
-
-/* Grid pattern animation */
-@keyframes grid-pulse {
-	0%, 100% {
-		opacity: 0.05;
-	}
-	50% {
-		opacity: 0.15;
-	}
-}
-
-.grid-pattern {
-	animation: grid-pulse 4s ease-in-out infinite;
-}
-
-/* Glow text effect */
-.glow-text {
-	text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
-}
-
-/* Tab switcher animation */
-.tab-indicator {
-	transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Form field spacing */
-.auth-form-field {
-	margin-bottom: 1.25rem;
-}
-
-.auth-form-field:last-child {
-	margin-bottom: 0;
-}
-
-/* Backdrop blur effect */
-.backdrop-blur-dark {
-	backdrop-filter: blur(12px);
-	background-color: rgba(17, 24, 39, 0.8);
-}
-
-/* Icon hover animation */
-@keyframes icon-bounce {
-	0%, 100% {
-		transform: scale(1);
-	}
-	50% {
-		transform: scale(1.1);
-	}
-}
-
-.icon-hover:hover i {
-	animation: icon-bounce 0.5s ease;
-}
-
-/* Card hover effect - Dark theme */
-.card-hover {
-	transition: all 0.3s ease;
-}
-
-.card-hover:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-}
-
-/* Gradient border animation */
-@keyframes gradient-border {
-	0% {
-		background-position: 0% 50%;
-	}
-	50% {
-		background-position: 100% 50%;
-	}
-	100% {
-		background-position: 0% 50%;
-	}
-}
-
-.gradient-border {
-	position: relative;
-	background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
-	background-size: 300% 300%;
-	animation: gradient-border 3s ease infinite;
-	padding: 2px;
-	border-radius: 0.5rem;
-}
-
-.gradient-border-inner {
-	background: #1f2937;
-	border-radius: 0.4rem;
-}
-
-/* Text gradient */
-.text-gradient {
-	background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-	-webkit-background-clip: text;
-	-webkit-text-fill-color: transparent;
-	background-clip: text;
-}
-
-/* Neon glow effect */
-.neon-glow {
-	box-shadow: 
-		0 0 5px rgba(59, 130, 246, 0.5),
-		0 0 10px rgba(59, 130, 246, 0.3),
-		0 0 20px rgba(59, 130, 246, 0.2),
-		0 0 40px rgba(139, 92, 246, 0.1);
-}
-
-/* Dark mode specific utilities */
-.bg-dark-primary {
-	background-color: #111827;
-}
-
-.bg-dark-secondary {
-	background-color: #1f2937;
-}
-
-.bg-dark-tertiary {
-	background-color: #374151;
-}
-
-.text-dark-primary {
-	color: #ffffff;
-}
-
-.text-dark-secondary {
-	color: #9ca3af;
-}
-
-.border-dark {
-	border-color: #4b5563;
-}
-
-/* Responsive adjustments */
-@media (max-width: 640px) {
-	.auth-title {
-		font-size: 1.875rem;
-	}
-	
-	.auth-subtitle {
-		font-size: 1rem;
-	}
-}
-
-/* Focus visible for accessibility */
-*:focus-visible {
-	outline: 2px solid #3b82f6;
-	outline-offset: 2px;
-}
-
 /* Canvas global styles */
-
-/* Prevent text selection during drag operations */
 .canvas-viewport {
   user-select: none;
   -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
 }
 
-/* Allow text selection only when editing */
 .card.editing,
 .card.editing * {
   user-select: text !important;
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
   cursor: text !important;
 }
 
-/* Prevent text selection in non-editing cards */
 .card:not(.editing) {
   user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
 }
 
-/* Card selection styles - Darker border like Milanote */
 .card.selected {
-  outline: 3px solid black;
+  outline: 3px solid var(--primary);
   outline-offset: -3px;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
-}
-
-.card.selected-single {
-  outline: 3px solid black;
-  outline-offset: -3px;
-  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.2);
 }
 
 .selection-outline {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  border: 1px solid black;
+  border: 1px solid var(--primary);
   border-radius: inherit;
-  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.2);
 }
 
-/* Canvas element styles */
-.canvas-element {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-/* Drag handle cursor */
 .drag-handle {
   cursor: move;
 }
@@ -487,170 +224,18 @@ input[type="checkbox"] {
   cursor: text;
 }
 
-/* Prevent draggable ghost image */
 [draggable="false"] {
   -webkit-user-drag: none;
   user-drag: none;
 }
 
-/* Selection box styles */
 .selection-box {
-  border: 1px solid black;
+  border: 1px solid var(--primary);
   background-color: rgba(59, 130, 246, 0.1);
   pointer-events: none;
   z-index: 10000;
 }
 
-/* Canvas panning cursor */
-.canvas-viewport[style*="cursor: grabbing"] {
-  cursor: grabbing !important;
-}
-
-.canvas-viewport[style*="cursor: grab"] {
-  cursor: grab !important;
-}
-
-/* Smooth transitions for cards */
-.card {
-  transition: outline 0.15s ease, box-shadow 0.15s ease;
-}
-
-/* Remove text selection highlight color during drag */
-::selection {
-  background: transparent;
-}
-
-::-moz-selection {
-  background: transparent;
-}
-
-/* Override selection only when not editing */
-.canvas-viewport:not(.editing-active) ::selection {
-  background: transparent;
-}
-
-.canvas-viewport:not(.editing-active) ::-moz-selection {
-  background: transparent;
-}
-
-/* Allow selection when editing */
-.editing ::selection {
-  background: black;
-}
-
-.editing ::-moz-selection {
-  background: black;
-}
-
-/* TipTap Text Selection Fixes */
-
-/* Ensure text selection works in TipTap editor when editing */
-.editing .ProseMirror,
-.editing .ProseMirror * {
-  user-select: text !important;
-  -webkit-user-select: text !important;
-  -moz-user-select: text !important;
-  -ms-user-select: text !important;
-  cursor: text !important;
-}
-
-/* Allow proper selection highlight when editing */
-.editing ::selection {
-  background: rgba(59, 130, 246, 0.3) !important;
-  color: inherit !important;
-}
-
-.editing ::-moz-selection {
-  background: rgba(59, 130, 246, 0.3) !important;
-  color: inherit !important;
-}
-
-/* Ensure EditorContent allows selection */
-.note-card .ProseMirror {
-  user-select: text;
-  -webkit-user-select: text;
-  outline: none;
-  min-height: 60px;
-}
-
-/* Prevent parent containers from blocking selection when editing */
-.editing-active,
-.editing-active * {
-  user-select: text !important;
-  -webkit-user-select: text !important;
-}
-
-/* Override canvas default user-select when card is editing */
-.canvas-element:has(.editing) {
-  user-select: auto !important;
-  -webkit-user-select: auto !important;
-}
-
-/* Make sure drag handle doesn't interfere when editing */
-.drag-handle.editing {
-  cursor: auto !important;
-  user-select: auto !important;
-  -webkit-user-select: auto !important;
-}
-
-/* TipTap specific styling for better UX */
-.ProseMirror p.is-editor-empty:first-child::before {
-  color: #adb5bd;
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-
-.ProseMirror:focus {
-  outline: none;
-}
-
-/* Ensure proper pointer events when editing */
-.editing .note-card {
-  pointer-events: auto !important;
-}
-
-/* Add these styles to your app/ui/globals.css */
-
-/* Drag and Drop Styles */
-
-/* Dragging cursor for toolbar buttons */
-.cursor-grab {
-  cursor: grab;
-}
-
-.cursor-grabbing {
-  cursor: grabbing;
-}
-
-/* Canvas drop zone indicator */
-.canvas-viewport[data-dragging-over="true"] {
-  background-color: rgba(59, 130, 246, 0.05);
-  transition: background-color 0.2s ease;
-}
-
-/* Animated border when dragging over canvas */
-@keyframes drop-zone-pulse {
-  0%, 100% {
-    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.4);
-  }
-  50% {
-    box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.8);
-  }
-}
-
-.canvas-viewport.drop-zone-active {
-  animation: drop-zone-pulse 1.5s ease-in-out infinite;
-}
-
-/* Drag preview styling (if you want to customize further) */
-.drag-preview {
-  opacity: 0.8;
-  transform: rotate(2deg);
-}
-
-/* Smooth transitions for cards being created */
 .canvas-element {
   transition: opacity 0.2s ease-in-out;
 }
@@ -670,27 +255,44 @@ input[type="checkbox"] {
   }
 }
 
-/* Drop indicator overlay */
-.drop-indicator {
-  position: absolute;
+/* TipTap specific styling */
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: var(--muted);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
   pointer-events: none;
-  z-index: 9999;
-  background: rgba(59, 130, 246, 0.1);
-  border: 2px dashed rgba(59, 130, 246, 0.5);
-  border-radius: 8px;
-  transition: all 0.2s ease;
 }
 
-/* Toolbar button states during drag */
-.toolbar-button-dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
+.ProseMirror:focus {
+  outline: none;
 }
 
-/* Prevent text selection during drag operations */
-body.dragging {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+.editing ::selection {
+  background: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+	width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+	background: var(--secondary);
+	border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+	background: var(--border);
+	border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+	background: var(--muted);
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+	outline: 2px solid var(--primary);
+	outline-offset: 2px;
 }
