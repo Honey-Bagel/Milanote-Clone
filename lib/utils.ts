@@ -60,7 +60,7 @@ export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 		case 'task_list':
 			return { canResize: true, minWidth: 250, minHeight: 100, defaultWidth: 250, defaultHeight: 100 };
 		case 'link':
-			return { canResize: true, minWidth: 200, minHeight: 70, defaultWidth: 250, defaultHeight: 70 };
+			return { canResize: false, minWidth: 200, minHeight: 70, defaultWidth: 250, defaultHeight: 70 };
 		case 'file':
 			return { canResize: false, minWidth: 300, minHeight: 70, defaultWidth: 300, defaultHeight: 70 };
 		case 'color_palette':
@@ -68,7 +68,7 @@ export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 		case 'column':
 			return { canResize: true, minWidth: 100, minHeight: 60, defaultWidth: 250, defaultHeight: 70 };
 		case 'board':
-			return { canResize: true, minWidth: 200, minHeight: 200, defaultWidth: 300, defaultHeight: 250 };
+			return { canResize: true, minWidth: 200, minHeight: 200, defaultWidth: 250, defaultHeight: 250 };
 		default:
 			return { canResize: true, minWidth: 100, minHeight: 60, defaultWidth: 250, defaultHeight: 70 };
 	}

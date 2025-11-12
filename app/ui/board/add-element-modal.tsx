@@ -2,13 +2,32 @@
 
 import { AddElementModalProps } from '@/lib/types';
 import { X, StickyNote, Image, Link, CheckSquare, Paperclip, Columns } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 export default function AddElementModal({ isOpen, onClose }: AddElementModalProps) {
+	const modalRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+				onClose();
+			}
+		}
+
+		if (isOpen) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		}
+	}, [isOpen, onClose]);
+
 	if (!isOpen) return null;
 
 	return (
 		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-			<div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4">
+			<div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4">
 				<div className="p-6 border-b border-gray-200">
 					<div className="flex items-center justify-between">
 						<h2 className="text-xl font-bold text-gray-800">Add to Board</h2>

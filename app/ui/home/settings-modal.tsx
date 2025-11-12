@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, User, Settings as SettingsIcon, LogOut, Bell, Palette, Lock } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
@@ -28,6 +28,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 	const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 	const router = useRouter();
 	const supabase = createClient();
+	const modalRef = useRef<HTMLDivElement | null>(null);
 
 	// Form states
 	const [fullName, setFullName] = useState('');
@@ -37,10 +38,22 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 	const [confirmPassword, setConfirmPassword] = useState('');
 
 	useEffect(() => {
+
+		const handleClickOutside = (e: MouseEvent) => {
+			if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+				onClose();
+			}
+		}
+
 		if (isOpen) {
 			fetchUserProfile();
+			document.addEventListener('mousedown', handleClickOutside);
 		}
-	}, [isOpen]);
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [isOpen, onClose]);
 
 	const fetchUserProfile = async () => {
 		setLoading(true);
@@ -200,7 +213,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-			<div className="bg-[var(--background)] rounded-xl shadow-2xl w-full max-w-2xl h-[90vh] overflow-hidden flex flex-col">
+			<div ref={modalRef} className="bg-[var(--background)] rounded-xl shadow-2xl w-full max-w-2xl h-[90vh] overflow-hidden flex flex-col">
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
 					<h2 className="text-2xl font-bold text-[var(--foreground)]">Settings</h2>

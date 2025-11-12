@@ -22,6 +22,7 @@ import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
 import ContextMenu from '@/app/ui/board/context-menu';
 import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
 import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
+import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
 
 interface CanvasProps {
 	/**
@@ -176,8 +177,7 @@ export function Canvas({
 						
 						{/* Cards Layer */}
 						<div className="cards-layer">
-							{Array.from(cards.values())
-								.sort((a, b) => a.z_index - b.z_index)
+							{getCanvasCards(cards)
 								.map((card) => (
 									<CanvasElement
 										key={card.id}
