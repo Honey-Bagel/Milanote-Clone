@@ -1,13 +1,15 @@
 /**
- * useDraggable Hook - Integrated Version
+ * useDraggable Hook
  * 
- * Handles dragging for cards and syncs to Supabase
+ * Handles dragging for cards, syncs to Supabase, and detects column overlaps
  */
 
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { useCanvasStore, type Position } from '@/lib/stores/canvas-store';
 import { screenToCanvas } from '@/lib/utils/transform';
-import { updateCardTransform } from '@/lib/data/cards-client';
+import { updateCardTransform, addCardToColumn } from '@/lib/data/cards-client';
+import { findOverlappingColumns } from '@/lib/utils/collision-detection';
+import type { ColumnCard } from '@/lib/types';
 
 interface UseDraggableOptions {
 	cardId: string;
@@ -28,7 +30,7 @@ export function useDraggable({
 	onDragEnd,
 	snapToGrid = false,
 	gridSize = 10,
-	dragThreshold = 1, // Reduced from 3 to 1 for more responsive dragging
+	dragThreshold = 1,
 }: UseDraggableOptions) {
 	const {
 		viewport,
@@ -38,6 +40,8 @@ export function useDraggable({
 		getCard,
 		selectCard,
 		bringCardsToFrontOnInteraction,
+		setPotentialColumnTarget,
+		updateCard,
 	} = useCanvasStore();
 
 	const [isDragging, setIsDragging] = useState(false);
@@ -64,18 +68,15 @@ export function useDraggable({
 
 			const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
 			
-			// Update selection IMMEDIATELY and synchronously
+			// Update selection
 			if (!selectedCardIds.has(cardId)) {
 				selectCard(cardId, isMultiSelect);
-				// After selection update, get the new selected cards
 				cardsToMoveRef.current = [cardId];
 			} else {
-				// Card is already selected, use all selected cards
 				cardsToMoveRef.current = Array.from(selectedCardIds);
 			}
 
-			// Brings cards to front when drag starts
-			// This returns z-index updates that we'll sync to database later
+			// Bring cards to front
 			zIndexUpdatesRef.current = bringCardsToFrontOnInteraction(cardsToMoveRef.current);
 
 			isDraggingRef.current = false;
@@ -88,7 +89,7 @@ export function useDraggable({
 			};
 			lastCanvasPosRef.current = canvasPos;
 
-			// Store initial positions for the cards we're going to move
+			// Store initial positions
 			initialPositionsRef.current.clear();
 			cardsToMoveRef.current.forEach((id) => {
 				const c = getCard(id);
@@ -115,10 +116,8 @@ export function useDraggable({
 
 					hasMovedRef.current = true;
 					isDraggingRef.current = true;
-
 					setIsDragging(true);
-			setGlobalDragging(true);
-
+					setGlobalDragging(true);
 					onDragStart?.();
 				}
 
@@ -132,7 +131,7 @@ export function useDraggable({
 				const snapDelta = (value: number) =>
 					snapToGrid ? Math.round(value / gridSize) * gridSize : value;
 
-				// Use the cards we determined at mousedown
+				// Update card positions
 				const updates = cardsToMoveRef.current.map((id) => {
 					const currentCard = getCard(id);
 					
@@ -154,31 +153,94 @@ export function useDraggable({
 
 				updateCards(updates);
 				onDrag?.(delta);
+
+				// ============================================================================
+				// COLUMN OVERLAP DETECTION - ONLY FOR SINGLE CARD DRAG
+				// ============================================================================
+				if (cardsToMoveRef.current.length === 1) {
+					const draggedCardId = cardsToMoveRef.current[0];
+					const draggedCard = getCard(draggedCardId);
+					
+					// Only check for columns if dragging a non-column card
+					if (draggedCard && draggedCard.card_type !== 'column') {
+						const allCards = new Map(Array.from(useCanvasStore.getState().cards.entries()));
+						const overlappingColumns = findOverlappingColumns(draggedCardId, allCards);
+						
+						// Set the first (topmost) overlapping column as potential target
+						const targetColumnId = overlappingColumns.length > 0 
+							? overlappingColumns[0].id 
+							: null;
+						
+						setPotentialColumnTarget(targetColumnId);
+					}
+				} else {
+					// Multi-select drag - no column drop
+					setPotentialColumnTarget(null);
+				}
 			};
 
 			const handleMouseUp = async () => {
 				const wasDragging = isDraggingRef.current;
+				const potentialTarget = useCanvasStore.getState().potentialColumnTarget;
 				
-				// Immediately clear dragging state
+				// Clear dragging state immediately
 				isDraggingRef.current = false;
 				hasMovedRef.current = false;
-
 				setIsDragging(false);
 				setGlobalDragging(false);
+
+				// ============================================================================
+				// HANDLE DROP ONTO COLUMN
+				// ============================================================================
+				if (wasDragging && potentialTarget && cardsToMoveRef.current.length === 1) {
+					const draggedCardId = cardsToMoveRef.current[0];
+					const draggedCard = getCard(draggedCardId);
+					const columnCard = getCard(potentialTarget) as ColumnCard | undefined;
+					
+					if (draggedCard && columnCard && draggedCard.card_type !== 'column') {
+						try {
+							// Calculate position in column (append to end)
+							const currentItems = columnCard.column_cards.column_items || [];
+							const newPosition = currentItems.length;
+							
+							// Add to database
+							await addCardToColumn(potentialTarget, draggedCardId, newPosition);
+							
+							// Update local state - add to column's items
+							const updatedColumnItems = [
+								...currentItems,
+								{ card_id: draggedCardId, position: newPosition }
+							];
+							
+							updateCard(potentialTarget, {
+								...columnCard,
+								column_cards: {
+									...columnCard.column_cards,
+									column_items: updatedColumnItems
+								}
+							});
+							
+							console.log(`Added card ${draggedCardId} to column ${potentialTarget}`);
+						} catch (error) {
+							console.error('Failed to add card to column:', error);
+						}
+					}
+				}
+
+				// Clear potential target
+				setPotentialColumnTarget(null);
 
 				if (wasDragging) {
 					const card = getCard(cardId);
 					if (card) {
 						onDragEnd?.({ x: card.position_x, y: card.position_y });
 						
-						// Sync moved cards to Supabase (fire and forget)
+						// Sync moved cards to Supabase
 						cardsToMoveRef.current.forEach(async (id) => {
 							const movedCard = getCard(id);
 							if (movedCard) {
 								try {
-									// Get the z-index update for this card (if any)
 									const newZIndex = zIndexUpdatesRef.current.get(id);
-
 									await updateCardTransform(id, {
 										position_x: movedCard.position_x,
 										position_y: movedCard.position_y,
@@ -190,15 +252,13 @@ export function useDraggable({
 							}
 						});
 
-						// Also sync z-index updates for cards that weren't moved but had their z-index changed
+						// Sync z-index updates for non-moved cards
 						zIndexUpdatesRef.current.forEach(async (zIndex, id) => {
 							if (!cardsToMoveRef.current.includes(id)) {
 								const card = getCard(id);
 								if (card) {
 									try {
-										await updateCardTransform(id, {
-											z_index: zIndex,
-										});
+										await updateCardTransform(id, { z_index: zIndex });
 									} catch (error) {
 										console.error('Failed to sync card z-index:', error);
 									}
@@ -208,9 +268,7 @@ export function useDraggable({
 					}
 				}
 
-				// Clear the cards to move reference
 				cardsToMoveRef.current = [];
-
 				document.removeEventListener('mousemove', handleMouseMove);
 				document.removeEventListener('mouseup', handleMouseUp);
 			};
@@ -228,6 +286,8 @@ export function useDraggable({
 			getCard,
 			selectCard,
 			bringCardsToFrontOnInteraction,
+			setPotentialColumnTarget,
+			updateCard,
 			onDragStart,
 			onDrag,
 			onDragEnd,
@@ -238,10 +298,10 @@ export function useDraggable({
 	);
 
 	useEffect(() => {
-	return () => {
-		document.onmousemove = null;
-		document.onmouseup = null;
-	};
+		return () => {
+			document.onmousemove = null;
+			document.onmouseup = null;
+		};
 	}, []);
 
 	return {

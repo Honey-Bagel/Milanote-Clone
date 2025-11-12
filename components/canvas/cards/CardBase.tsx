@@ -57,6 +57,10 @@ export function CardBase({
         ${className}
       `}
       style={{
+		width: '100%',
+		height: '100%',
+		overflow: 'hidden',
+		boxSizing: 'border-box',
         ...style,
         userSelect: isEditing ? 'text' : 'none',
         WebkitUserSelect: isEditing ? 'text' : 'none',

@@ -281,42 +281,78 @@ export async function sendCardToBack(boardId: string, cardId: string) {
 }
 
 /**
- * Add card to column
+ * Add a card to a column card's column_items array
  */
 export async function addCardToColumn(
 	columnId: string,
 	cardId: string,
-	position = 0,
-) {
+	position: number
+): Promise<void> {
 	const supabase = createClient();
-
-	const { error } = await supabase.from("column_items").insert({
-		column_id: columnId,
-		card_id: cardId,
-		position,
-	});
-
-	if (error) {
-		console.error("Error adding card to column:", error);
-		throw error;
+	
+	// First, get the current column card data
+	const { data: columnCard, error: fetchError } = await supabase
+		.from('column_cards')
+		.select('column_items')
+		.eq('id', columnId)
+		.single();
+	
+	if (fetchError) {
+		throw new Error(`Failed to fetch column card: ${fetchError.message}`);
+	}
+	
+	// Prepare updated column_items array
+	const currentItems = columnCard?.column_items || [];
+	const updatedItems = [
+		...currentItems,
+		{ card_id: cardId, position }
+	];
+	
+	// Update the column card
+	const { error: updateError } = await supabase
+		.from('column_cards')
+		.update({ column_items: updatedItems })
+		.eq('id', columnId);
+	
+	if (updateError) {
+		throw new Error(`Failed to update column card: ${updateError.message}`);
 	}
 }
 
 /**
- * Remove card from column
+ * Remove a card from a column card's column_items array
  */
-export async function removeCardFromColumn(columnId: string, cardId: string) {
+export async function removeCardFromColumn(
+	columnId: string,
+	cardId: string
+): Promise<void> {
 	const supabase = createClient();
-
-	const { error } = await supabase
-		.from("column_items")
-		.delete()
-		.eq("column_id", columnId)
-		.eq("card_id", cardId);
 	
-	if (error) {
-		console.error("Error remove card from column:", error);
-		throw error;
+	// Get current column card data
+	const { data: columnCard, error: fetchError } = await supabase
+		.from('column_cards')
+		.select('column_items')
+		.eq('id', columnId)
+		.single();
+	
+	if (fetchError) {
+		throw new Error(`Failed to fetch column card: ${fetchError.message}`);
+	}
+	
+	// Filter out the card and reindex positions
+	const currentItems = columnCard?.column_items || [];
+	const updatedItems = currentItems
+		.filter(item => item.card_id !== cardId)
+		.map((item, index) => ({ ...item, position: index }));
+	
+	// Update the column card
+	const { error: updateError } = await supabase
+		.from('column_cards')
+		.update({ column_items: updatedItems })
+		.eq('id', columnId);
+	
+	if (updateError) {
+		throw new Error(`Failed to update column card: ${updateError.message}`);
 	}
 }
 

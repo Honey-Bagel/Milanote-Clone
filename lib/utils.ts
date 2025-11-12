@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Card } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
@@ -48,4 +49,27 @@ export function getTimeAgo(timestamp: string): string {
 	// Years
 	const diffInYears = Math.floor(diffInDays / 365);
 	return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
+};
+
+export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
+	switch (cardType) {
+		case 'note':
+			return { canResize: false, minWidth: 200, minHeight: null, defaultWidth: 250, defaultHeight: null };
+		case 'image':
+			return { canResize: true, keepAspectRatio: true, minWidth: 200, minHeight: 200, defaultWidth: 300, defaultHeight: 300 };
+		case 'task_list':
+			return { canResize: true, minWidth: 250, minHeight: 100, defaultWidth: 250, defaultHeight: 100 };
+		case 'link':
+			return { canResize: true, minWidth: 200, minHeight: 70, defaultWidth: 250, defaultHeight: 70 };
+		case 'file':
+			return { canResize: false, minWidth: 300, minHeight: 70, defaultWidth: 300, defaultHeight: 70 };
+		case 'color_palette':
+			return { canResize: true, minWidth: 100, minHeight: 100, defaultWidth: 250, defaultHeight: 100 };
+		case 'column':
+			return { canResize: true, minWidth: 100, minHeight: 60, defaultWidth: 250, defaultHeight: 70 };
+		case 'board':
+			return { canResize: true, minWidth: 200, minHeight: 200, defaultWidth: 300, defaultHeight: 250 };
+		default:
+			return { canResize: true, minWidth: 100, minHeight: 60, defaultWidth: 250, defaultHeight: 70 };
+	}
 }

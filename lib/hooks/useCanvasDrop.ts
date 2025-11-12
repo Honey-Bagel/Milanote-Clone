@@ -5,6 +5,7 @@ import { Card } from '@/lib/types';
 import { createCard } from '@/lib/data/cards-client';
 import { createClient } from '@/lib/supabase/client';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
+import { getDefaultCardDimensions } from '../utils';
 
 interface UseCanvasDropParams {
 	boardId: string | null;
@@ -127,6 +128,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 				// Determine the file type
 				const cardType = getCardTypeFromFile(file);
 
+				const { defaultWidth, defaultHeight } = getDefaultCardDimensions(cardType);
+
 				// Prepare card data based on type
 				let cardData: any;
 				if (cardType === 'image') {
@@ -150,8 +153,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 					{
 						position_x: canvasX,
 						position_y: canvasY + yOffset,
-						width: cardType === 'image' ? 300 : 250,
-						height: cardType === 'image' ? 300 : undefined,
+						width: defaultWidth,
+						height: defaultHeight,
 						z_index: currentZIndex + i * 10,
 					},
 					cardData
@@ -207,6 +210,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 		const cardType = e.dataTransfer.getData('cardType') as Card['card_type'];
 		if (!cardType) return;
 
+		const { defaultWidth, defaultHeight } = getDefaultCardDimensions(cardType);
+
 		// Get the canvas element to calculate relative position
 		const canvasElement = e.currentTarget as HTMLElement;
 		const rect = canvasElement.getBoundingClientRect();
@@ -232,8 +237,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 				{
 					position_x: canvasX,
 					position_y: canvasY,
-					width: 250,
-					height: cardType === 'note' ? 200 : undefined,
+					width: defaultWidth,
+					height: defaultHeight,
 					z_index: zIndex,
 				},
 				defaultData

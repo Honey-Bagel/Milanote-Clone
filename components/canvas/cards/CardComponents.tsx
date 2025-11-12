@@ -156,14 +156,15 @@ export function NoteCardComponent({
 	return (
 		<CardBase 
 			isEditing={isEditing}
-			className={`${colorClasses[card.note_cards.color]} min-w-[220px] max-w-[460px]`}
+			className={`${colorClasses[card.note_cards.color]}`}
 			style={{
 				userSelect: isEditing ? 'text' : 'none',
 				WebkitUserSelect: isEditing ? 'text' : 'none',
+				height: 'auto',
 			}}
 		>
 			<div 
-				className="note-card" 
+				className="note-card h-full flex flex-col" 
 				onKeyDown={handleKeyDown}
 				onClick={(e) => {
 					if (isEditing) {
@@ -181,6 +182,7 @@ export function NoteCardComponent({
 					WebkitUserSelect: isEditing ? 'text' : 'none',
 					MozUserSelect: isEditing ? 'text' : 'none',
 					cursor: isEditing ? 'text' : 'pointer',
+					overflow: 'auto',
 				}}
 			>
 				<EditorContent 
@@ -188,6 +190,8 @@ export function NoteCardComponent({
 					style={{
 						userSelect: isEditing ? 'text' : 'none',
 						WebkitUserSelect: isEditing ? 'text' : 'none',
+						flex: 1,
+						overflow: 'auto',
 					}}
 				/>
 			</div>
@@ -272,18 +276,19 @@ export function ImageCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} className="min-w-[220px] max-w-[560px]">
-			<div className="image-card overflow-hidden">
+		<CardBase isEditing={isEditing}>
+			<div className="image-card h-full flex flex-col overflow-hidden">
 				{card.image_cards.image_url ? (
 					<>
-						<Image
-							src={card.image_cards.image_url}
-							alt={card.image_cards.alt_text || 'Image'}
-							className="w-full h-auto object-cover"
-							style={{ maxHeight: '420px' }}
-							width={500}
-							height={420}
-						/>
+						<div className="flex-1 relative overflow-hidden">
+							<Image
+								src={card.image_cards.image_url}
+								alt={card.image_cards.alt_text || 'Image'}
+								fill
+								className="object-contain"
+								sizes="(max-width: 1200px) 100vw, 1200px"
+							/>
+						</div>
 						{isEditing ? (
 							<div className="p-3 space-y-2 bg-gray-50 border-t border-gray-200">
 								<input
@@ -324,7 +329,7 @@ export function ImageCardComponent({
 								/>
 							</div>
 						) : (
-							<div className="flex items-center justify-center h-40 bg-gray-100 text-gray-400">
+							<div className="flex items-center justify-center h-full bg-gray-100 text-gray-400">
 								No image
 							</div>
 						)}
@@ -395,8 +400,8 @@ export function TextCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} className="bg-transparent border-none shadow-none min-w-[280px] max-w-[640px]">
-			<div className="text-card p-2">
+		<CardBase isEditing={isEditing} className="bg-transparent border-none shadow-none">
+			<div className="text-card p-2 h-full flex flex-col overflow-auto">
 				{card.text_cards.title && (
 					isEditing ? (
 						<input
@@ -408,7 +413,7 @@ export function TextCardComponent({
 							onClick={(e) => e.stopPropagation()}
 						/>
 					) : (
-						<h3 className="text-xl font-bold text-gray-900 mb-1">
+						<h3 className="text-xl font-bold text-gray-900 mb-1 flex-shrink-0">
 							{card.text_cards.title}
 						</h3>
 					)
@@ -417,12 +422,12 @@ export function TextCardComponent({
 					<textarea
 						value={card.text_cards.content}
 						onChange={handleContentChange}
-						className="text-base text-gray-800 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 min-h-[100px] resize-y"
+						className="text-base text-gray-800 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 flex-1 resize-none"
 						placeholder="Type your text..."
 						onClick={(e) => e.stopPropagation()}
 					/>
 				) : (
-					<p className="text-base text-gray-800 whitespace-pre-wrap">
+					<p className="text-base text-gray-800 whitespace-pre-wrap flex-1 overflow-auto">
 						{card.text_cards.content}
 					</p>
 				)}
@@ -568,8 +573,8 @@ export function TaskListCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
-			<div className="task-list-card p-4">
+		<CardBase isEditing={isEditing} >
+			<div className="task-list-card p-4 h-full flex flex-col overflow-auto">
 				{isEditing ? (
 					<input
 						type="text"
@@ -584,7 +589,7 @@ export function TaskListCardComponent({
 					</h3>
 				)}
 				
-				<div className="space-y-2">
+				<div className="space-y-2 flex-1 overflow-auto">
 					{[...card.task_list_cards.tasks]
 						.sort((a, b) => a.position - b.position)
 						.map(task => (
@@ -648,7 +653,7 @@ export function TaskListCardComponent({
 							e.stopPropagation();
 							handleAddTask();
 						}}
-						className="mt-3 text-sm text-blue-600 hover:text-blue-700"
+						className="mt-3 text-sm text-blue-600 hover:text-blue-700 flex-shrink-0"
 					>
 						+ Add task
 					</button>
@@ -720,7 +725,7 @@ export function LinkCardComponent({
 
 	if (isEditing) {
 		return (
-			<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+			<CardBase isEditing={isEditing}>
 				<div className="link-card p-4 space-y-3 text-black">
 					<div>
 						<label className="text-xs text-gray-500 block mb-1">Title</label>
@@ -754,7 +759,7 @@ export function LinkCardComponent({
 		"https://" + card.link_cards.url
 
 	return (
-		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+		<CardBase isEditing={isEditing}>
 			<a
 				href={full_url}
 				target="_blank"
@@ -943,7 +948,7 @@ export function ColorPaletteCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} className="min-w-[320px] max-w-[420px]">
+		<CardBase isEditing={isEditing}>
 			<div className="color-palette-card p-4">
 				{isEditing ? (
 					<input
@@ -1044,12 +1049,13 @@ export function ColumnCardComponent({
 	card: ColumnCard; 
 	isEditing: boolean;
 }) {
-	const { updateCard, cards, isDragging } = useCanvasStore();
-	const [isDropTarget, setIsDropTarget] = useState(false);
-	const dropZoneRef = useRef<HTMLDivElement>(null);
+	const { updateCard, cards, potentialColumnTarget } = useCanvasStore();
+	
+	// Check if this column is the potential drop target
+	const isDropTarget = potentialColumnTarget === card.id;
 
 	const debouncedSave = useDebouncedCallback(
-		async (title: string, background_color: string, column_items?: Array<{card_id: string, position: number}> ) => {
+		async (title: string, background_color: string, column_items?: Array<{card_id: string, position: number}>) => {
 			try {
 				const updateData: any = {
 					title,
@@ -1070,7 +1076,6 @@ export function ColumnCardComponent({
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 		
-		// Update local state
 		updateCard(card.id, {
 			...card,
 			column_cards: {
@@ -1079,14 +1084,12 @@ export function ColumnCardComponent({
 			},
 		});
 
-		// Debounced save
 		debouncedSave(newTitle, card.column_cards.background_color);
 	};
 
 	const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newColor = e.target.value;
 		
-		// Update local state
 		updateCard(card.id, {
 			...card,
 			column_cards: {
@@ -1095,17 +1098,90 @@ export function ColumnCardComponent({
 			},
 		});
 
-		// Debounced save
 		debouncedSave(card.column_cards.title, newColor);
+	};
+
+	const handleRemoveCard = async (cardId: string) => {
+		try {
+			// Remove from database
+			await removeCardFromColumn(card.id, cardId);
+			
+			// Update local state
+			const updatedItems = (card.column_cards.column_items || [])
+				.filter(item => item.card_id !== cardId)
+				.map((item, index) => ({ ...item, position: index }));
+			
+			updateCard(card.id, {
+				...card,
+				column_cards: {
+					...card.column_cards,
+					column_items: updatedItems
+				}
+			});
+		} catch (error) {
+			console.error('Failed to remove card from column:', error);
+		}
+	};
+
+	// Helper to get card title for preview
+	const getCardTitle = (itemCard: Card): string => {
+		switch (itemCard.card_type) {
+			case 'note':
+				return 'Note';
+			case 'text':
+				return itemCard.text_cards?.title || 'Text';
+			case 'task_list':
+				return itemCard.task_list_cards?.title || 'Tasks';
+			case 'link':
+				return itemCard.link_cards?.title || 'Link';
+			case 'file':
+				return itemCard.file_cards?.file_name || 'File';
+			case 'image':
+				return itemCard.image_cards?.caption || 'Image';
+			case 'color_palette':
+				return itemCard.color_palette_cards?.title || 'Palette';
+			case 'board':
+				return itemCard.board_cards?.board_title || 'Board';
+			default:
+				return 'Card';
+		}
+	};
+
+	// Helper to get card icon/indicator
+	const getCardIcon = (itemCard: Card): string => {
+		switch (itemCard.card_type) {
+			case 'note':
+				return '📝';
+			case 'text':
+				return '📄';
+			case 'task_list':
+				return '✓';
+			case 'link':
+				return '🔗';
+			case 'file':
+				return '📎';
+			case 'image':
+				return '🖼️';
+			case 'color_palette':
+				return '🎨';
+			case 'board':
+				return '📋';
+			default:
+				return '•';
+		}
 	};
 
 	return (
 		<CardBase 
 			isEditing={isEditing} 
-			className="min-w-[280px] max-w-[420px]"
+			className={`
+				transition-all duration-200
+				${isDropTarget ? 'ring-4 ring-blue-400 ring-opacity-50 shadow-lg scale-[1.02]' : ''}
+			`}
 			style={{ backgroundColor: card.column_cards.background_color }}
 		>
-			<div className="column-card p-4">
+			<div className="column-card p-4 h-full flex flex-col">
+				{/* Header */}
 				{isEditing ? (
 					<div className="space-y-3 mb-3">
 						<input
@@ -1132,10 +1208,68 @@ export function ColumnCardComponent({
 						{card.column_cards.title}
 					</h3>
 				)}
-				<div className="min-h-[200px] border-2 border-dashed border-gray-300 rounded p-2">
-					<p className="text-xs text-gray-400 text-center mt-8">
-						{card.column_cards.column_items?.length || 0} items
-					</p>
+				
+				{/* Drop zone with visual feedback */}
+				<div 
+					className={`
+						flex-1 border-2 border-dashed rounded p-2 transition-all duration-200 overflow-auto
+						${isDropTarget 
+							? 'border-blue-500 bg-blue-50 scale-[1.01]' 
+							: 'border-gray-300 bg-white bg-opacity-30'
+						}
+					`}
+				>
+					{/* Render column items */}
+					{card.column_cards.column_items && card.column_cards.column_items.length > 0 ? (
+						<div className="space-y-2">
+							{card.column_cards.column_items
+								.sort((a, b) => a.position - b.position)
+								.map((item) => {
+									const itemCard = cards.get(item.card_id);
+									if (!itemCard) return null;
+									
+									return (
+										<div 
+											key={item.card_id}
+											className="group relative p-2 bg-white rounded shadow-sm hover:shadow-md transition-shadow border border-gray-200"
+										>
+											<div className="flex items-center gap-2">
+												<span className="text-base flex-shrink-0">
+													{getCardIcon(itemCard)}
+												</span>
+												<span className="text-xs font-medium text-gray-800 flex-1 truncate">
+													{getCardTitle(itemCard)}
+												</span>
+												{isEditing && (
+													<button
+														onClick={(e) => {
+															e.stopPropagation();
+															handleRemoveCard(item.card_id);
+														}}
+														className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity"
+														title="Remove from column"
+													>
+														×
+													</button>
+												)}
+											</div>
+										</div>
+									);
+								})}
+						</div>
+					) : (
+						<div className="flex items-center justify-center h-full">
+							<p className={`
+								text-xs text-center transition-all duration-200
+								${isDropTarget 
+									? 'text-blue-600 font-medium' 
+									: 'text-gray-400'
+								}
+							`}>
+								{isDropTarget ? '⬇ Drop here to add' : 'Drag cards here'}
+							</p>
+						</div>
+					)}
 				</div>
 			</div>
 		</CardBase>
@@ -1289,7 +1423,7 @@ export function BoardCardComponent({
 
 	if (isEditing) {
 		return (
-			<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[420px]">
+			<CardBase isEditing={isEditing}>
 				<div className="board-card p-4 space-y-3 text-black">
 					<div>
 						<label className="text-xs text-gray-500 block mb-1">Board Title</label>
@@ -1390,7 +1524,7 @@ export function BoardCardComponent({
 
 	// View mode - clickable board preview
 	return (
-		<CardBase isEditing={isEditing} className="min-w-[280px] max-w-[360px] cursor-pointer hover:shadow-lg transition-shadow">
+		<CardBase isEditing={isEditing} className="cursor-pointer hover:shadow-lg transition-shadow">
 			<div 
 				className="board-card overflow-hidden"
 				onDoubleClick={handleNavigateToBoard}

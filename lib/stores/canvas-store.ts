@@ -60,7 +60,11 @@ interface CanvasState {
 	isDragging: boolean;
 	isPanning: boolean;
 	isDrawingSelection: boolean;
+	isResizing: boolean;
 	editingCardId: string | null;
+
+	// Column interaction state
+	potentialColumnTarget: string | null; // Column card id
 
 	// ============================================================================
 	// CARD ACTIONS
@@ -103,7 +107,11 @@ interface CanvasState {
 	setIsDragging: (isDragging: boolean) => void;
 	setIsPanning: (isPanning: boolean) => void;
 	setIsDrawingSelection: (isDrawing: boolean) => void;
+	setIsResizing: (isResizing: boolean) => void;
 	setEditingCardId: (id: string | null) => void;
+
+	// Column
+	setPotentialColumnTarget: (columnId: string | null) => void;
 
 	// ============================================================================
 	// UTILITY ACTIONS
@@ -147,7 +155,9 @@ export const useCanvasStore = create<CanvasState>()(
 			isDragging: false,
 			isPanning: false,
 			isDrawingSelection: false,
+			isResizing: false,
 			editingCardId: null,
+			potentialColumnTarget: null,
 
 			// ============================================================================
 			// CARD ACTIONS
@@ -357,9 +367,21 @@ export const useCanvasStore = create<CanvasState>()(
 					state.isDrawingSelection = isDrawing;
 				}),
 
+			setIsResizing: (isResizing) =>
+				set((state) => {
+					state.isResizing = isResizing;
+				}),
+
 			setEditingCardId: (id) =>
 				set((state) => {
 					state.editingCardId = id;
+				}),
+
+			// Column
+
+			setPotentialColumnTarget: (columnId) =>
+				set((state) => {
+					state.potentialColumnTarget = columnId;
 				}),
 
 			// ============================================================================

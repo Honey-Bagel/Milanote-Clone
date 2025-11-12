@@ -1,5 +1,5 @@
 /**
- * CanvasElement Component - With TipTap Support
+ * CanvasElement Component
  * 
  * Wrapper for each card, adapted to your database schema
  */
@@ -11,6 +11,8 @@ import type { Editor } from '@tiptap/react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useDraggable } from '@/lib/hooks/useDraggable';
 import { CardRenderer } from './cards/CardRenderer';
+import { useResizable } from '@/lib/hooks/useResizable';
+import { getDefaultCardDimensions } from '@/lib/utils';
 
 interface CanvasElementProps {
 	card: Card;
@@ -34,9 +36,17 @@ export function CanvasElement({
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
 
+	const { canResize } = getDefaultCardDimensions(card.card_type);
+
 	const { handleMouseDown, isDragging } = useDraggable({
 		cardId: card.id,
 		snapToGrid: false,
+	});
+
+	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({
+		cardId: card.id,
+		maxWidth: 1200,
+		maxHeight: 1200,
 	});
 
 	const handleClick = (e: React.MouseEvent) => {
@@ -61,6 +71,7 @@ export function CanvasElement({
 			e.stopPropagation();
 			return;
 		}
+		
 		// Otherwise, handle dragging
 		handleMouseDown(e);
 	};
@@ -111,12 +122,14 @@ export function CanvasElement({
 					onContextMenu={handleContextMenu}
 					style={{
 						display: 'inline-block',
-						width: 'auto',
-						minHeight: 'auto',
+						width: card.width,
+						height: card.height || 'auto',
+						minHeight: card.height ? card.height : 'auto',
 						userSelect: isEditing ? 'auto' : 'none',
 						WebkitUserSelect: isEditing ? 'auto' : 'none',
 						cursor: isEditing ? 'auto' : 'move',
-						pointerEvents: isEditing || !isDragging ? 'auto' : 'none'
+						pointerEvents: isEditing || !isDragging ? 'auto' : 'none',
+						position: 'relative'
 					}}
 				>
 					{/* Render the actual card content based on type */}
@@ -129,6 +142,27 @@ export function CanvasElement({
 					{/* Selection indicator */}
 					{isSelected && (
 						<div className="selection-outline" />
+					)}
+
+					{/* Resize Handle - Only show when selected and editing */}
+					{canResize && isSelected && !isEditing && (
+						<div
+							aria-label="Resize South-East"
+							onMouseDown={(e) => handleMouseDownResizable(e, 'se')}
+							className="resize-handle resize-handle-se"
+							style={{
+								position: 'absolute',
+								right: -4,
+								bottom: -4,
+								width: 8,
+								height: 8,
+								cursor: 'se-resize',
+								zIndex: card.z_index + 1,
+								backgroundColor: '#3B82F6',
+								border: '1px solid white',
+								borderRadius: '50%',
+							}}
+						/>
 					)}
 				</div>
 			</div>
