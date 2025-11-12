@@ -6,6 +6,7 @@ import { Fragment, useState, useEffect } from 'react';
 import SettingsModal from '../home/settings-modal';
 import Link from 'next/link';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
+import { RealtimeAvatarStack } from '@/components/realtime-avatar-stack';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -146,26 +147,7 @@ export default function TopToolbar({
 					</button>
 
 					{/* Collaborators */}
-					<div className="flex items-center -space-x-2">
-						<div className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold" style={{
-							background: `linear-gradient(to bottom right, var(--primary), var(--accent))`,
-							borderColor: 'var(--card)'
-						}}>
-							JD
-						</div>
-						<div className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold" style={{
-							background: `linear-gradient(to bottom right, var(--accent), var(--primary))`,
-							borderColor: 'var(--card)'
-						}}>
-							AM
-						</div>
-						<div className="w-8 h-8 rounded-full border-2 flex items-center justify-center text-xs font-semibold" style={{
-							background: `linear-gradient(to bottom right, var(--primary), var(--accent))`,
-							borderColor: 'var(--card)'
-						}}>
-							SK
-						</div>
-					</div>
+					<RealtimeAvatarStack roomName={boardId}/>
 
 					{/* Share Button */}
 					<button

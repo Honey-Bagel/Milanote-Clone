@@ -17,7 +17,7 @@ export default function ElementToolbar({
 }
 ) {
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
-	const { addCard } = useCanvasStore();
+	const { addCard, showGrid, setShowGrid } = useCanvasStore();
 	const params = useParams();
 	const boardId = params.id as string;
 	const supabase = createClient();
@@ -77,16 +77,16 @@ export default function ElementToolbar({
 	}
 	
 	return (
-		<div className="bg-gray-800 border-b border-gray-700 px-6 py-3 h-full flex items-center">
+		<div className="bg-[var(--card)] border-b border-[var(--border)] px-6 py-3 h-full flex items-center">
 			<div className="flex items-center space-x-2">
 				{/* Add Elements */}
-				<button onClick={() => {setIsElementModalOpen(true)}} className="px-4 py-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 font-medium text-sm flex items-center space-x-2 transition-colors">
+				<button onClick={() => {setIsElementModalOpen(true)}} className="px-4 py-2 bg-[var(--background)] hover:bg-[var(--border)] rounded-lg text-[var(--muted)] font-medium text-sm flex items-center space-x-2 transition-colors">
 					<Plus className="w-4 h-4" />
 					<span>Add</span>
 					<ChevronDown className="w-3 h-3" />
 				</button>
 
-				<div className="w-px h-6 bg-gray-700"></div>
+				<div className="w-px h-6 bg-[var(--border)]"></div>
 
 				{/* Element Types */}
 				<DraggableToolbarButton 
@@ -137,24 +137,21 @@ export default function ElementToolbar({
 					onClick={() => {}}
 				/>
 
-				<div className="w-px h-6 bg-gray-700"></div>
+				<div className="w-px h-6 bg-[var(--border)]"></div>
 
 				{/* Drawing Tools */}
-				<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors" title="Draw Line">
+				<button className="p-2 hover:bg-[var(--border)] rounded-lg text-[var(--muted)] transition-colors" title="Draw Line">
 					<Minus className="w-4 h-4 rotate-45" />
 				</button>
-				<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors" title="Draw Arrow">
+				<button className="p-2 hover:bg-[var(--border)] rounded-lg text-[var(--muted)] transition-colors" title="Draw Arrow">
 					<ArrowRight className="w-4 h-4" />
 				</button>
 
 				<div className="flex-1"></div>
 
 				{/* View Options */}
-				<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors" title="Grid View">
+				<button onClick={() => setShowGrid(!showGrid) } className="p-2 hover:bg-[var(--border)] rounded-lg text-[var(--muted)] transition-colors" title="Toggle Grid">
 					<Grid3x3 className="w-4 h-4" />
-				</button>
-				<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors" title="Filter">
-					<Filter className="w-4 h-4" />
 				</button>
 			</div>
 

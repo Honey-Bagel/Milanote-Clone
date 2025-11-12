@@ -52,7 +52,7 @@ export function DraggableToolbarButton({
       draggable
       onDragStart={handleDragStart}
       onClick={onClick}
-      className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors cursor-grab active:cursor-grabbing"
+      className="p-2 hover:bg-[var(--border)] rounded-lg text-[var(--muted)] hover:text-gray-200 transition-colors cursor-grab active:cursor-grabbing"
       title={title}
     >
       <Icon className="w-4 h-4" />

@@ -66,6 +66,9 @@ interface CanvasState {
 	// Column interaction state
 	potentialColumnTarget: string | null; // Column card id
 
+	// Visual states
+	showGrid: boolean;
+
 	// ============================================================================
 	// CARD ACTIONS
 	// ============================================================================
@@ -114,6 +117,12 @@ interface CanvasState {
 	setPotentialColumnTarget: (columnId: string | null) => void;
 
 	// ============================================================================
+	// VISUAL STATE ACTIONS
+	// ============================================================================
+
+	setShowGrid: (showGrid: boolean) => void;
+
+	// ============================================================================
 	// UTILITY ACTIONS
 	// ============================================================================
 
@@ -156,6 +165,7 @@ export const useCanvasStore = create<CanvasState>()(
 			isPanning: false,
 			isDrawingSelection: false,
 			isResizing: false,
+			showGrid: true,
 			editingCardId: null,
 			potentialColumnTarget: null,
 
@@ -382,6 +392,15 @@ export const useCanvasStore = create<CanvasState>()(
 			setPotentialColumnTarget: (columnId) =>
 				set((state) => {
 					state.potentialColumnTarget = columnId;
+				}),
+
+			// ============================================================================
+			// VISUAL STATE ACTIONS
+			// ============================================================================
+
+			setShowGrid: (showGrid) =>
+				set((state) => {
+					state.showGrid = showGrid;
 				}),
 
 			// ============================================================================

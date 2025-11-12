@@ -41,7 +41,6 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
 					enablePan={true}
 					enableZoom={true}
 					enableKeyboardShortcuts={true}
-					showGrid={true}
 					enableSelectionBox={false}
 				/>
 			</main>

@@ -40,7 +40,6 @@ interface CanvasProps {
 	enableZoom?: boolean;
 	enableKeyboardShortcuts?: boolean;
 	enableSelectionBox?: boolean;
-	showGrid?: boolean;
 	
 	onCardClick?: (cardId: string) => void;
 	onCardDoubleClick?: (cardId: string) => void;
@@ -54,7 +53,6 @@ export function Canvas({
 	enableZoom = true,
 	enableKeyboardShortcuts = true,
 	enableSelectionBox = true,
-	showGrid = true,
 	onCardClick,
 	onCardDoubleClick,
 }: CanvasProps) {
@@ -65,7 +63,7 @@ export function Canvas({
 	const [cardContextMenuData, setCardContextMenuData] = useState({card: null, position: { x: 0, y: 0}});
 	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
 	
-	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard } = useCanvasStore();
+	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard, showGrid } = useCanvasStore();
 
 	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop({
 		boardId,
