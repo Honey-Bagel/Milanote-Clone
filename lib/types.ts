@@ -276,6 +276,7 @@ export type ColumnCard = {
 	column_cards: {
 		title: string;
 		background_color: string;
+		is_collapsed: boolean;
 		column_items: Array<{
 			card_id: string;
 			position: number;
@@ -339,6 +340,11 @@ export type ColorPaletteCardData = {
 export type ColumnCardData = {
 	title: string;
 	background_color?: string;
+	is_collapsed?: boolean;
+	column_items?: Array<{
+		card_id: string;
+		position: number;
+	}>;
 };
 
 // Union type for all card-specific data

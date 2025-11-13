@@ -1,13 +1,16 @@
 /**
- * useDraggable Hook
+ * useDraggable Hook - With Column Add/Remove Logic
  * 
- * Handles dragging for cards, syncs to Supabase, and detects column overlaps
+ * Key behaviors:
+ * 1. When dragging a card INTO a column -> add to column_items
+ * 2. When dragging a card OUT of a column -> remove from column_items  
+ * 3. Cards remain independent CanvasElements always
  */
 
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { useCanvasStore, type Position } from '@/lib/stores/canvas-store';
 import { screenToCanvas } from '@/lib/utils/transform';
-import { updateCardTransform, addCardToColumn } from '@/lib/data/cards-client';
+import { updateCardTransform, addCardToColumn, removeCardFromColumn } from '@/lib/data/cards-client';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import type { ColumnCard } from '@/lib/types';
 
@@ -42,6 +45,7 @@ export function useDraggable({
 		bringCardsToFrontOnInteraction,
 		setPotentialColumnTarget,
 		updateCard,
+		cards,
 	} = useCanvasStore();
 
 	const [isDragging, setIsDragging] = useState(false);
@@ -55,6 +59,20 @@ export function useDraggable({
 	const initialPositionsRef = useRef<Map<string, Position>>(new Map());
 	const cardsToMoveRef = useRef<string[]>([]);
 	const zIndexUpdatesRef = useRef<Map<string, number>>(new Map());
+	const startingColumnRef = useRef<string | null>(null); // Track which column card started in
+
+	/**
+	 * Find which column (if any) a card belongs to
+	 */
+	const findCardColumn = (cardId: string): string | null => {
+		const allCards = Array.from(cards.values());
+		const columnCard = allCards.find(c => 
+			c.card_type === 'column' && 
+			c.column_cards?.column_items?.some(item => item.card_id === cardId)
+		);
+		
+		return columnCard?.id || null;
+	};
 
 	const handleMouseDown = useCallback(
 		(e: React.MouseEvent) => {
@@ -74,6 +92,11 @@ export function useDraggable({
 				cardsToMoveRef.current = [cardId];
 			} else {
 				cardsToMoveRef.current = Array.from(selectedCardIds);
+			}
+
+			// Track starting column
+			if (cardsToMoveRef.current.length === 1) {
+				startingColumnRef.current = findCardColumn(cardsToMoveRef.current[0]);
 			}
 
 			// Bring cards to front
@@ -182,6 +205,7 @@ export function useDraggable({
 			const handleMouseUp = async () => {
 				const wasDragging = isDraggingRef.current;
 				const potentialTarget = useCanvasStore.getState().potentialColumnTarget;
+				const startingColumn = startingColumnRef.current;
 				
 				// Clear dragging state immediately
 				isDraggingRef.current = false;
@@ -190,45 +214,100 @@ export function useDraggable({
 				setGlobalDragging(false);
 
 				// ============================================================================
-				// HANDLE DROP ONTO COLUMN
+				// HANDLE COLUMN MEMBERSHIP CHANGES
 				// ============================================================================
-				if (wasDragging && potentialTarget && cardsToMoveRef.current.length === 1) {
+				if (wasDragging && cardsToMoveRef.current.length === 1) {
 					const draggedCardId = cardsToMoveRef.current[0];
 					const draggedCard = getCard(draggedCardId);
-					const columnCard = getCard(potentialTarget) as ColumnCard | undefined;
 					
-					if (draggedCard && columnCard && draggedCard.card_type !== 'column') {
-						try {
-							// Calculate position in column (append to end)
-							const currentItems = columnCard.column_cards.column_items || [];
-							const newPosition = currentItems.length;
+					if (draggedCard && draggedCard.card_type !== 'column') {
+						// Case 1: Dropped onto a column
+						if (potentialTarget) {
+							const targetColumn = getCard(potentialTarget) as ColumnCard | undefined;
 							
-							// Add to database
-							await addCardToColumn(potentialTarget, draggedCardId, newPosition);
-							
-							// Update local state - add to column's items
-							const updatedColumnItems = [
-								...currentItems,
-								{ card_id: draggedCardId, position: newPosition }
-							];
-							
-							updateCard(potentialTarget, {
-								...columnCard,
-								column_cards: {
-									...columnCard.column_cards,
-									column_items: updatedColumnItems
+							if (targetColumn) {
+								try {
+									// Remove from starting column if it was in one
+									if (startingColumn && startingColumn !== potentialTarget) {
+										await removeCardFromColumn(startingColumn, draggedCardId);
+										
+										// Update local state for starting column
+										const startCol = getCard(startingColumn) as ColumnCard;
+										if (startCol) {
+											const updatedItems = (startCol.column_cards.column_items || [])
+												.filter(item => item.card_id !== draggedCardId)
+												.map((item, index) => ({ ...item, position: index }));
+											
+											updateCard(startingColumn, {
+												...startCol,
+												column_cards: {
+													...startCol.column_cards,
+													column_items: updatedItems
+												}
+											});
+										}
+									}
+									
+									// Add to new column (if not already in it)
+									if (startingColumn !== potentialTarget) {
+										const currentItems = targetColumn.column_cards.column_items || [];
+										const newPosition = currentItems.length;
+										
+										await addCardToColumn(potentialTarget, draggedCardId, newPosition);
+										
+										// Update local state for target column
+										const updatedColumnItems = [
+											...currentItems,
+											{ card_id: draggedCardId, position: newPosition }
+										];
+										
+										updateCard(potentialTarget, {
+											...targetColumn,
+											column_cards: {
+												...targetColumn.column_cards,
+												column_items: updatedColumnItems
+											}
+										});
+										
+										console.log(`Added card ${draggedCardId} to column ${potentialTarget}`);
+									}
+								} catch (error) {
+									console.error('Failed to update column membership:', error);
 								}
-							});
-							
-							console.log(`Added card ${draggedCardId} to column ${potentialTarget}`);
-						} catch (error) {
-							console.error('Failed to add card to column:', error);
+							}
+						}
+						// Case 2: Dragged out of column (no overlap with any column)
+						else if (startingColumn) {
+							try {
+								await removeCardFromColumn(startingColumn, draggedCardId);
+								
+								// Update local state
+								const startCol = getCard(startingColumn) as ColumnCard;
+								if (startCol) {
+									const updatedItems = (startCol.column_cards.column_items || [])
+										.filter(item => item.card_id !== draggedCardId)
+										.map((item, index) => ({ ...item, position: index }));
+									
+									updateCard(startingColumn, {
+										...startCol,
+										column_cards: {
+											...startCol.column_cards,
+											column_items: updatedItems
+										}
+									});
+								}
+								
+								console.log(`Removed card ${draggedCardId} from column ${startingColumn}`);
+							} catch (error) {
+								console.error('Failed to remove card from column:', error);
+							}
 						}
 					}
 				}
 
 				// Clear potential target
 				setPotentialColumnTarget(null);
+				startingColumnRef.current = null;
 
 				if (wasDragging) {
 					const card = getCard(cardId);
@@ -294,6 +373,7 @@ export function useDraggable({
 			snapToGrid,
 			gridSize,
 			dragThreshold,
+			findCardColumn
 		]
 	);
 

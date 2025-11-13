@@ -20,13 +20,7 @@ export async function getBoardCards(boardId: string) {
 			link_cards(*),
 			file_cards(*),
 			color_palette_cards(*),
-			column_cards(
-				*,
-				column_items(
-					card_id,
-					position
-				)
-			),
+			column_cards(*),
 			board_cards(*)
 		`)
 		.eq("board_id", boardId)

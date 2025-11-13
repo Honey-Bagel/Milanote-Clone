@@ -9,7 +9,7 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import type { NoteCard, ImageCard, TextCard, TaskListCard, LinkCard, FileCard, ColorPaletteCard, ColumnCard, Card } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { updateCardContent } from '@/lib/data/cards-client';
+import { updateCardContent, removeCardFromColumn } from '@/lib/data/cards-client';
 import { CardBase } from './CardBase';
 import Image from 'next/image';
 import { useEditor, EditorContent, Editor as TipTapEditor } from '@tiptap/react';
@@ -20,6 +20,7 @@ import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useDebouncedCallback } from 'use-debounce';
+import { CanvasElement } from '../CanvasElement';
 
 // ============================================================================
 // NOTE CARD - WITH TIPTAP
@@ -1042,27 +1043,38 @@ export function ColorPaletteCardComponent({
 // COLUMN CARD
 // ============================================================================
 
+interface ColumnCardComponentProps {
+	card: ColumnCard;
+	isEditing: boolean;
+	onEditorReady?: (cardId: string, editor: any) => void;
+}
+
 export function ColumnCardComponent({ 
 	card, 
-	isEditing 
-}: { 
-	card: ColumnCard; 
-	isEditing: boolean;
-}) {
-	const { updateCard, cards, potentialColumnTarget } = useCanvasStore();
+	isEditing,
+	onEditorReady 
+}: ColumnCardComponentProps) {
+	const { 
+		updateCard,
+		potentialColumnTarget,
+		cards,
+		selectCard,
+		setEditingCardId,
+	} = useCanvasStore();
 	
-	// Check if this column is the potential drop target
+	const [isCollapsed, setIsCollapsed] = useState(card.column_cards.is_collapsed || false);
+	
 	const isDropTarget = potentialColumnTarget === card.id;
 
 	const debouncedSave = useDebouncedCallback(
-		async (title: string, background_color: string, column_items?: Array<{card_id: string, position: number}>) => {
+		async (title: string, background_color: string, is_collapsed?: boolean) => {
 			try {
 				const updateData: any = {
 					title,
 					background_color,
 				};
-				if (column_items !== undefined) {
-					updateData.column_items = column_items;
+				if (is_collapsed !== undefined) {
+					updateData.is_collapsed = is_collapsed;
 				}
 
 				await updateCardContent(card.id, 'column', updateData);
@@ -1101,12 +1113,25 @@ export function ColumnCardComponent({
 		debouncedSave(card.column_cards.title, newColor);
 	};
 
+	const handleToggleCollapse = async () => {
+		const newCollapsed = !isCollapsed;
+		setIsCollapsed(newCollapsed);
+		
+		updateCard(card.id, {
+			...card,
+			column_cards: {
+				...card.column_cards,
+				is_collapsed: newCollapsed,
+			},
+		});
+
+		debouncedSave(card.column_cards.title, card.column_cards.background_color, newCollapsed);
+	};
+
 	const handleRemoveCard = async (cardId: string) => {
 		try {
-			// Remove from database
 			await removeCardFromColumn(card.id, cardId);
 			
-			// Update local state
 			const updatedItems = (card.column_cards.column_items || [])
 				.filter(item => item.card_id !== cardId)
 				.map((item, index) => ({ ...item, position: index }));
@@ -1123,156 +1148,229 @@ export function ColumnCardComponent({
 		}
 	};
 
-	// Helper to get card title for preview
-	const getCardTitle = (itemCard: Card): string => {
-		switch (itemCard.card_type) {
-			case 'note':
-				return 'Note';
-			case 'text':
-				return itemCard.text_cards?.title || 'Text';
-			case 'task_list':
-				return itemCard.task_list_cards?.title || 'Tasks';
-			case 'link':
-				return itemCard.link_cards?.title || 'Link';
-			case 'file':
-				return itemCard.file_cards?.file_name || 'File';
-			case 'image':
-				return itemCard.image_cards?.caption || 'Image';
-			case 'color_palette':
-				return itemCard.color_palette_cards?.title || 'Palette';
-			case 'board':
-				return itemCard.board_cards?.board_title || 'Board';
-			default:
-				return 'Card';
-		}
+	const handleCardClick = (cardId: string) => {
+		selectCard(cardId);
+		console.log("selected card:", cardId);
 	};
 
-	// Helper to get card icon/indicator
-	const getCardIcon = (itemCard: Card): string => {
-		switch (itemCard.card_type) {
-			case 'note':
-				return '📝';
-			case 'text':
-				return '📄';
-			case 'task_list':
-				return '✓';
-			case 'link':
-				return '🔗';
-			case 'file':
-				return '📎';
-			case 'image':
-				return '🖼️';
-			case 'color_palette':
-				return '🎨';
-			case 'board':
-				return '📋';
-			default:
-				return '•';
-		}
+	const handleCardDoubleClick = (cardId: string) => {
+		setEditingCardId(cardId);
 	};
+
+	const handleCardContextMenu = (e: React.MouseEvent, itemCard: Card) => {
+		// Pass through to parent
+		e.stopPropagation();
+	};
+
+	// Get cards that belong to this column
+	const columnItems = (card.column_cards.column_items || [])
+		.sort((a, b) => a.position - b.position)
+		.map(item => cards.get(item.card_id))
+		.filter((c): c is Card => c !== undefined);
+
+	const itemCount = columnItems.length;
 
 	return (
-		<CardBase 
-			isEditing={isEditing} 
+		<div 
 			className={`
+				column-card-container
+				flex flex-col
+				border-2
+				rounded-lg
+				overflow-hidden
 				transition-all duration-200
-				${isDropTarget ? 'ring-4 ring-blue-400 ring-opacity-50 shadow-lg scale-[1.02]' : ''}
+				w-full h-full
+				${isDropTarget 
+					? 'border-blue-400 bg-blue-50 shadow-xl ring-4 ring-blue-200 ring-opacity-50' 
+					: isEditing
+						? 'border-blue-400 bg-white shadow-md'
+						: 'border-gray-300 bg-white shadow-sm hover:shadow-md'
+				}
 			`}
-			style={{ backgroundColor: card.column_cards.background_color }}
+			style={{ 
+				backgroundColor: isDropTarget ? undefined : card.column_cards.background_color,
+			}}
 		>
-			<div className="column-card p-4 h-full flex flex-col">
-				{/* Header */}
-				{isEditing ? (
-					<div className="space-y-3 mb-3">
+			{/* Header */}
+			<div className={`
+				column-header 
+				flex items-center gap-2 
+				px-3 py-2.5
+				border-b-2
+				flex-shrink-0
+				${isDropTarget ? 'border-blue-300 bg-blue-100' : 'border-gray-200 bg-white bg-opacity-60'}
+			`}>
+				{/* Collapse Button */}
+				<button
+					onClick={(e) => {
+						e.stopPropagation();
+						handleToggleCollapse();
+					}}
+					className={`
+						w-6 h-6 flex items-center justify-center 
+						rounded transition-all flex-shrink-0
+						${isDropTarget 
+							? 'text-blue-600 hover:bg-blue-200' 
+							: 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+						}
+					`}
+					title={isCollapsed ? "Expand column" : "Collapse column"}
+				>
+					<svg 
+						className={`w-3.5 h-3.5 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+						fill="currentColor" 
+						viewBox="0 0 20 20"
+					>
+						<path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+					</svg>
+				</button>
+
+				{/* Title */}
+				<div className="flex-1 min-w-0">
+					{isEditing ? (
 						<input
 							type="text"
 							value={card.column_cards.title}
 							onChange={handleTitleChange}
-							className="text-sm font-semibold text-gray-700 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+							className={`
+								w-full text-sm font-medium
+								bg-transparent border-none outline-none 
+								focus:ring-2 focus:ring-blue-400 rounded px-1.5 py-0.5
+								${isDropTarget ? 'text-blue-700' : 'text-gray-800'}
+							`}
 							placeholder="Column title"
 							onClick={(e) => e.stopPropagation()}
 						/>
-						<div className="flex items-center gap-2">
-							<label className="text-xs text-gray-500">Background:</label>
-							<input
-								type="color"
-								value={card.column_cards.background_color}
-								onChange={handleColorChange}
-								className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
-								onClick={(e) => e.stopPropagation()}
-							/>
-						</div>
-					</div>
-				) : (
-					<h3 className="text-sm font-semibold text-gray-700 mb-2">
-						{card.column_cards.title}
-					</h3>
+					) : (
+						<h3 className={`
+							text-sm font-medium truncate
+							${isDropTarget ? 'text-blue-700' : 'text-gray-800'}
+						`}>
+							{card.column_cards.title}
+						</h3>
+					)}
+				</div>
+
+				{/* Card Count Badge */}
+				<div className={`
+					px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0
+					${isDropTarget 
+						? 'bg-blue-200 text-blue-700' 
+						: 'bg-gray-200 text-gray-600'
+					}
+				`}>
+					{itemCount}
+				</div>
+
+				{/* Color Picker (Edit Mode) */}
+				{isEditing && (
+					<input
+						type="color"
+						value={card.column_cards.background_color}
+						onChange={handleColorChange}
+						className="w-7 h-7 rounded border-2 border-gray-300 cursor-pointer flex-shrink-0"
+						onClick={(e) => e.stopPropagation()}
+						title="Column background color"
+					/>
 				)}
-				
-				{/* Drop zone with visual feedback */}
+			</div>
+
+			{/* Cards List Container */}
+			{!isCollapsed && (
 				<div 
 					className={`
-						flex-1 border-2 border-dashed rounded p-2 transition-all duration-200 overflow-auto
-						${isDropTarget 
-							? 'border-blue-500 bg-blue-50 scale-[1.01]' 
-							: 'border-gray-300 bg-white bg-opacity-30'
-						}
+						column-list-container
+						flex-1 
+						overflow-auto
+						p-2
+						transition-all duration-200
+						${isDropTarget ? 'bg-blue-50' : 'bg-transparent'}
 					`}
+					style={{
+						minHeight: '100px'
+					}}
 				>
-					{/* Render column items */}
-					{card.column_cards.column_items && card.column_cards.column_items.length > 0 ? (
-						<div className="space-y-2">
-							{card.column_cards.column_items
-								.sort((a, b) => a.position - b.position)
-								.map((item) => {
-									const itemCard = cards.get(item.card_id);
-									if (!itemCard) return null;
-									
-									return (
-										<div 
-											key={item.card_id}
-											className="group relative p-2 bg-white rounded shadow-sm hover:shadow-md transition-shadow border border-gray-200"
-										>
-											<div className="flex items-center gap-2">
-												<span className="text-base flex-shrink-0">
-													{getCardIcon(itemCard)}
-												</span>
-												<span className="text-xs font-medium text-gray-800 flex-1 truncate">
-													{getCardTitle(itemCard)}
-												</span>
-												{isEditing && (
-													<button
-														onClick={(e) => {
-															e.stopPropagation();
-															handleRemoveCard(item.card_id);
-														}}
-														className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs transition-opacity"
-														title="Remove from column"
-													>
-														×
-													</button>
-												)}
-											</div>
-										</div>
-									);
-								})}
-						</div>
-					) : (
-						<div className="flex items-center justify-center h-full">
-							<p className={`
-								text-xs text-center transition-all duration-200
+					{itemCount === 0 ? (
+						/* Empty State */
+						<div className={`
+							flex flex-col items-center justify-center gap-2 h-full
+							transition-all duration-200
+							${isDropTarget ? 'scale-110' : ''}
+						`}>
+							<div className={`
+								w-12 h-12 rounded-full flex items-center justify-center
+								transition-all duration-200
 								${isDropTarget 
-									? 'text-blue-600 font-medium' 
+									? 'bg-blue-200 text-blue-600 scale-110' 
+									: 'bg-gray-200 text-gray-400'
+								}
+							`}>
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+								</svg>
+							</div>
+							<p className={`
+								text-sm font-medium transition-all duration-200
+								${isDropTarget 
+									? 'text-blue-600' 
 									: 'text-gray-400'
 								}
 							`}>
-								{isDropTarget ? '⬇ Drop here to add' : 'Drag cards here'}
+								{isDropTarget ? 'Drop cards here' : 'Drag cards here'}
 							</p>
+						</div>
+					) : (
+						/* Render actual cards inside column */
+						<div className="column-cards-list space-y-2">
+							{columnItems.map((itemCard) => (
+								<div 
+									key={itemCard.id}
+									className="column-card-wrapper relative"
+									style={{
+										// Cards take full width of column with padding
+										width: '100%',
+									}}
+								>
+									{/* Remove button (only in edit mode) */}
+									{isEditing && (
+										<button
+											onClick={(e) => {
+												e.stopPropagation();
+												handleRemoveCard(itemCard.id);
+											}}
+											className="absolute -top-1 -right-1 z-10 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-md transition-colors"
+											title="Remove from column"
+										>
+											×
+										</button>
+									)}
+									
+									{/* Render the actual card */}
+									<CanvasElement
+										card={itemCard}
+										boardId={card.board_id}
+										onCardClick={handleCardClick}
+										onCardDoubleClick={handleCardDoubleClick}
+										onContextMenu={handleCardContextMenu}
+										onEditorReady={onEditorReady}
+										isInsideColumn={true}
+									/>
+								</div>
+							))}
 						</div>
 					)}
 				</div>
-			</div>
-		</CardBase>
+			)}
+
+			{/* Collapsed State */}
+			{isCollapsed && (
+				<div className="px-3 py-2 text-center border-t border-gray-200 bg-gray-50">
+					<p className="text-xs text-gray-500">
+						{itemCount} {itemCount === 1 ? 'card' : 'cards'} (collapsed)
+					</p>
+				</div>
+			)}
+		</div>
 	);
 }
 

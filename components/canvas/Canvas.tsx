@@ -1,9 +1,3 @@
-/**
- * Canvas Component - With TipTap Toolbar Integration
- * 
- * Loads cards from your Supabase database and renders them with toolbar support
- */
-
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
@@ -16,7 +10,7 @@ import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
 import type { Card } from '@/lib/types';
-import type { Editor } from '@tiptap/react';
+import { forEach, type Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/element-toolbar';
 import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
 import ContextMenu from '@/app/ui/board/context-menu';
@@ -25,22 +19,13 @@ import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
 import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
 
 interface CanvasProps {
-	/**
-	 * Initial cards loaded from database
-	 */
 	initialCards?: Card[];
-	
-	/**
-	 * Board ID for saving updates
-	 */
 	boardId: string | null;
-	
 	className?: string;
 	enablePan?: boolean;
 	enableZoom?: boolean;
 	enableKeyboardShortcuts?: boolean;
 	enableSelectionBox?: boolean;
-	
 	onCardClick?: (cardId: string) => void;
 	onCardDoubleClick?: (cardId: string) => void;
 }
@@ -79,21 +64,18 @@ export function Canvas({
 		setSelectedEditor(null);
 	}
 
-	// Load initial cards on mount
 	useEffect(() => {
 		if (initialCards.length > 0) {
 			loadCards(initialCards);
 		}
 	}, [initialCards, loadCards]);
 
-	// Clear editor when editing is done
 	useEffect(() => {
 		if (!editingCardId) {
 			setSelectedEditor(null);
 		}
 	}, [editingCardId]);
 
-	// Attach interaction hooks
 	useCanvasInteractions(canvasRef, {
 		enablePan,
 		enableZoom,
@@ -128,11 +110,32 @@ export function Canvas({
 	}
 
 	const handleEditorReady = (cardId: string, editor: Editor) => {
-		// Only set editor if this card is being edited
 		if (editingCardId === cardId) {
 			setSelectedEditor(editor);
 		}
 	};
+
+	/**
+	 * Helper to check if a card is inside any column
+	 */
+	const isCardInColumn = (cardId: string): boolean => {
+		const allCards = Array.from(cards.values());
+		return allCards.some(c => 
+			c.card_type === 'column' && 
+			c.column_cards?.column_items?.some(item => item.card_id === cardId)
+		);
+	};
+
+	/**
+	 * Separate cards into:
+	 * - Column cards (will render their own children)
+	 * - Free cards (not in any column)
+	 */
+	const allCards = getCanvasCards(cards);
+	const columnCards = allCards.filter(c => c.card_type === 'column');
+	const freeCards = allCards.filter(c => 
+		c.card_type !== 'column' && !isCardInColumn(c.id)
+	);
 
 	return (
 		<div className="flex flex-col h-screen">
@@ -173,20 +176,34 @@ export function Canvas({
 						{/* Background Grid */}
 						{showGrid && <Grid />}
 						
-						{/* Cards Layer */}
+						{/* Column Cards Layer (renders first, includes their child cards) */}
+						<div className="columns-layer">
+							{columnCards.map((card) => (
+								<CanvasElement
+									key={card.id}
+									card={card}
+									boardId={boardId}
+									onCardClick={handleCardClick}
+									onCardDoubleClick={onCardDoubleClick}
+									onContextMenu={handleCardContextMenu}
+									onEditorReady={handleEditorReady}
+								/>
+							))}
+						</div>
+						
+						{/* Free Cards Layer (only cards NOT in columns) */}
 						<div className="cards-layer">
-							{getCanvasCards(cards)
-								.map((card) => (
-									<CanvasElement
-										key={card.id}
-										card={card}
-										boardId={boardId}
-										onCardClick={handleCardClick}
-										onCardDoubleClick={onCardDoubleClick}
-										onContextMenu={handleCardContextMenu}
-										onEditorReady={handleEditorReady}
-									/>
-								))}
+							{freeCards.map((card) => (
+								<CanvasElement
+									key={card.id}
+									card={card}
+									boardId={boardId}
+									onCardClick={handleCardClick}
+									onCardDoubleClick={onCardDoubleClick}
+									onContextMenu={handleCardContextMenu}
+									onEditorReady={handleEditorReady}
+								/>
+							))}
 						</div>
 					</div>
 				</div>

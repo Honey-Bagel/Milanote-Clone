@@ -1,9 +1,3 @@
-/**
- * CanvasElement Component
- * 
- * Wrapper for each card, adapted to your database schema
- */
-
 'use client';
 
 import type { Card } from '@/lib/types';
@@ -21,6 +15,7 @@ interface CanvasElementProps {
 	onCardDoubleClick?: (cardId: string) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 	onEditorReady?: (cardId: string, editor: Editor) => void;
+	isInsideColumn?: boolean; // NEW: indicates if rendered inside a column
 }
 
 export function CanvasElement({ 
@@ -29,7 +24,8 @@ export function CanvasElement({
 	onCardClick, 
 	onCardDoubleClick,
 	onContextMenu,
-	onEditorReady 
+	onEditorReady,
+	isInsideColumn = false // Default to false for backwards compatibility
 }: CanvasElementProps) {
 	const { selectedCardIds, setEditingCardId, editingCardId } = useCanvasStore();
 	
@@ -38,6 +34,7 @@ export function CanvasElement({
 
 	const { canResize } = getDefaultCardDimensions(card.card_type);
 
+	// Only enable dragging/resizing if NOT inside a column
 	const { handleMouseDown, isDragging } = useDraggable({
 		cardId: card.id,
 		snapToGrid: false,
@@ -72,7 +69,8 @@ export function CanvasElement({
 			return;
 		}
 		
-		// Otherwise, handle dragging
+		// Allow dragging even from inside column
+		// The useDraggable hook will handle extracting it from the column
 		handleMouseDown(e);
 	};
 
@@ -88,6 +86,64 @@ export function CanvasElement({
 		}
 	};
 
+	// Different styling for in-column vs canvas rendering
+	if (isInsideColumn) {
+		// In-column: use relative positioning, no absolute positioning
+		return (
+			<div
+				data-element-id={card.id}
+				data-card="true"
+				data-in-column="true"
+				className="canvas-element-in-column"
+				style={{
+					position: 'relative',
+					width: '100%',
+					userSelect: isEditing ? 'auto' : 'none',
+					WebkitUserSelect: isEditing ? 'auto' : 'none',
+					MozUserSelect: isEditing ? 'auto' : 'none',
+					msUserSelect: isEditing ? 'auto' : 'none',
+				}}
+			>
+				<div
+					className={`
+						card
+						${isSelected ? 'selected' : ''}
+						${isEditing ? 'editing' : ''}
+						${selectedCardIds.size === 1 && isSelected ? 'selected-single' : ''}
+					`}
+					onClick={handleClick}
+					onDoubleClick={handleDoubleClick}
+					onContextMenu={handleContextMenu}
+					onMouseDown={handleMouseDown}
+					style={{
+						width: '100%',
+						height: card.height || 'auto',
+						minHeight: card.height ? card.height : 'auto',
+						userSelect: isEditing ? 'auto' : 'none',
+						WebkitUserSelect: isEditing ? 'auto' : 'none',
+						cursor: isEditing ? 'auto' : 'pointer',
+						position: 'relative'
+					}}
+				>
+					{/* Render the actual card content */}
+					<CardRenderer 
+						card={card} 
+						isEditing={isEditing}
+						onEditorReady={handleEditorReady}
+					/>
+					
+					{/* Selection indicator */}
+					{isSelected && (
+						<div className="selection-outline" />
+					)}
+
+					{/* No resize handle for cards in columns */}
+				</div>
+			</div>
+		);
+	}
+
+	// Normal canvas rendering: absolute positioning
 	return (
 		<div
 			data-element-id={card.id}
