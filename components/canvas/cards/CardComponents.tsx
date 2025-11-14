@@ -1067,6 +1067,14 @@ export function ColumnCardComponent({
 	} = useCanvasStore();
 	
 	const [isCollapsed, setIsCollapsed] = useState(card.column_cards.is_collapsed || false);
+	const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+	const [dragPreviewPos, setDragPreviewPos] = useState<{ x: number, y: number } | null>(null);
+
+	const draggedCardRef = useRef<Card | null>(null);
+	const dragStartIndexRef = useRef<number | null>(null);
+	const columnListRef = useRef<HTMLDivElement>(null);
+	const dragOverIndexRef = useRef<number | null>(null);
 	
 	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({
 		cardId: card.id
@@ -1075,7 +1083,7 @@ export function ColumnCardComponent({
 	const isDropTarget = potentialColumnTarget === card.id;
 
 	const debouncedSave = useDebouncedCallback(
-		async (title: string, background_color: string, is_collapsed?: boolean) => {
+		async (title: string, background_color: string, is_collapsed?: boolean, column_items?: Array<{card_id: string, position: number}>) => {
 			try {
 				const updateData: any = {
 					title,
@@ -1083,6 +1091,9 @@ export function ColumnCardComponent({
 				};
 				if (is_collapsed !== undefined) {
 					updateData.is_collapsed = is_collapsed;
+				}
+				if (column_items !== undefined) {
+					updateData.column_items = column_items;
 				}
 
 				await updateCardContent(card.id, 'column', updateData);
@@ -1157,18 +1168,138 @@ export function ColumnCardComponent({
 	};
 
 	const handleCardClick = (cardId: string) => {
-		selectCard(cardId);
-		console.log("selected card:", cardId);
+		if (!draggedCardId) {
+			selectCard(cardId);
+		}
 	};
 
 	const handleCardDoubleClick = (cardId: string) => {
-		setEditingCardId(cardId);
+		if (!draggedCardId) {
+			setEditingCardId(cardId);
+		}
 	};
 
 	const handleCardContextMenu = (e: React.MouseEvent, itemCard: Card) => {
 		// Pass through to parent
 		e.stopPropagation();
 	};
+
+	// Drag to Re-order logic
+
+	const handleCardDragStart = useCallback((e: React.MouseEvent, itemCard: Card, index: number) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		// Store dragged card info
+		setDraggedCardId(itemCard.id);
+		draggedCardRef.current = itemCard;
+		dragStartIndexRef.current = index;
+
+		// Set initial preview
+		if (columnListRef.current) {
+			const rect = columnListRef.current.getBoundingClientRect();
+			setDragPreviewPos({
+				x: e.clientX - rect.left,
+				y: e.clientY - rect.top
+			});
+		}
+
+		// Add a mouse move listener for drag preview
+		const handleMouseMove = (me: MouseEvent) => {
+			if (columnListRef.current) {
+				const rect = columnListRef.current.getBoundingClientRect();
+				setDragPreviewPos({
+					x: me.clientX - rect.left,
+					y: me.clientY - rect.top
+				});
+			}
+
+			if (columnListRef.current) {
+				const items = Array.from(columnListRef.current.querySelectorAll('.column-card-wrapper'));
+				let newDragOverIndex: number | null = null;
+
+				for (let i = 0; i < items.length; i++) {
+					const item = items[i] as HTMLElement;
+					const rect = item.getBoundingClientRect();
+					const midpoint = rect.top + rect.height / 2;
+
+					if (me.clientY < midpoint) {
+						newDragOverIndex = i;
+						break;
+					}
+				}
+
+				// If not over any item, drop at end
+				if (newDragOverIndex === null) {
+					newDragOverIndex = items.length;
+				}
+
+				console.log(newDragOverIndex);
+
+				setDragOverIndex(newDragOverIndex);
+				dragOverIndexRef.current = newDragOverIndex;
+			}
+		};
+
+		const handleMouseUp = () => {
+			// Handle the drop
+			const endIndex = dragOverIndexRef.current;
+			if (endIndex !== null && dragStartIndexRef.current !== null && draggedCardRef.current) {
+				console.log('test')
+				const startIndex = dragStartIndexRef.current;
+				const endIndex = dragOverIndex;
+
+				// Only reorder if positions actually changed
+				if (startIndex !== endIndex) {
+					const items = [...(card.column_cards.column_items || [])];
+
+					// Remove from old position
+					const [movedItem] = items.splice(startIndex, 1);
+
+					// Insert at new position
+					const insertIndex = endIndex > startIndex ? endIndex - 1 : endIndex;
+					items.splice(insertIndex, 0, movedItem);
+
+					// Update positions
+					const updatedItems = items.map((item, index) => ({
+						...item,
+						position: index
+					}));
+
+					// Update local state
+					updateCard(card.id, {
+						...card,
+						column_cards: {
+							...card.column_cards,
+							column_items: updatedItems
+						}
+					});
+
+					// Save to db
+					debouncedSave(
+						card.column_cards.title,
+						card.column_cards.background_color,
+						undefined,
+						updatedItems
+					);
+				}
+			}
+
+			// Clean up
+			setDraggedCardId(null);
+			setDragOverIndex(null);
+			setDragPreviewPos(null);
+			draggedCardRef.current = null;
+			dragStartIndexRef.current = null;
+			dragOverIndexRef.current = null;
+
+			document.removeEventListener('mousemove', handleMouseMove);
+			document.removeEventListener('mouseup', handleMouseUp);
+		};
+
+		document.addEventListener('mousemove', handleMouseMove);
+		document.addEventListener('mouseup', handleMouseUp);
+	}, [card, dragOverIndex, updateCard, debouncedSave]);
 
 	// Get cards that belong to this column
 	const columnItems = ([...card.column_cards.column_items || []])
@@ -1184,9 +1315,10 @@ export function ColumnCardComponent({
 				column-card-container
 				flex flex-col
 				border-2
+				rounded-lg
 				overflow-hidden
 				transition-all duration-200
-				w-full h-fit
+				w-full h-full
 				${isDropTarget 
 					? 'border-blue-400 bg-blue-50 shadow-xl ring-4 ring-blue-200 ring-opacity-50' 
 					: isEditing
@@ -1285,12 +1417,14 @@ export function ColumnCardComponent({
 			{/* Cards List Container */}
 			{!isCollapsed && (
 				<div 
+					ref={columnListRef}
 					className={`
 						column-list-container
 						flex-1 
 						overflow-auto
 						p-2
 						transition-all duration-200
+						relative
 						${isDropTarget ? 'bg-blue-50' : 'bg-transparent'}
 					`}
 					style={{
@@ -1329,41 +1463,94 @@ export function ColumnCardComponent({
 					) : (
 						/* Render actual cards inside column */
 						<div className="column-cards-list space-y-2">
-							{columnItems.map((itemCard) => (
-								<div 
-									key={itemCard.id}
-									className="column-card-wrapper relative"
-									style={{
-										// Cards take full width of column with padding
-										width: '100%',
-									}}
-								>
-									{/* Remove button (only in edit mode) */}
-									{isEditing && (
-										<button
-											onClick={(e) => {
-												e.stopPropagation();
-												handleRemoveCard(itemCard.id);
-											}}
-											className="absolute -top-1 -right-1 z-10 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-md transition-colors"
-											title="Remove from column"
-										>
-											×
-										</button>
+							{columnItems.map((itemCard, index) => (
+								<div key={itemCard.id}>
+									{/* Insertion line indicator */}
+									{dragOverIndex === index && draggedCardId !== itemCard.id && (
+										<div className="h-0.5 bg-blue-500 rounded mb-2 shadow-lg animate-pulse" />
 									)}
 									
-									{/* Render the actual card */}
-									<CanvasElement
-										card={itemCard}
-										boardId={card.board_id}
-										onCardClick={handleCardClick}
-										onCardDoubleClick={handleCardDoubleClick}
-										onContextMenu={handleCardContextMenu}
-										onEditorReady={onEditorReady}
-										isInsideColumn={true}
-									/>
+									<div 
+										className={`
+											column-card-wrapper relative
+											transition-opacity duration-150
+											${draggedCardId === itemCard.id ? 'opacity-30' : 'opacity-100'}
+										`}
+										style={{
+											width: '100%',
+										}}
+										onMouseDown={(e) => {
+											// Only allow reordering when not editing the column
+											if (!isEditing) {
+												handleCardDragStart(e, itemCard, index);
+											}
+										}}
+									>
+										{/* Drag handle indicator */}
+										{!isEditing && (
+											<div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 hover:opacity-60 transition-opacity cursor-move z-10">
+												<svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+													<path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 9a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
+												</svg>
+											</div>
+										)}
+										
+										{/* Remove button (only in edit mode) */}
+										{isEditing && (
+											<button
+												onClick={(e) => {
+													e.stopPropagation();
+													handleRemoveCard(itemCard.id);
+												}}
+												className="absolute -top-1 -right-1 z-10 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs shadow-md transition-colors"
+												title="Remove from column"
+											>
+												×
+											</button>
+										)}
+										
+										{/* Render the actual card */}
+										<CanvasElement
+											card={itemCard}
+											boardId={card.board_id}
+											onCardClick={handleCardClick}
+											onCardDoubleClick={handleCardDoubleClick}
+											onContextMenu={handleCardContextMenu}
+											onEditorReady={onEditorReady}
+											isInsideColumn={true}
+										/>
+									</div>
 								</div>
 							))}
+							
+							{/* Drop at end indicator */}
+							{dragOverIndex === columnItems.length && (
+								<div className="h-0.5 bg-blue-500 rounded shadow-lg animate-pulse" />
+							)}
+						</div>
+					)}
+
+					{/* Drag Preview Ghost */}
+					{draggedCardId && dragPreviewPos && draggedCardRef.current && (
+						<div
+							className="absolute pointer-events-none z-50"
+							style={{
+								left: dragPreviewPos.x - 20,
+								top: dragPreviewPos.y - 20,
+								transform: 'rotate(-3deg)',
+								opacity: 0.8,
+							}}
+						>
+							<div className="shadow-2xl rounded-lg border-2 border-blue-400 bg-white scale-95">
+								<CanvasElement
+									card={draggedCardRef.current}
+									boardId={card.board_id}
+									onCardClick={() => {}}
+									onCardDoubleClick={() => {}}
+									onContextMenu={() => {}}
+									isInsideColumn={true}
+								/>
+							</div>
 						</div>
 					)}
 				</div>

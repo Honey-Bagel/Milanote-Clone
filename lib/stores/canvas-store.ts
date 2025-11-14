@@ -229,6 +229,13 @@ export const useCanvasStore = create<CanvasState>()(
 				// Delete from local state first for immediate UI feedback
 				set((state) => {
 					ids.forEach((id) => {
+						const card = state.getCard(id);
+						if (card?.card_type === 'column') {
+							card.column_cards.column_items.forEach((card) => {
+								state.cards.delete(card.card_id);
+								ids.push(card.card_id);
+							})
+						}
 						state.cards.delete(id);
 						state.selectedCardIds.delete(id);
 						if (state.editingCardId === id) {
