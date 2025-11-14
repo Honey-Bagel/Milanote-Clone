@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { Card } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -64,7 +65,7 @@ export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 		case 'color_palette':
 			return { canResize: true, minWidth: 100, minHeight: 100, defaultWidth: 250, defaultHeight: 100 };
 		case 'column':
-			return { canResize: true, minWidth: 100, minHeight: 60, defaultWidth: 250, defaultHeight: 70 };
+			return { canResize: false, minWidth: 250, minHeight: 60, defaultWidth: 250, defaultHeight: null };
 		case 'board':
 			return { canResize: true, minWidth: 200, minHeight: 200, defaultWidth: 250, defaultHeight: 250 };
 		default:

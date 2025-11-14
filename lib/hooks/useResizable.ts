@@ -49,16 +49,14 @@ export function useResizable({
 		if (!card) return;
 
 		// Get default data per card type
-		const { minWidth, minHeight, canResize, keepAspectRatio: maintainAspectRatio } = getDefaultCardDimensions(card.card_type);
-
-		if (!canResize) return;
+		const { minWidth, minHeight, defaultHeight, canResize, keepAspectRatio: maintainAspectRatio } = getDefaultCardDimensions(card.card_type);
 
 		// Store initial state
 		const startCanvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
 		startPosRef.current = startCanvasPos;
 		startDimensionsRef.current = {
 			width: card.width,
-			height: card.height || minHeight,
+			height: card.height || null,
 		};
 		
 		// Calculate aspect ratio if needed
@@ -92,14 +90,14 @@ export function useResizable({
 
 			// Calculate new dimensions
 			let newWidth = Math.max(minWidth, Math.min(maxWidth, startDimensionsRef.current.width + deltaX));
-			let newHeight = Math.max(minHeight, Math.min(maxHeight, startDimensionsRef.current.height + deltaY));
+			let newHeight = defaultHeight ? Math.max(minHeight, Math.min(maxHeight, startDimensionsRef.current.height + deltaY)) : null;
 
 			// Maintain aspect ratio if needed
 			if (maintainAspectRatio) {
 				if (Math.abs(deltaX) > Math.abs(deltaY)) {
 					newHeight = newWidth / aspectRatioRef.current;
 				} else {
-					newWidth = newHeight * aspectRatioRef.current;
+					newWidth = newHeight ? newHeight * aspectRatioRef.current : null;
 				}
 			}
 
@@ -118,12 +116,12 @@ export function useResizable({
 			updateCard(cardId, {
 				...card,
 				width: newWidth,
-				height: newHeight,
+				height: newHeight ? newHeight : card.height,
 				position_x: newX,
 				position_y: newY,
 			});
 
-			onResize?.(newWidth, newHeight);
+			onResize?.(newWidth, newHeight ? newHeight : card.height);
 		};
 
 		const handleMouseUp = async () => {
@@ -135,7 +133,7 @@ export function useResizable({
 			document.removeEventListener('mousemove', handleMouseMove);
 			document.removeEventListener('mouseup', handleMouseUp);
 			if (card) {
-				onResizeEnd?.(card.width, card.height || minHeight);
+				onResizeEnd?.(card.width, card.height);
 
 				// Sync to database
 				try {

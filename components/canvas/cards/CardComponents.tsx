@@ -21,6 +21,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { useDebouncedCallback } from 'use-debounce';
 import { CanvasElement } from '../CanvasElement';
+import { useResizable } from '@/lib/hooks/useResizable';
 
 // ============================================================================
 // NOTE CARD - WITH TIPTAP
@@ -1046,12 +1047,14 @@ export function ColorPaletteCardComponent({
 interface ColumnCardComponentProps {
 	card: ColumnCard;
 	isEditing: boolean;
+	isSelected?: boolean;
 	onEditorReady?: (cardId: string, editor: any) => void;
 }
 
 export function ColumnCardComponent({ 
 	card, 
 	isEditing,
+	isSelected,
 	onEditorReady 
 }: ColumnCardComponentProps) {
 	const { 
@@ -1060,9 +1063,14 @@ export function ColumnCardComponent({
 		cards,
 		selectCard,
 		setEditingCardId,
+		selectedCardIds,
 	} = useCanvasStore();
 	
 	const [isCollapsed, setIsCollapsed] = useState(card.column_cards.is_collapsed || false);
+	
+	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({
+		cardId: card.id
+	});
 	
 	const isDropTarget = potentialColumnTarget === card.id;
 
@@ -1163,7 +1171,7 @@ export function ColumnCardComponent({
 	};
 
 	// Get cards that belong to this column
-	const columnItems = ([...card.column_cards.column_items])
+	const columnItems = ([...card.column_cards.column_items || []])
 		.sort((a, b) => a.position - b.position)
 		.map(item => cards.get(item.card_id))
 		.filter((c): c is Card => c !== undefined);
@@ -1178,7 +1186,7 @@ export function ColumnCardComponent({
 				border-2
 				overflow-hidden
 				transition-all duration-200
-				w-full h-full
+				w-full h-fit
 				${isDropTarget 
 					? 'border-blue-400 bg-blue-50 shadow-xl ring-4 ring-blue-200 ring-opacity-50' 
 					: isEditing
@@ -1368,6 +1376,27 @@ export function ColumnCardComponent({
 						{itemCount} {itemCount === 1 ? 'card' : 'cards'} (collapsed)
 					</p>
 				</div>
+			)}
+
+			{/* East direction Resize Handle for Column Card */}
+			{isSelected && !isEditing && (
+				<div
+					aria-label="Resize East"
+					onMouseDown={(e) => handleMouseDownResizable(e, 'e')}
+					className="resize-handle resize-handle-e"
+					style={{
+						position: 'absolute',
+						right: -4,
+						bottom: -4,
+						width: 8,
+						height: 8,
+						cursor: 'e-resize',
+						zIndex: card.z_index + 1,
+						backgroundColor: '#3B82F6',
+						border: '1px solid white',
+						borderRadius: '50%',
+					}}
+				/>
 			)}
 		</div>
 	);

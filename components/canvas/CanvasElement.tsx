@@ -192,6 +192,7 @@ export function CanvasElement({
 					<CardRenderer 
 						card={card} 
 						isEditing={isEditing}
+						isSelected={isSelected}
 						onEditorReady={handleEditorReady}
 					/>
 					
