@@ -67,6 +67,8 @@ export function Canvas({
 	useEffect(() => {
 		if (initialCards.length > 0) {
 			loadCards(initialCards);
+		} else {
+			loadCards([]);
 		}
 	}, [initialCards, loadCards]);
 

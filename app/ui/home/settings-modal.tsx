@@ -169,7 +169,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 			const { error } = await supabase.auth.signOut();
 			if (error) throw error;
 			
-			router.push('/login');
+			router.push('/auth');
 		} catch (error) {
 			console.error('Error logging out:', error);
 			showMessage('error', 'Failed to log out');

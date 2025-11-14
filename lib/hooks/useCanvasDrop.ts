@@ -26,7 +26,7 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 			case 'image':
 				return { image_url: '', caption: '' };
 			case 'task_list':
-				return { title: 'Task List' };
+				return { title: 'Task List', tasks: [{ id: `task-${Date.now()}`, text: 'test', completed: false, position: 0 }] };
 			case 'link':
 				return { title: 'New Link', url: 'https://example.com' };
 			case 'file':

@@ -310,11 +310,7 @@ export function ImageCardComponent({
 									onClick={(e) => e.stopPropagation()}
 								/>
 							</div>
-						) : card.image_cards.caption ? (
-							<div className="p-3 text-xs text-gray-600 bg-gray-50 border-t border-gray-200">
-								{card.image_cards.caption}
-							</div>
-						) : null}
+						) : null }
 					</>
 				) : (
 					<div className="p-4">
@@ -592,7 +588,7 @@ export function TaskListCardComponent({
 				)}
 				
 				<div className="space-y-2 flex-1 overflow-auto">
-					{[...card.task_list_cards.tasks]
+					{[...card.task_list_cards.tasks || []]
 						.sort((a, b) => a.position - b.position)
 						.map(task => (
 						<div
@@ -612,6 +608,7 @@ export function TaskListCardComponent({
 									value={task.text}
 									onChange={(e) => handleTaskTextChange(task.id, e.target.value)}
 									onBlur={() => setEditingTaskId(null)}
+									placeholder='Add new task...'
 									onKeyDown={(e) => {
 										if (e.key === 'Enter') {
 											setEditingTaskId(null);
@@ -1070,6 +1067,7 @@ export function ColumnCardComponent({
 	const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 	const [dragPreviewPos, setDragPreviewPos] = useState<{ x: number, y: number } | null>(null);
+	const [cardHoverId, setCardHoverId] = useState<string | null>(null);
 
 	const draggedCardRef = useRef<Card | null>(null);
 	const dragStartIndexRef = useRef<number | null>(null);
@@ -1485,10 +1483,16 @@ export function ColumnCardComponent({
 												handleCardDragStart(e, itemCard, index);
 											}
 										}}
+										onMouseEnter={() => setCardHoverId(itemCard.id)}
+										onMouseLeave={() => {
+											if(cardHoverId === itemCard.id) {
+												setCardHoverId(null);
+											}
+										}}
 									>
 										{/* Drag handle indicator */}
 										{!isEditing && (
-											<div className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 hover:opacity-60 transition-opacity cursor-move z-10">
+											<div className={`absolute left-1 top-1/2 -translate-y-1/2 ${cardHoverId === itemCard.id ? "hover:opacity-60" : "opacity-0"} transition-opacity cursor-move z-10`}>
 												<svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
 													<path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 9a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
 												</svg>
