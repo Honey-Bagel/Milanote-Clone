@@ -31,7 +31,6 @@
     "konva": "^10.0.8",
     "lucide-react": "^0.552.0",
     "next": "16.0.1",
-    "quill": "^2.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-konva": "^19.2.0",
