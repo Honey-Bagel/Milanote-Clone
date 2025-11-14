@@ -105,7 +105,7 @@ export interface AddElementModalProps {
 export interface ContextMenuProps {
 	isOpen: boolean;
 	data: {
-		card: Card;
+		card: Card | null;
 		position: {
 			x: number;
 			y: number;

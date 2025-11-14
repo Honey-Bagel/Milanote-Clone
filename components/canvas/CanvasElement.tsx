@@ -183,7 +183,7 @@ export function CanvasElement({
 						minHeight: card.height ? card.height : 'auto',
 						userSelect: isEditing ? 'auto' : 'none',
 						WebkitUserSelect: isEditing ? 'auto' : 'none',
-						cursor: isEditing ? 'auto' : 'move',
+						cursor: isEditing ? 'auto' : 'pointer',
 						pointerEvents: isEditing || !isDragging ? 'auto' : 'none',
 						position: 'relative'
 					}}

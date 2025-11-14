@@ -4,6 +4,7 @@ import { ContextMenuProps } from '@/lib/types';
 import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
+import { GetCardTypeContextMenu } from '@/components/canvas/cards/CardComponentContextMenus';
 
 export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
@@ -24,7 +25,7 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 	}, [onClose]);
 
 	const handleEditButton = () => {
-		setEditingCardId(data?.card?.id);
+		setEditingCardId(data?.card?.id || null);
 		onClose();
 	};
 
@@ -54,6 +55,9 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 				left: `${data.position.x}px` 
 			}}
 		>
+			{data.card && (
+				GetCardTypeContextMenu(data.card, onClose)
+			)}
 			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
 				<Copy className="w-4 h-4" />
 				<span>Duplicate</span>

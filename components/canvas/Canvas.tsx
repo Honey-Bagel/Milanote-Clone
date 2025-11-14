@@ -45,7 +45,7 @@ export function Canvas({
 	const canvasViewportRef = useRef<HTMLDivElement>(null);
 	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
 	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
-	const [cardContextMenuData, setCardContextMenuData] = useState({card: null, position: { x: 0, y: 0}});
+	const [cardContextMenuData, setCardContextMenuData] = useState<{ card: null | Card, position: { x: number, y: number }}>({card: null, position: { x: 0, y: 0}});
 	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
 	
 	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard, showGrid } = useCanvasStore();

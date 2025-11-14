@@ -1163,7 +1163,7 @@ export function ColumnCardComponent({
 	};
 
 	// Get cards that belong to this column
-	const columnItems = (card.column_cards.column_items || [])
+	const columnItems = ([...card.column_cards.column_items])
 		.sort((a, b) => a.position - b.position)
 		.map(item => cards.get(item.card_id))
 		.filter((c): c is Card => c !== undefined);
@@ -1176,7 +1176,6 @@ export function ColumnCardComponent({
 				column-card-container
 				flex flex-col
 				border-2
-				rounded-lg
 				overflow-hidden
 				transition-all duration-200
 				w-full h-full
