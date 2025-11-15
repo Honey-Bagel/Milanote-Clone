@@ -18,6 +18,26 @@ interface CanvasElementProps {
 	isInsideColumn?: boolean; // NEW: indicates if rendered inside a column
 }
 
+function orderKeyToZIndex(orderKey: string): number {
+	let hash = 0;
+	for (let i = 0; i < orderKey.length; i++) {
+		const char = orderKey.charCodeAt(i);
+		hash = ((hash << 5) - hash) + char;
+		hash = hash & hash; // Convert to 32 bit int
+	}
+
+	return Math.abs(hash) % 100000;
+}
+
+export function useCardZIndex(card: Card, allCards: Map<string, Card>): number {
+	const sortedCards = Array.from(allCards.values())
+		.sort((a, b) => a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0);
+
+	const index = sortedCards.findIndex(c => c.id === card.id);
+
+	return index >= 0 ? index : 0;
+}
+
 export function CanvasElement({ 
 	card, 
 	boardId,
@@ -27,17 +47,19 @@ export function CanvasElement({
 	onEditorReady,
 	isInsideColumn = false // Default to false for backwards compatibility
 }: CanvasElementProps) {
-	const { selectedCardIds, setEditingCardId, editingCardId } = useCanvasStore();
+	const { selectedCardIds, setEditingCardId, editingCardId, cards: allCards } = useCanvasStore();
 	
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
-
 	const { canResize } = getDefaultCardDimensions(card.card_type);
+
+	const cssZIndex = useCardZIndex(card, allCards);
 
 	// Only enable dragging/resizing if NOT inside a column
 	const { handleMouseDown, isDragging } = useDraggable({
 		cardId: card.id,
 		snapToGrid: false,
+		dragThreshold: 3
 	});
 
 	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({
@@ -153,7 +175,7 @@ export function CanvasElement({
 				position: 'absolute',
 				top: card.position_y,
 				left: card.position_x,
-				zIndex: card.z_index,
+				zIndex: cssZIndex,
 				userSelect: isEditing ? 'auto' : 'none',
 				WebkitUserSelect: isEditing ? 'auto' : 'none',
 				MozUserSelect: isEditing ? 'auto' : 'none',
@@ -214,7 +236,7 @@ export function CanvasElement({
 								width: 8,
 								height: 8,
 								cursor: 'se-resize',
-								zIndex: card.z_index + 1,
+								zIndex: cssZIndex + 1,
 								backgroundColor: '#3B82F6',
 								border: '1px solid white',
 								borderRadius: '50%',

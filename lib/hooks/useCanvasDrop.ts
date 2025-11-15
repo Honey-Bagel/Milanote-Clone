@@ -7,14 +7,10 @@ import { createClient } from '@/lib/supabase/client';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { getDefaultCardDimensions } from '../utils';
 
-interface UseCanvasDropParams {
-	boardId: string | null;
-	viewport: { x: number; y: number; zoom: number };
-}
 
-export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
+export function useCanvasDrop(boardId: string) {
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
-	const { addCard, getNewCardZIndex } = useCanvasStore();
+	const { addCard, viewport, getNewCardOrderKey } = useCanvasStore();
 	const supabase = createClient();
 
 	const getDefaultCardData = (cardType: Card['card_type']) => {
@@ -113,22 +109,20 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 		const canvasX = (clientX - viewport.x) / viewport.zoom;
 		const canvasY = (clientY - viewport.y) /viewport.zoom;
 
-		// Get the starting z-index using the manager
-		let currentZIndex = getNewCardZIndex();
-
 		// Process each dropped file
 		let yOffset = 0;
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
 			
 			try {
+				// Get order key
+				const orderKey = getNewCardOrderKey();
+
 				// Upload file to supabase
 				const fileUrl = await uploadFileToStorage(file, boardId);
 
 				// Determine the file type
 				const cardType = getCardTypeFromFile(file);
-
-				const { defaultWidth, defaultHeight } = getDefaultCardDimensions(cardType);
 
 				// Prepare card data based on type
 				let cardData: any;
@@ -146,6 +140,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 					};
 				}
 
+				const { defaultWidth, defaultHeight } = getDefaultCardDimensions(cardType);
+
 				// Create card in database with stacked positioning
 				const cardId = await createCard(
 					boardId,
@@ -155,7 +151,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 						position_y: canvasY + yOffset,
 						width: defaultWidth,
 						height: defaultHeight,
-						z_index: currentZIndex + i * 10,
+						order_key: orderKey,
+						z_index: parseInt(orderKey.replace(/\D/g, '')) || (i * 10),
 					},
 					cardData
 				);
@@ -180,7 +177,7 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 				console.error(`Failed to upload and create card for ${file.name}:`, error);
 			}
 		}
-	}, [boardId, viewport, addCard, supabase, getNewCardZIndex, uploadFileToStorage]);
+	}, [boardId, viewport, addCard, supabase, getNewCardOrderKey, uploadFileToStorage]);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
@@ -225,8 +222,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 		const canvasY = (clientY - viewport.y) / viewport.zoom;
 
 		try {
-			// Get z-index for new card using the manager
-			const zIndex = getNewCardZIndex();
+			// Get order-key for new card
+			const orderKey = getNewCardOrderKey();
 
 			const defaultData = getDefaultCardData(cardType);
 
@@ -239,7 +236,8 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 					position_y: canvasY,
 					width: defaultWidth,
 					height: defaultHeight,
-					z_index: zIndex,
+					order_key: orderKey,
+					z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
 				},
 				defaultData
 			);
@@ -260,7 +258,7 @@ export function useCanvasDrop({ boardId, viewport }: UseCanvasDropParams) {
 		} catch (error) {
 			console.error('Failed to create card on drop:', error);
 		}
-	}, [boardId, viewport, addCard, supabase, getDefaultCardData, handleFileDrop, getNewCardZIndex]);
+	}, [boardId, viewport, addCard, supabase, getDefaultCardData, handleFileDrop, getNewCardOrderKey]);
 
 	return {
 		isDraggingOver,

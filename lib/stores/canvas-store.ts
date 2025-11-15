@@ -5,11 +5,12 @@ import { enableMapSet } from 'immer';
 import type { Card } from '@/lib/types';
 import { deleteCard as deleteCardFromDB } from '@/lib/data/cards-client';
 import {
-	bringToFront as zIndexBringToFront,
-	sendToBack as zIndexSendToBack,
-	cardsToZIndexList,
-	getZIndexForNewCard,
-} from "@/lib/utils/z-index-manager";
+	bringToFront as orderKeyBringToFront,
+	sendToBack as orderKeySendToBack,
+	cardsToOrderKeyList,
+	getOrderKeyForNewCard,
+	bringCardsToFrontOnInteraction
+} from "@/lib/utils/order-key-manager";
 
 // Enable Immer's Map and Set support
 enableMapSet();
@@ -141,12 +142,12 @@ interface CanvasState {
 	 * Automatically bring cards to front when they're moved or clicked
 	 * This should be called whenever a card interaction begins
 	 */
-	bringCardsToFrontOnInteraction: (cardIds: string[]) => Map<string, number>;
+	bringCardsToFrontOnInteraction: (cardIds: string[]) => Map<string, string>;
 
 	/**
 	 * Get the z-index for a new card
 	 */
-	getNewCardZIndex: () => number;
+	getNewCardOrderKey: () => string;
 }
 
 // ============================================================================
@@ -174,12 +175,7 @@ export const useCanvasStore = create<CanvasState>()(
 			// ============================================================================
 
 			loadCards: (cards) =>
-				set((state) => {
-					state.cards.clear();
-					cards.forEach((card) => {
-						state.cards.set(card.id, card);
-					});
-				}),
+					set({ cards: new Map(cards.map(c => [c.id, c])) }),
 
 			addCard: (card) =>
 				set((state) => {
@@ -428,60 +424,72 @@ export const useCanvasStore = create<CanvasState>()(
 			bringToFront: (id) =>
 				set((state) => {
 					const allCards = Array.from(state.cards.values());
-					const updates = zIndexBringToFront([id], cardsToZIndexList(allCards));
+					const updates = orderKeyBringToFront([id], cardsToOrderKeyList(allCards));
 
-					updates.forEach((zIndex, cardId) => {
+					updates.forEach((orderKey, cardId) => {
 						const card = state.cards.get(cardId);
 						if (card) {
-							state.cards.set(cardId, { ...card, z_index: zIndex });
+							state.cards.set(cardId, {
+								...card,
+								order_key: orderKey,
+								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+							});
 						}
 					});
 				}),
 
-			sendToBack: (id) =>
-				set((state) => {
-					const allCards = Array.from(state.cards.values());
-					const updates = zIndexSendToBack([id], cardsToZIndexList(allCards));
+			sendToBack: (id) => set((state) => {
+				const allCards = Array.from(state.cards.values());
+				const updates = orderKeySendToBack([id], cardsToOrderKeyList(allCards));
 
-					updates.forEach((zIndex, cardId) => {
-						const card = state.cards.get(cardId);
-						if (card) {
-							state.cards.set(cardId, { ...card, z_index: zIndex });
-						}
-					});
-				}),
+				updates.forEach((orderKey, cardId) => {
+					const card = state.cards.get(cardId);
+					if (card) {
+						state.cards.set(cardId, {
+							...card,
+							order_key: orderKey,
+							// ⚠️ DUAL-WRITE: Also update z_index during migration
+							z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+						});
+					}
+				});
+			}),
 
-			bringSelectedToFront: () =>
-				set((state) => {
-					const selectedIds = Array.from(state.selectedCardIds);
-					if (selectedIds.length === 0) return;
+			bringSelectedToFront: () => set((state) => {
+				const allCards = Array.from(state.cards.values());
+				const selectedIds = Array.from(state.selectedCardIds);
+				const updates = orderKeyBringToFront(selectedIds, cardsToOrderKeyList(allCards));
 
-					const allCards = Array.from(state.cards.values());
-					const updates = zIndexBringToFront(selectedIds, cardsToZIndexList(allCards));
+				updates.forEach((orderKey, cardId) => {
+					const card = state.cards.get(cardId);
+					if (card) {
+						state.cards.set(cardId, {
+							...card,
+							order_key: orderKey,
+							// ⚠️ DUAL-WRITE
+							z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+						});
+					}
+				});
+			}),
 
-					updates.forEach((zIndex, cardId) => {
-						const card = state.cards.get(cardId);
-						if (card) {
-							state.cards.set(cardId, { ...card, z_index: zIndex });
-						}
-					});
-				}),
+			sendSelectedToBack: () => set((state) => {
+				const allCards = Array.from(state.cards.values());
+				const selectedIds = Array.from(state.selectedCardIds);
+				const updates = orderKeySendToBack(selectedIds, cardsToOrderKeyList(allCards));
 
-			sendSelectedToBack: () =>
-				set((state) => {
-					const selectedIds = Array.from(state.selectedCardIds);
-					if (selectedIds.length === 0) return;
-
-					const allCards = Array.from(state.cards.values());
-					const updates = zIndexSendToBack(selectedIds, cardsToZIndexList(allCards));
-
-					updates.forEach((zIndex, cardId) => {
-						const card = state.cards.get(cardId);
-						if (card) {
-							state.cards.set(cardId, { ...card, z_index: zIndex });
-						}
-					});
-				}),
+				updates.forEach((orderKey, cardId) => {
+					const card = state.cards.get(cardId);
+					if (card) {
+						state.cards.set(cardId, {
+							...card,
+							order_key: orderKey,
+							// ⚠️ DUAL-WRITE
+							z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+						});
+					}
+				});
+			}),
 
 			// ============================================================================
 			// UTILITY ACTIONS
@@ -490,13 +498,22 @@ export const useCanvasStore = create<CanvasState>()(
 			bringCardsToFrontOnInteraction: (cardIds) => {
 				const state = get();
 				const allCards = Array.from(state.cards.values());
-				const updates = zIndexBringToFront(cardIds, cardsToZIndexList(allCards));
+				const updates = bringCardsToFrontOnInteraction(
+					cardIds,
+					cardsToOrderKeyList(allCards)
+				);
 
+				// Apply updates to store
 				set((state) => {
-					updates.forEach((zIndex, cardId) => {
+					updates.forEach((orderKey, cardId) => {
 						const card = state.cards.get(cardId);
 						if (card) {
-							state.cards.set(cardId, { ...card, z_index: zIndex });
+							state.cards.set(cardId, {
+								...card,
+								order_key: orderKey,
+								// ⚠️ DUAL-WRITE
+								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+							});
 						}
 					});
 				});
@@ -504,10 +521,10 @@ export const useCanvasStore = create<CanvasState>()(
 				return updates;
 			},
 
-			getNewCardZIndex: () => {
+			getNewCardOrderKey: () => {
 				const state = get();
 				const allCards = Array.from(state.cards.values());
-				return getZIndexForNewCard(cardsToZIndexList(allCards));
+				return getOrderKeyForNewCard(cardsToOrderKeyList(allCards));
 			},
 
 		})),

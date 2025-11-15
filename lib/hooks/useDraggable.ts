@@ -12,7 +12,7 @@ import { useCanvasStore, type Position } from '@/lib/stores/canvas-store';
 import { screenToCanvas } from '@/lib/utils/transform';
 import { updateCardTransform, addCardToColumn, removeCardFromColumn } from '@/lib/data/cards-client';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
-import type { ColumnCard } from '@/lib/types';
+import type { Card } from '@/lib/types';
 
 interface UseDraggableOptions {
 	cardId: string;

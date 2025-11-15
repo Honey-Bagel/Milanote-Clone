@@ -124,36 +124,30 @@ export interface LayoutProps {
 	showSidebar?: boolean;
 }
 
-export type NoteCard = {
+export type BaseCard = {
 	id: string;
 	board_id: string;
-	card_type: "note";
 	position_x: number;
 	position_y: number;
 	width: number;
 	height: number | null;
 	z_index: number;
+	order_key: string;
 	created_by: string | null;
 	created_at: string;
 	updated_at: string;
+}
+
+export type NoteCard = BaseCard & {
+	card_type: "note";
 	note_cards: {
 		content: string;
 		color: "yellow" | "blue" | "green" | "pink" | "purple";
 	};
 };
 
-export type ImageCard = {
-	id: string;
-	board_id: string;
+export type ImageCard = BaseCard & {
 	card_type: "image";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	image_cards: {
 		image_url: string;
 		caption: string | null;
@@ -161,36 +155,16 @@ export type ImageCard = {
 	};
 };
 
-export type TextCard = {
-	id: string;
-	board_id: string;
+export type TextCard = BaseCard & {
 	card_type: "text";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	text_cards: {
 		title: string | null;
 		content: string;
 	};
 };
 
-export type TaskListCard = {
-	id: string;
-	board_id: string;
+export type TaskListCard = BaseCard & {
 	card_type: "task_list";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	task_list_cards: {
 		title: string;
 		tasks: Array<{
@@ -202,18 +176,8 @@ export type TaskListCard = {
 	};
 };
 
-export type LinkCard = {
-	id: string;
-	board_id: string;
+export type LinkCard = BaseCard & {
 	card_type: "link";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	link_cards: {
 		title: string;
 		url: string;
@@ -221,18 +185,8 @@ export type LinkCard = {
 	};
 };
 
-export type FileCard = {
-	id: string;
-	board_id: string;
+export type FileCard = BaseCard & {
 	card_type: "file";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	file_cards: {
 		file_name: string;
 		file_url: string;
@@ -242,18 +196,8 @@ export type FileCard = {
 	};
 };
 
-export type ColorPaletteCard = {
-	id: string;
-	board_id: string;
+export type ColorPaletteCard = BaseCard & {
 	card_type: "color_palette";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	color_palette_cards: {
 		title: string;
 		description: string | null;
@@ -261,18 +205,8 @@ export type ColorPaletteCard = {
 	};
 };
 
-export type ColumnCard = {
-	id: string;
-	board_id: string;
+export type ColumnCard = BaseCard & {
 	card_type: "column";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	column_cards: {
 		title: string;
 		background_color: string;
@@ -368,18 +302,8 @@ export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? BoardCardData
 	: never;
 
-export type BoardCard = {
-	id: string;
-	board_id: string;
+export type BoardCard = BaseCard & {
 	card_type: "board";
-	position_x: number;
-	position_y: number;
-	width: number;
-	height: number | null;
-	z_index: number;
-	created_by: string | null;
-	created_at: string;
-	updated_at: string;
 	board_cards: {
 		linked_board_id: string;
 		board_title: string;
@@ -393,4 +317,25 @@ export type BoardCardData = {
 	board_title: string;
 	board_color: string;
 	card_count?: number;
+};
+
+// ============================================================================
+// HELPER TYPES
+// ============================================================================
+
+/**
+ * For components that only need ordering information
+ */
+export interface CardWithOrder {
+	id: string;
+	order_key: string;
+	z_index: number;
+};
+
+/**
+ * For the order key manager functions
+ */
+export interface CardOrderKey {
+	id: string;
+	order_key: string;
 };

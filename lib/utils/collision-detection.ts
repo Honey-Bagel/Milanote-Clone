@@ -75,7 +75,7 @@ export function findOverlappingColumns(
 		// 4. Don't already contain this card
 		if (
 			card.card_type === 'column' &&
-			card.z_index < draggedCard.z_index &&
+			card.order_key < draggedCard.order_key &&
 			card.id !== draggedCardId
 		) {
 			const columnCard = card as ColumnCard;
@@ -95,5 +95,5 @@ export function findOverlappingColumns(
 	});
 	
 	// Sort by z-index descending - prefer the topmost column if multiple overlap
-	return overlappingColumns.sort((a, b) => b.z_index - a.z_index);
+	return overlappingColumns.sort((a, b) => a.order_key < b.order_key ? 1 : a.order_key > b.order_key ? -1 : 0);
 }

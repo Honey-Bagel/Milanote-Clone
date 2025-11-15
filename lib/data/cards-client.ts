@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
 import { Card } from "@/lib/types";
 import {
-	bringToFront as zIndexBringToFront,
-	sendToBack as zIndexSendToBack,
-	cardsToZIndexList,
-} from "@/lib/utils/z-index-manager";
+	bringToFront as orderKeyBringToFront,
+	sendToBack as orderKeySendToBack,
+	cardsToOrderKeyList,
+	getOrderKeyForNewCard
+} from "@/lib/utils/order-key-manager";
 
 /**
  * Client-side version: Fetch all cards for a specific board with their type-specific data
@@ -41,7 +42,7 @@ export async function getBoardCards(boardId: string) {
 			board_cards(*)
 		`)
 		.eq("board_id", boardId)
-		.order("z_index", { ascending: true });
+		.order("order_key", { ascending: true });
 
 	if (error) {
 		console.error("Error fetching board cards:", error);
@@ -62,6 +63,7 @@ export async function createCard(
 		position_y: number,
 		width?: number,
 		height?: number,
+		order_key: string,
 		z_index?: number,
 	},
 	typeSpecificData: any
@@ -84,6 +86,7 @@ export async function createCard(
 			position_y: cardData.position_y,
 			width: cardData.width || 250,
 			height: cardData.height,
+			order_key: cardData.order_key,
 			z_index: cardData.z_index || 0,
 			created_by: user.id
 		})
@@ -124,6 +127,7 @@ export async function updateCardTransform(
 		position_y?: number;
 		width?: number;
 		height?: number;
+		order_key?: string,
 		z_index?: number;
 	}
 ) {
@@ -189,7 +193,7 @@ export async function duplicateCard(cardId: string, offsetX = 20, offsetY = 20) 
 			*,
 			note_cards(*),
 			image_cards(*),
-			text_cards(*),
+			t	ext_cards(*),
 			task_list_cards(*),
 			link_cards(*),
 			file_cards(*),
@@ -217,6 +221,15 @@ export async function duplicateCard(cardId: string, offsetX = 20, offsetY = 20) 
 		}
 	}
 
+	const { data: allBoardCards } = await supabase
+		.from("cards")
+		.select("id, order_key")
+		.eq("board_id", card.board_id);
+
+	const newOrderKey = getOrderKeyForNewCard(
+		cardsToOrderKeyList(allBoardCards || [])
+	);
+
 	// Create duplicate
 	return createCard(
 		card.board_id,
@@ -226,6 +239,7 @@ export async function duplicateCard(cardId: string, offsetX = 20, offsetY = 20) 
 			position_y: card.position_y + offsetY,
 			width: card.width,
 			height: card.height || undefined,
+			order_key: newOrderKey,
 			z_index: card.z_index + 10,
 		},
 		typeData
@@ -241,24 +255,30 @@ export async function bringCardToFront(boardId: string, cardId: string) {
 	// Get all cards in the board
 	const { data: allCards, error: fetchError } = await supabase
 		.from('cards')
-		.select('id, z_index')
+		.select('id, order_key')
 		.eq('board_id', boardId);
 
 	if (fetchError || !allCards) {
 		console.error('Error fetching cards for z-index update:', fetchError);
 	}
 
-	// Use z-index manager to calculate updates
-	const updates = zIndexBringToFront([cardId], cardsToZIndexList(allCards || []));
+	// Use order-key manager to calculate updates
+	const updates = orderKeyBringToFront(
+		[cardId],
+		cardsToOrderKeyList(allCards)
+	);
 
 	// Apply all updates to the database
-	for (const [id, z_index] of updates.entries()) {
-		await updateCardTransform(id, { z_index });
+	for (const [id, orderKey] of updates.entries()) {
+		await updateCardTransform(id, {
+			order_key: orderKey,
+			z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+		});
 	}
 }
 
 /**
- * Send card to back using z-index manager
+ * Send card to back using order-key manager
  */
 export async function sendCardToBack(boardId: string, cardId: string) {
 	const supabase = createClient();
@@ -273,11 +293,28 @@ export async function sendCardToBack(boardId: string, cardId: string) {
 		console.error('Error fetching cards for z-index update:', fetchError);
 	}
 
-	const updates = zIndexSendToBack([cardId], cardsToZIndexList(allCards || []));
+	const updates = orderKeySendToBack(
+		[cardId],
+		cardsToOrderKeyList(allCards)
+	);
 
-	for (const [id, z_index] of updates.entries()) {
-		await updateCardTransform(id, { z_index });
+	for (const [id, orderKey] of updates.entries()) {
+		await updateCardTransform(id, { 
+			order_key: orderKey,
+			z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+		 });
 	}
+}
+
+export async function getNewCardOrderKeyForBoard(boardId: string): Promise<string> {
+	const supabase = createClient();
+
+	const { data: allCards } = await supabase
+		.from('cards')
+		.select('id, order_key')
+		.eq('board_id', boardId);
+
+	return getOrderKeyForNewCard(cardsToOrderKeyList(allCards || []));
 }
 
 /**

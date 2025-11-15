@@ -50,10 +50,7 @@ export function Canvas({
 	
 	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard, showGrid } = useCanvasStore();
 
-	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop({
-		boardId,
-		viewport
-	});
+	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop(boardId || '');
 
 	const mouseDownHandler = (e: React.MouseEvent) => {
 		if (e.button !== 0) return;
