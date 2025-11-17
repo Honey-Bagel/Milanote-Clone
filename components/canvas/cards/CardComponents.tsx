@@ -41,6 +41,7 @@ export function NoteCardComponent({
 	const debouncedSave = useDebouncedCallback(
 		async (content: string) => {
 			try {
+				if (card.id === 'preview-card') return;
 				await updateCardContent(card.id, 'note', {
 					content,
 				});
@@ -1312,8 +1313,6 @@ export function ColumnCardComponent({
 			className={`
 				column-card-container
 				flex flex-col
-				border-2
-				rounded-lg
 				overflow-hidden
 				transition-all duration-200
 				w-full h-full

@@ -227,7 +227,7 @@ export const useCanvasStore = create<CanvasState>()(
 					ids.forEach((id) => {
 						const card = state.getCard(id);
 						if (card?.card_type === 'column') {
-							card.column_cards.column_items.forEach((card) => {
+							card.column_cards.column_items?.forEach((card) => {
 								state.cards.delete(card.card_id);
 								ids.push(card.card_id);
 							})
