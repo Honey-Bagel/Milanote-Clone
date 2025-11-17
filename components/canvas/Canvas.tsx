@@ -148,34 +148,6 @@ export function Canvas({
 	);
 
 	/**
-	 * Get default dimensions for card type (for preview)
-	 */
-	const getPreviewDimensions = (cardType: Card['card_type']) => {
-		switch (cardType) {
-			case 'note':
-				return { width: 250, height: 200 };
-			case 'image':
-				return { width: 300, height: 300 };
-			case 'text':
-				return { width: 300, height: 150 };
-			case 'task_list':
-				return { width: 280, height: 250 };
-			case 'link':
-				return { width: 300, height: 100 };
-			case 'file':
-				return { width: 280, height: 100 };
-			case 'color_palette':
-				return { width: 300, height: 200 };
-			case 'column':
-				return { width: 300, height: 400 };
-			case 'board':
-				return { width: 280, height: 150 };
-			default:
-				return { width: 250, height: 150 };
-		}
-	};
-
-	/**
 	 * Create a preview card mock object
 	 */
 	const createPreviewCard = (cardType: Card['card_type'], x: number, y: number): Card | null => {

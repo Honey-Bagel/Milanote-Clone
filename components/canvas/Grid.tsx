@@ -54,3 +54,6 @@ export function Grid({
 		/>
 	);
 }
+
+// backgroundImage: `radial-gradient(circle, ${gridColor} 1px, transparent 1px)
+// Change the grid color if I do radial

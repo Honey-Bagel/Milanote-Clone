@@ -22,6 +22,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { useDebouncedCallback } from 'use-debounce';
 import { CanvasElement } from '../CanvasElement';
 import { useResizable } from '@/lib/hooks/useResizable';
+import { CardRenderer } from './CardRenderer';
 
 // ============================================================================
 // NOTE CARD - WITH TIPTAP
@@ -1067,7 +1068,6 @@ export function ColumnCardComponent({
 	const [isCollapsed, setIsCollapsed] = useState(card.column_cards.is_collapsed || false);
 	const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-	const [dragPreviewPos, setDragPreviewPos] = useState<{ x: number, y: number } | null>(null);
 	const [cardHoverId, setCardHoverId] = useState<string | null>(null);
 
 	const draggedCardRef = useRef<Card | null>(null);
@@ -1183,8 +1183,10 @@ export function ColumnCardComponent({
 		e.stopPropagation();
 	};
 
-	// Drag to Re-order logic
-
+	/**
+	 * Handle card drag start - for REORDERING within column
+	 * This creates a preview that works both inside AND outside the column
+	 */
 	const handleCardDragStart = useCallback((e: React.MouseEvent, itemCard: Card, index: number) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -1194,49 +1196,44 @@ export function ColumnCardComponent({
 		draggedCardRef.current = itemCard;
 		dragStartIndexRef.current = index;
 
-		// Set initial preview
-		if (columnListRef.current) {
-			const rect = columnListRef.current.getBoundingClientRect();
-			setDragPreviewPos({
-				x: e.clientX - rect.left,
-				y: e.clientY - rect.top
-			});
-		}
-
-		// Add a mouse move listener for drag preview
+		// Track mouse movement for drag preview
 		const handleMouseMove = (me: MouseEvent) => {
+			// Update drag over index if still over column
 			if (columnListRef.current) {
-				const rect = columnListRef.current.getBoundingClientRect();
-				setDragPreviewPos({
-					x: me.clientX - rect.left,
-					y: me.clientY - rect.top
-				});
-			}
+				const columnRect = columnListRef.current.getBoundingClientRect();
+				const isOverColumn = 
+					me.clientX >= columnRect.left &&
+					me.clientX <= columnRect.right &&
+					me.clientY >= columnRect.top &&
+					me.clientY <= columnRect.bottom;
 
-			if (columnListRef.current) {
-				const items = Array.from(columnListRef.current.querySelectorAll('.column-card-wrapper'));
-				let newDragOverIndex: number | null = null;
+				if (isOverColumn) {
+					const items = Array.from(columnListRef.current.querySelectorAll('.column-card-wrapper'));
+					let newDragOverIndex: number | null = null;
 
-				for (let i = 0; i < items.length; i++) {
-					const item = items[i] as HTMLElement;
-					const rect = item.getBoundingClientRect();
-					const midpoint = rect.top + rect.height / 2;
+					for (let i = 0; i < items.length; i++) {
+						const item = items[i] as HTMLElement;
+						const rect = item.getBoundingClientRect();
+						const midpoint = rect.top + rect.height / 2;
 
-					if (me.clientY < midpoint) {
-						newDragOverIndex = i;
-						break;
+						if (me.clientY < midpoint) {
+							newDragOverIndex = i;
+							break;
+						}
 					}
+
+					// If not over any item, drop at end
+					if (newDragOverIndex === null) {
+						newDragOverIndex = items.length;
+					}
+
+					setDragOverIndex(newDragOverIndex);
+					dragOverIndexRef.current = newDragOverIndex;
+				} else {
+					// Outside column - clear drop indicator
+					setDragOverIndex(null);
+					dragOverIndexRef.current = null;
 				}
-
-				// If not over any item, drop at end
-				if (newDragOverIndex === null) {
-					newDragOverIndex = items.length;
-				}
-
-				console.log(newDragOverIndex);
-
-				setDragOverIndex(newDragOverIndex);
-				dragOverIndexRef.current = newDragOverIndex;
 			}
 		};
 
@@ -1244,9 +1241,7 @@ export function ColumnCardComponent({
 			// Handle the drop
 			const endIndex = dragOverIndexRef.current;
 			if (endIndex !== null && dragStartIndexRef.current !== null && draggedCardRef.current) {
-				console.log('test')
 				const startIndex = dragStartIndexRef.current;
-				const endIndex = dragOverIndex;
 
 				// Only reorder if positions actually changed
 				if (startIndex !== endIndex) {
@@ -1287,7 +1282,6 @@ export function ColumnCardComponent({
 			// Clean up
 			setDraggedCardId(null);
 			setDragOverIndex(null);
-			setDragPreviewPos(null);
 			draggedCardRef.current = null;
 			dragStartIndexRef.current = null;
 			dragOverIndexRef.current = null;
@@ -1298,7 +1292,7 @@ export function ColumnCardComponent({
 
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
-	}, [card, dragOverIndex, updateCard, debouncedSave]);
+	}, [card, updateCard, debouncedSave]);
 
 	// Get cards that belong to this column
 	const columnItems = ([...card.column_cards.column_items || []])
@@ -1313,6 +1307,8 @@ export function ColumnCardComponent({
 			className={`
 				column-card-container
 				flex flex-col
+				border-2
+				rounded-lg
 				overflow-hidden
 				transition-all duration-200
 				w-full h-full
@@ -1327,7 +1323,7 @@ export function ColumnCardComponent({
 				backgroundColor: isDropTarget ? undefined : card.column_cards.background_color,
 			}}
 		>
-			{/* Header */}
+			{/* Header - keep existing header code */}
 			<div className={`
 				column-header 
 				flex items-center gap-2 
@@ -1368,26 +1364,18 @@ export function ColumnCardComponent({
 							type="text"
 							value={card.column_cards.title}
 							onChange={handleTitleChange}
-							className={`
-								w-full text-sm font-medium
-								bg-transparent border-none outline-none 
-								focus:ring-2 focus:ring-blue-400 rounded px-1.5 py-0.5
-								${isDropTarget ? 'text-blue-700' : 'text-gray-800'}
-							`}
+							className="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
 							placeholder="Column title"
 							onClick={(e) => e.stopPropagation()}
 						/>
 					) : (
-						<h3 className={`
-							text-sm font-medium truncate
-							${isDropTarget ? 'text-blue-700' : 'text-gray-800'}
-						`}>
+						<h3 className="text-sm font-medium text-gray-800 truncate">
 							{card.column_cards.title}
 						</h3>
 					)}
 				</div>
 
-				{/* Card Count Badge */}
+				{/* Card count badge */}
 				<div className={`
 					px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0
 					${isDropTarget 
@@ -1398,45 +1386,39 @@ export function ColumnCardComponent({
 					{itemCount}
 				</div>
 
-				{/* Color Picker (Edit Mode) */}
+				{/* Color picker (only in edit mode) */}
 				{isEditing && (
 					<input
 						type="color"
 						value={card.column_cards.background_color}
 						onChange={handleColorChange}
-						className="w-7 h-7 rounded border-2 border-gray-300 cursor-pointer flex-shrink-0"
+						className="w-6 h-6 rounded cursor-pointer flex-shrink-0"
+						title="Change column color"
 						onClick={(e) => e.stopPropagation()}
-						title="Column background color"
 					/>
 				)}
 			</div>
 
-			{/* Cards List Container */}
+			{/* Body */}
 			{!isCollapsed && (
 				<div 
 					ref={columnListRef}
-					className={`
-						column-list-container
-						flex-1 
-						overflow-auto
-						p-2
-						transition-all duration-200
-						relative
-						${isDropTarget ? 'bg-blue-50' : 'bg-transparent'}
-					`}
-					style={{
-						minHeight: '100px'
-					}}
+					className="column-body flex-1 overflow-y-auto p-3 relative"
 				>
-					{itemCount === 0 ? (
-						/* Empty State */
+					{columnItems.length === 0 ? (
+						/* Empty state */
 						<div className={`
-							flex flex-col items-center justify-center gap-2 h-full
+							flex flex-col items-center justify-center 
+							min-h-[200px] 
+							border-2 border-dashed rounded-lg
 							transition-all duration-200
-							${isDropTarget ? 'scale-110' : ''}
+							${isDropTarget 
+								? 'border-blue-400 bg-blue-50' 
+								: 'border-gray-300 bg-gray-50'
+							}
 						`}>
 							<div className={`
-								w-12 h-12 rounded-full flex items-center justify-center
+								w-12 h-12 rounded-full flex items-center justify-center mb-3
 								transition-all duration-200
 								${isDropTarget 
 									? 'bg-blue-200 text-blue-600 scale-110' 
@@ -1533,28 +1515,9 @@ export function ColumnCardComponent({
 						</div>
 					)}
 
-					{/* Drag Preview Ghost */}
-					{draggedCardId && dragPreviewPos && draggedCardRef.current && (
-						<div
-							className="absolute pointer-events-none z-50"
-							style={{
-								left: dragPreviewPos.x - 20,
-								top: dragPreviewPos.y - 20,
-								transform: 'rotate(-3deg)',
-								opacity: 0.8,
-							}}
-						>
-							<div className="shadow-2xl rounded-lg border-2 border-blue-400 bg-white scale-95">
-								<CanvasElement
-									card={draggedCardRef.current}
-									boardId={card.board_id}
-									onCardClick={() => {}}
-									onCardDoubleClick={() => {}}
-									onContextMenu={() => {}}
-									isInsideColumn={true}
-								/>
-							</div>
-						</div>
+					{/* UPDATED: Canvas-wide Drag Preview - uses fixed positioning */}
+					{draggedCardId && draggedCardRef.current && (
+						<ColumnDragPreview card={draggedCardRef.current} />
 					)}
 				</div>
 			)}
@@ -1563,31 +1526,55 @@ export function ColumnCardComponent({
 			{isCollapsed && (
 				<div className="px-3 py-2 text-center border-t border-gray-200 bg-gray-50">
 					<p className="text-xs text-gray-500">
-						{itemCount} {itemCount === 1 ? 'card' : 'cards'} (collapsed)
+						{itemCount} {itemCount === 1 ? 'card' : 'cards'}
 					</p>
 				</div>
 			)}
+		</div>
+	);
+}
 
-			{/* East direction Resize Handle for Column Card */}
-			{isSelected && !isEditing && (
-				<div
-					aria-label="Resize East"
-					onMouseDown={(e) => handleMouseDownResizable(e, 'e')}
-					className="resize-handle resize-handle-e"
-					style={{
-						position: 'absolute',
-						right: -4,
-						bottom: -4,
-						width: 8,
-						height: 8,
-						cursor: 'e-resize',
-						zIndex: card.z_index + 1,
-						backgroundColor: '#3B82F6',
-						border: '1px solid white',
-						borderRadius: '50%',
-					}}
-				/>
-			)}
+/**
+ * Separate component for drag preview that follows cursor
+ * Uses a portal-like approach with fixed positioning
+ */
+function ColumnDragPreview({ card }: { card: Card }) {
+	const [position, setPosition] = useState({ x: 0, y: 0 });
+
+	useEffect(() => {
+		const handleMouseMove = (e: MouseEvent) => {
+			setPosition({ x: e.clientX, y: e.clientY });
+		};
+
+		// Attach immediately
+		handleMouseMove(new MouseEvent('mousemove', {
+			clientX: window.event ? (window.event as MouseEvent).clientX : 0,
+			clientY: window.event ? (window.event as MouseEvent).clientY : 0,
+		}));
+
+		window.addEventListener('mousemove', handleMouseMove);
+		return () => window.removeEventListener('mousemove', handleMouseMove);
+	}, []);
+
+	return (
+		<div
+			className="fixed pointer-events-none z-[10000]"
+			style={{
+				left: position.x,
+				top: position.y,
+				transform: 'translate(-50%, -50%) rotate(-3deg)',
+				opacity: 0.8,
+			}}
+		>
+			<div className="shadow-2xl rounded-lg border-2 border-blue-400 bg-white scale-95">
+				<div style={{ width: `${card.width}px` }}>
+					<CardRenderer
+						card={card}
+						isEditing={false}
+						isSelected={false}
+					/>
+				</div>
+			</div>
 		</div>
 	);
 }

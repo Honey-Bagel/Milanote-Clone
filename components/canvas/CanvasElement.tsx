@@ -47,7 +47,7 @@ export function CanvasElement({
 	onEditorReady,
 	isInsideColumn = false // Default to false for backwards compatibility
 }: CanvasElementProps) {
-	const { selectedCardIds, setEditingCardId, editingCardId, cards: allCards } = useCanvasStore();
+	const { selectedCardIds, setEditingCardId, editingCardId, cards: allCards, snapToGrid } = useCanvasStore();
 	
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
@@ -58,8 +58,8 @@ export function CanvasElement({
 	// Only enable dragging/resizing if NOT inside a column
 	const { handleMouseDown, isDragging } = useDraggable({
 		cardId: card.id,
-		snapToGrid: false,
-		dragThreshold: 3
+		snapToGrid: snapToGrid,
+		dragThreshold: 1
 	});
 
 	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({

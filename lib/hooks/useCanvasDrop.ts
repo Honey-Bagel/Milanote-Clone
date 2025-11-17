@@ -107,7 +107,7 @@ export function useCanvasDrop(boardId: string) {
 
 		// Transform client coordinates to canvas coordinates
 		const canvasX = (clientX - viewport.x) / viewport.zoom;
-		const canvasY = (clientY - viewport.y) /viewport.zoom;
+		const canvasY = (clientY - viewport.y) / viewport.zoom;
 
 		// Process each dropped file
 		let yOffset = 0;
@@ -147,8 +147,8 @@ export function useCanvasDrop(boardId: string) {
 					boardId,
 					cardType,
 					{
-						position_x: canvasX,
-						position_y: canvasY + yOffset,
+						position_x: canvasX - defaultWidth / 2,
+						position_y: (canvasY + yOffset) - defaultHeight / 2,
 						width: defaultWidth,
 						height: defaultHeight,
 						order_key: orderKey,
@@ -207,7 +207,7 @@ export function useCanvasDrop(boardId: string) {
 		const cardType = e.dataTransfer.getData('cardType') as Card['card_type'];
 		if (!cardType) return;
 
-		const { defaultWidth, defaultHeight } = getDefaultCardDimensions(cardType);
+		const { defaultWidth, defaultHeight, minHeight } = getDefaultCardDimensions(cardType);
 
 		// Get the canvas element to calculate relative position
 		const canvasElement = e.currentTarget as HTMLElement;
@@ -232,8 +232,8 @@ export function useCanvasDrop(boardId: string) {
 				boardId,
 				cardType,
 				{
-					position_x: canvasX,
-					position_y: canvasY,
+					position_x: canvasX - defaultWidth / 2,
+					position_y: canvasY - (defaultHeight || minHeight || 100) / 2,
 					width: defaultWidth,
 					height: defaultHeight,
 					order_key: orderKey,

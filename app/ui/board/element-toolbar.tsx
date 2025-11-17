@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
-import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown } from 'lucide-react';
+import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from './add-element-modal';
@@ -19,7 +19,7 @@ export default function ElementToolbar({
 	canvasRef,
 	setDragPreview,
 }: ElementToolbarProps) {
-	const { showGrid, setShowGrid, viewport } = useCanvasStore();
+	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
 	
 	// Track dragging state
@@ -190,10 +190,18 @@ export default function ElementToolbar({
 				{/* View Options */}
 				<button 
 					onClick={() => setShowGrid(!showGrid)} 
-					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors" 
+					className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${showGrid ? 'bg-gray-200' : ''}`}
 					title="Toggle Grid"
 				>
 					<Grid3x3 className="w-4 h-4" />
+				</button>
+
+				<button
+					onClick={() => setSnapToGrid(!snapToGrid)}
+					className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${snapToGrid ? 'bg-gray-200' : ''}`}
+					title="Snap to Grid"
+				>
+					<Magnet className="w-4 h-4" />
 				</button>
 			</div>
 

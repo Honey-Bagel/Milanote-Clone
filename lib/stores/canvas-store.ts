@@ -62,6 +62,7 @@ interface CanvasState {
 	isPanning: boolean;
 	isDrawingSelection: boolean;
 	isResizing: boolean;
+	snapToGrid: boolean;
 	editingCardId: string | null;
 
 	// Column interaction state
@@ -113,6 +114,7 @@ interface CanvasState {
 	setIsDrawingSelection: (isDrawing: boolean) => void;
 	setIsResizing: (isResizing: boolean) => void;
 	setEditingCardId: (id: string | null) => void;
+	setSnapToGrid: (snapToGrid: boolean) => void;
 
 	// Column
 	setPotentialColumnTarget: (columnId: string | null) => void;
@@ -169,6 +171,7 @@ export const useCanvasStore = create<CanvasState>()(
 			showGrid: true,
 			editingCardId: null,
 			potentialColumnTarget: null,
+			snapToGrid: false,
 
 			// ============================================================================
 			// CARD ACTIONS
@@ -388,6 +391,11 @@ export const useCanvasStore = create<CanvasState>()(
 			setEditingCardId: (id) =>
 				set((state) => {
 					state.editingCardId = id;
+				}),
+
+			setSnapToGrid: (snapToGrid) =>
+				set((state) => {
+					state.snapToGrid = snapToGrid;
 				}),
 
 			// Column
