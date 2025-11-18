@@ -55,7 +55,7 @@ export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 		case 'note':
 			return { canResize: false, minWidth: 200, minHeight: null, defaultWidth: 250, defaultHeight: null };
 		case 'image':
-			return { canResize: true, keepAspectRatio: true, minWidth: 200, minHeight: 200, defaultWidth: 300, defaultHeight: 300 };
+			return { canResize: true, keepAspectRatio: true, minWidth: 200, minHeight: 200, defaultWidth: 300, defaultHeight: null };
 		case 'task_list':
 			return { canResize: true, minWidth: 250, minHeight: 100, defaultWidth: 250, defaultHeight: 100 };
 		case 'link':

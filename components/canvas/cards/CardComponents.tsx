@@ -9,7 +9,7 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import type { NoteCard, ImageCard, TextCard, TaskListCard, LinkCard, FileCard, ColorPaletteCard, ColumnCard, Card } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { updateCardContent, removeCardFromColumn } from '@/lib/data/cards-client';
+import { updateCardContent, removeCardFromColumn, updateCardTransform } from '@/lib/data/cards-client';
 import { CardBase } from './CardBase';
 import Image from 'next/image';
 import { useEditor, EditorContent, Editor as TipTapEditor } from '@tiptap/react';
@@ -215,6 +215,7 @@ export function ImageCardComponent({
 	isEditing: boolean;
 }) {
 	const { updateCard } = useCanvasStore();
+	const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; } | null>(null);
 
 	const debouncedSave = useDebouncedCallback(
 		async (image_url: string, caption: string | null, alt_text: string | null) => {
@@ -230,6 +231,25 @@ export function ImageCardComponent({
 		},
 		1000
 	);
+
+	// Update card height when image loads
+	useEffect(() => {
+		if (imageDimensions && card.width) {
+			const aspectRatio = imageDimensions.height / imageDimensions.width;
+			const newHeight = Math.round(card.width * aspectRatio);
+
+			if (card.height !== newHeight) {
+				updateCard(card.id, {
+					...card,
+					height: newHeight,
+				});
+
+				updateCardTransform(card.id, { height: newHeight }).catch(err => {
+					console.error('Failed to update card height:', err);
+				});
+			}
+		}
+	}, [imageDimensions, card, card.width, card.height, card.id, updateCard]);
 
 	const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newUrl = e.target.value;
@@ -281,16 +301,24 @@ export function ImageCardComponent({
 
 	return (
 		<CardBase isEditing={isEditing}>
-			<div className="image-card h-full flex flex-col overflow-hidden">
+			<div className="image-card flex flex-col" style={{ height: '100%' }}>
 				{card.image_cards.image_url ? (
 					<>
-						<div className="flex-1 relative overflow-hidden">
+						<div className="flex-shrink-0 relative" style={{ width: '100%', height: 'auto' }}>
 							<Image
 								src={card.image_cards.image_url}
 								alt={card.image_cards.alt_text || 'Image'}
-								fill
-								className="object-contain"
+								width={card.width || 300}
+								height={card.height || 300}
+								className="w-full h-auto"
 								sizes="(max-width: 1200px) 100vw, 1200px"
+								onLoad={(e) => {
+									const img = e.currentTarget as HTMLImageElement;
+									setImageDimensions({
+										width: img.naturalWidth,
+										height: img.naturalHeight
+									});
+								}}
 							/>
 						</div>
 						{isEditing ? (
@@ -676,6 +704,20 @@ export function LinkCardComponent({
 	isEditing: boolean;
 }) {
 	const { updateCard } = useCanvasStore();
+	const [faviconUrl, setFaviconUrl] = useState<string>('');
+
+	const full_url = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
+		card.link_cards.url :
+		"https://" + card.link_cards.url
+
+	useEffect(() => {
+		const getFaviconUrl = async () => {
+			const domain = new URL(full_url).hostname;
+			setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=64`);
+		};
+
+		getFaviconUrl();
+	}, [full_url]);
 
 	const debouncedSave = useDebouncedCallback(
 		async (title: string, url: string, favicon_url: string | null) => {
@@ -727,37 +769,35 @@ export function LinkCardComponent({
 	if (isEditing) {
 		return (
 			<CardBase isEditing={isEditing}>
-				<div className="link-card p-4 space-y-3 text-black">
-					<div>
-						<label className="text-xs text-gray-500 block mb-1">Title</label>
-						<input
-							type="text"
-							value={card.link_cards.title}
-							onChange={handleTitleChange}
-							className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-							placeholder="Link title"
-							onClick={(e) => e.stopPropagation()}
-						/>
-					</div>
-					<div>
-						<label className="text-xs text-gray-500 block mb-1">URL</label>
-						<input
-							type="url"
-							value={card.link_cards.url}
-							onChange={handleUrlChange}
-							className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
-							placeholder="https://example.com"
-							onClick={(e) => e.stopPropagation()}
-						/>
+				<div className="link-card block p-2 hover:bg-gray-50 transition-colors items-center">
+					<div className="flex-1 gap-2">
+						<div className="flex items-center">
+							<label className="text-xs text-gray-500 block pr-1">Title</label>
+							<input
+								type="text"
+								value={card.link_cards.title}
+								onChange={handleTitleChange}
+								className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+								placeholder="Link title"
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</div>
+						<div className="flex items-center">
+							<label className="text-xs text-gray-500 block pr-1">URL</label>
+							<input
+								type="url"
+								value={card.link_cards.url}
+								onChange={handleUrlChange}
+								className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+								placeholder="https://example.com"
+								onClick={(e) => e.stopPropagation()}
+							/>
+						</div>
 					</div>
 				</div>
 			</CardBase>
 		);
 	}
-
-	const full_url = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
-		card.link_cards.url :
-		"https://" + card.link_cards.url
 
 	return (
 		<CardBase isEditing={isEditing}>
@@ -769,11 +809,13 @@ export function LinkCardComponent({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-start gap-3">
-					{card.link_cards.favicon_url && (
+					{faviconUrl && (
 						<Image 
-							src={card.link_cards.favicon_url} 
-							alt="" 
-							className="w-5 h-5 mt-1 flex-shrink-0" 
+							src={faviconUrl} 
+							alt=""
+							className="w-5 h-5 mt-1 flex-shrink-0"
+							width={5}
+							height={5}
 						/>
 					)}
 					<div className="flex-1 min-w-0">
