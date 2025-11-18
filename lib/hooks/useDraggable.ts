@@ -15,7 +15,7 @@ import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import type { Card } from '@/lib/types';
 
 interface UseDraggableOptions {
-	cardId: string;
+	card: Card;
 	
 	onDragStart?: () => void;
 	onDrag?: (delta: Position) => void;
@@ -27,7 +27,7 @@ interface UseDraggableOptions {
 }
 
 export function useDraggable({
-	cardId,
+	card,
 	onDragStart,
 	onDrag,
 	onDragEnd,
@@ -46,6 +46,7 @@ export function useDraggable({
 		setPotentialColumnTarget,
 		updateCard,
 		cards,
+		setDragPreview
 	} = useCanvasStore();
 
 	const [isDragging, setIsDragging] = useState(false);
@@ -60,6 +61,8 @@ export function useDraggable({
 	const cardsToMoveRef = useRef<string[]>([]);
 	const zIndexUpdatesRef = useRef<Map<string, number>>(new Map());
 	const startingColumnRef = useRef<string | null>(null); // Track which column card started in
+	const cardId = card.id;
+	const canvas = document.querySelector('div.canvas-viewport');
 
 	/**
 	 * Find which column (if any) a card belongs to
@@ -127,6 +130,20 @@ export function useDraggable({
 			const handleMouseMove = (e: MouseEvent) => {
 				const currentCanvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
 
+				if (findCardColumn(cardId) && canvas) {
+					const rect = canvas.getBoundingClientRect();
+					const clientX = e.clientX - rect.left;
+					const clientY = e.clientY - rect.top;
+					
+					const canvasX = (clientX - viewport.x) / viewport.zoom;
+					const canvasY = (clientY - viewport.y) / viewport.zoom;
+					setDragPreview({
+						cardType: card.card_type,
+						canvasX,
+						canvasY
+					});
+				}
+				
 				if (!hasMovedRef.current) {
 					const distanceMoved = Math.sqrt(
 						Math.pow(e.clientX - startPosRef.current.screen.x, 2) +
@@ -212,6 +229,7 @@ export function useDraggable({
 				hasMovedRef.current = false;
 				setIsDragging(false);
 				setGlobalDragging(false);
+				setDragPreview(null);
 
 				// ============================================================================
 				// HANDLE COLUMN MEMBERSHIP CHANGES
@@ -347,6 +365,7 @@ export function useDraggable({
 					}
 				}
 
+				setDragPreview(null);
 				cardsToMoveRef.current = [];
 				document.removeEventListener('mousemove', handleMouseMove);
 				document.removeEventListener('mouseup', handleMouseUp);
@@ -373,7 +392,8 @@ export function useDraggable({
 			snapToGrid,
 			gridSize,
 			dragThreshold,
-			findCardColumn
+			findCardColumn,
+			setDragPreview
 		]
 	);
 

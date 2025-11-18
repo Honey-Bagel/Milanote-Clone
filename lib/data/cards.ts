@@ -15,7 +15,6 @@ export async function getBoardCards(boardId: string) {
 			*,
 			note_cards(*),
 			image_cards(*),
-			text_cards(*),
 			task_list_cards(*),
 			link_cards(*),
 			file_cards(*),

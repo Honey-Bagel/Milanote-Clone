@@ -17,8 +17,6 @@ export function useCanvasDrop(boardId: string) {
 		switch (cardType) {
 			case 'note':
 				return { content: '<p>New note</p>', color: 'yellow' as const };
-			case 'text':
-				return { content: '<p>New text</p>', title: 'Text' };
 			case 'image':
 				return { image_url: '', caption: '' };
 			case 'task_list':

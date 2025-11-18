@@ -6,20 +6,17 @@ import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from './add-element-modal';
 import { DraggableToolbarButton } from '@/components/ui/draggable-toolbar-button';
-import type { DragPreviewState } from '@/components/canvas/Canvas';
 
 interface ElementToolbarProps {
 	onCreateCard: (cardType: Card['card_type']) => void;
 	canvasRef: RefObject<HTMLDivElement | null>;
-	setDragPreview: (preview: DragPreviewState | null) => void;
 }
 
 export default function ElementToolbar({ 
 	onCreateCard,
 	canvasRef,
-	setDragPreview,
 }: ElementToolbarProps) {
-	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid } = useCanvasStore();
+	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
 	
 	// Track dragging state

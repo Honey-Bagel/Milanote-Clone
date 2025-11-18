@@ -57,9 +57,9 @@ export function CanvasElement({
 
 	// Only enable dragging/resizing if NOT inside a column
 	const { handleMouseDown, isDragging } = useDraggable({
-		cardId: card.id,
+		card: card,
 		snapToGrid: snapToGrid,
-		dragThreshold: 1
+		dragThreshold: 3
 	});
 
 	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({

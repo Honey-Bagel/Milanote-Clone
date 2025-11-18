@@ -55,11 +55,8 @@ export function Canvas({
 	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
 	const [cardContextMenuData, setCardContextMenuData] = useState<{ card: null | Card, position: { x: number, y: number }}>({card: null, position: { x: 0, y: 0}});
 	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
-	
-	// Drag preview state - managed by toolbar, displayed by canvas
-	const [dragPreview, setDragPreview] = useState<DragPreviewState | null>(null);
-	
-	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard, showGrid } = useCanvasStore();
+
+	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard, showGrid, dragPreview } = useCanvasStore();
 
 	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop(boardId || '');
 
@@ -283,7 +280,6 @@ export function Canvas({
 					<ElementToolbar 
 						onCreateCard={() => {}} 
 						canvasRef={canvasViewportRef}
-						setDragPreview={setDragPreview}
 					/>
 				)}
 			</div>

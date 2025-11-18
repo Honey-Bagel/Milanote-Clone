@@ -7,6 +7,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { screenToCanvas, boxesIntersect, getNormalizedBox } from '@/lib/utils/transform';
+import { getDefaultCardDimensions } from '../utils';
 
 interface UseSelectionBoxOptions {
 	/**
@@ -124,11 +125,25 @@ export function useSelectionBox(
 			const intersectingCardIds: string[] = [];
 
 			cards.forEach((card, id) => {
+				let cardHeight: number;
+
+				const cardElement = document.querySelector(`[data-element-id="${id}"]`);
+				if (cardElement) { // Get the actual div height of the card
+					const screenHeight = cardElement.getBoundingClientRect().height;
+					cardHeight = screenHeight / viewport.zoom;
+				} else if (card.height) { // Get the height of the card from card state
+					cardHeight = card.height;
+				} else { // Fallback: Get default height or 200 (Should never happen)
+					const defaults = getDefaultCardDimensions(card.card_type);
+					cardHeight = defaults.defaultHeight || 200;
+				}
+
+				const rect = canvas.getBoundingClientRect(); // Get canvas to use canvas offset
 				const cardBounds = {
-					x: card.position_x,
-					y: card.position_y,
+					x: card.position_x + rect.left,
+					y: card.position_y + rect.top,
 					width: card.width,
-					height: card.height, // Use default height if not set
+					height: cardHeight
 				};
 
 				if (boxesIntersect(selectionBounds, cardBounds)) {

@@ -42,6 +42,13 @@ export interface SelectionBox {
 	currentY: number;
 }
 
+export interface DragPreviewState {
+	cardType?: Card['card_type'];
+	card?: Card;
+	canvasX: number;
+	canvasY: number;
+}
+
 // ============================================================================
 // STORE INTERFACE
 // ============================================================================
@@ -70,6 +77,7 @@ interface CanvasState {
 
 	// Visual states
 	showGrid: boolean;
+	dragPreview: DragPreviewState | null;
 
 	// ============================================================================
 	// CARD ACTIONS
@@ -124,6 +132,7 @@ interface CanvasState {
 	// ============================================================================
 
 	setShowGrid: (showGrid: boolean) => void;
+	setDragPreview: (preview: DragPreviewState | null) => void;
 
 	// ============================================================================
 	// UTILITY ACTIONS
@@ -172,6 +181,7 @@ export const useCanvasStore = create<CanvasState>()(
 			editingCardId: null,
 			potentialColumnTarget: null,
 			snapToGrid: false,
+			dragPreview: null,
 
 			// ============================================================================
 			// CARD ACTIONS
@@ -413,6 +423,9 @@ export const useCanvasStore = create<CanvasState>()(
 				set((state) => {
 					state.showGrid = showGrid;
 				}),
+
+			setDragPreview: (preview) =>
+				set({ dragPreview: preview }),
 
 			// ============================================================================
 			// UTILITY ACTIONS

@@ -1063,6 +1063,8 @@ export function ColumnCardComponent({
 		selectCard,
 		setEditingCardId,
 		selectedCardIds,
+		setDragPreview,
+		viewport
 	} = useCanvasStore();
 	
 	const [isCollapsed, setIsCollapsed] = useState(card.column_cards.is_collapsed || false);
@@ -1191,9 +1193,6 @@ export function ColumnCardComponent({
 		e.preventDefault();
 		e.stopPropagation();
 
-		// Store dragged card info
-		setDraggedCardId(itemCard.id);
-		draggedCardRef.current = itemCard;
 		dragStartIndexRef.current = index;
 
 		// Track mouse movement for drag preview
@@ -1229,6 +1228,23 @@ export function ColumnCardComponent({
 
 					setDragOverIndex(newDragOverIndex);
 					dragOverIndexRef.current = newDragOverIndex;
+
+					const canvas = document.querySelector("div.canvas-viewport");
+					if (!canvas) return;
+
+					const rect = canvas.getBoundingClientRect();
+
+					const clientX = me.clientX - rect.left;
+					const clientY = me.clientY - rect.top;
+
+					const canvasX = (clientX - viewport.x) / viewport.zoom;
+					const canvasY = (clientY - viewport.y) / viewport.zoom;
+
+					setDragPreview({
+						cardType: itemCard.card_type,
+						canvasX,
+						canvasY
+					})
 				} else {
 					// Outside column - clear drop indicator
 					setDragOverIndex(null);
@@ -1239,6 +1255,7 @@ export function ColumnCardComponent({
 
 		const handleMouseUp = () => {
 			// Handle the drop
+			setDragPreview(null);
 			const endIndex = dragOverIndexRef.current;
 			if (endIndex !== null && dragStartIndexRef.current !== null && draggedCardRef.current) {
 				const startIndex = dragStartIndexRef.current;
@@ -1292,7 +1309,7 @@ export function ColumnCardComponent({
 
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
-	}, [card, updateCard, debouncedSave]);
+	}, [card, updateCard, debouncedSave, setDragPreview, viewport]);
 
 	// Get cards that belong to this column
 	const columnItems = ([...card.column_cards.column_items || []])
@@ -1513,11 +1530,6 @@ export function ColumnCardComponent({
 								<div className="h-0.5 bg-blue-500 rounded shadow-lg animate-pulse" />
 							)}
 						</div>
-					)}
-
-					{/* UPDATED: Canvas-wide Drag Preview - uses fixed positioning */}
-					{draggedCardId && draggedCardRef.current && (
-						<ColumnDragPreview card={draggedCardRef.current} />
 					)}
 				</div>
 			)}
