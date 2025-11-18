@@ -199,7 +199,7 @@ export function CanvasElement({
 					onDoubleClick={handleDoubleClick}
 					onContextMenu={handleContextMenu}
 					style={{
-						display: 'inline-block',
+						display: 'block',
 						width: card.width,
 						height: card.height || 'auto',
 						minHeight: card.height ? card.height : 'auto',
