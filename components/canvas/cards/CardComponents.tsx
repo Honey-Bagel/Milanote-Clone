@@ -703,7 +703,7 @@ export function LinkCardComponent({
 	card: LinkCard; 
 	isEditing: boolean;
 }) {
-	const { updateCard } = useCanvasStore();
+	const { updateCard, clearSelection, setEditingCardId } = useCanvasStore();
 	const [faviconUrl, setFaviconUrl] = useState<string>('');
 
 	const full_url = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
@@ -718,6 +718,23 @@ export function LinkCardComponent({
 
 		getFaviconUrl();
 	}, [full_url]);
+
+	useEffect(() => {
+		const handleEnterKeyPressed = (e: KeyboardEvent) => {
+			if (!isEditing) return;
+			const isMod = e.metaKey || e.ctrlKey;
+			if (isMod || e.key !== 'Enter') return;
+
+			clearSelection();
+			setEditingCardId(null);
+		}
+
+		document.addEventListener('keydown', handleEnterKeyPressed);
+
+		return () => {
+			document.removeEventListener('keydown', handleEnterKeyPressed)
+		}
+	});
 
 	const debouncedSave = useDebouncedCallback(
 		async (title: string, url: string, favicon_url: string | null) => {
@@ -777,7 +794,7 @@ export function LinkCardComponent({
 								type="text"
 								value={card.link_cards.title}
 								onChange={handleTitleChange}
-								className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+								className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none"
 								placeholder="Link title"
 								onClick={(e) => e.stopPropagation()}
 							/>
@@ -788,7 +805,7 @@ export function LinkCardComponent({
 								type="url"
 								value={card.link_cards.url}
 								onChange={handleUrlChange}
-								className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+								className="w-full px-2 py-1 text-sm border border-gray-300 rounded outline-none"
 								placeholder="https://example.com"
 								onClick={(e) => e.stopPropagation()}
 							/>
