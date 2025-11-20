@@ -200,6 +200,8 @@ export default function ElementToolbar({
 				>
 					<Magnet className="w-4 h-4" />
 				</button>
+
+				
 			</div>
 
 			<AddElementModal isOpen={isElementModalOpen} onClose={() => setIsElementModalOpen(false)} />

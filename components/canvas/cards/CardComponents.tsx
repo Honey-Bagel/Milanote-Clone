@@ -705,19 +705,30 @@ export function LinkCardComponent({
 }) {
 	const { updateCard, clearSelection, setEditingCardId } = useCanvasStore();
 	const [faviconUrl, setFaviconUrl] = useState<string>('');
+	const [fullURL, setFullURL] = useState<string | null>(null);
 
-	const full_url = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
-		card.link_cards.url :
-		"https://" + card.link_cards.url
+	useEffect(() => {
+		const getFullUrl = async () => {
+			const newUrl = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
+				card.link_cards.url :
+				"https://" + card.link_cards.url;
+
+			setFullURL(newUrl);
+		}
+
+		getFullUrl();
+	}, [card]);
 
 	useEffect(() => {
 		const getFaviconUrl = async () => {
-			const domain = new URL(full_url).hostname;
+			if (fullURL === null) return;
+			const domain = new URL(fullURL).hostname;
 			setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=64`);
+			console.log('test');
 		};
 
 		getFaviconUrl();
-	}, [full_url]);
+	}, [fullURL]);
 
 	useEffect(() => {
 		const handleEnterKeyPressed = (e: KeyboardEvent) => {
@@ -748,7 +759,7 @@ export function LinkCardComponent({
 				console.error('Failed to update link card:', error);
 			}
 		},
-		1000
+		10000
 	);
 
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -819,7 +830,7 @@ export function LinkCardComponent({
 	return (
 		<CardBase isEditing={isEditing}>
 			<a
-				href={full_url}
+				href={fullURL || ''}
 				target="_blank"
 				rel="noopener noreferrer"
 				className="link-card block p-4 hover:bg-gray-50 transition-colors"
@@ -839,9 +850,9 @@ export function LinkCardComponent({
 						<h3 className="font-medium text-sm text-gray-900 truncate">
 							{card.link_cards.title || card.link_cards.url}
 						</h3>
-						{card.link_cards.url && (
+						{fullURL && (
 							<p className="text-xs text-gray-400 truncate mt-1">
-								{new URL(full_url).hostname}
+								{new URL(fullURL).hostname}
 							</p>
 						)}
 					</div>

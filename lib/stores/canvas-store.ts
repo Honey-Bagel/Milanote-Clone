@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { devtools } from 'zustand/middleware';
+import { temporal } from 'zundo';
 import { enableMapSet } from 'immer';
 import type { Card } from '@/lib/types';
 import { deleteCard as deleteCardFromDB } from '@/lib/data/cards-client';
@@ -125,6 +126,7 @@ interface CanvasState {
 	setSnapToGrid: (snapToGrid: boolean) => void;
 
 	// Column
+
 	setPotentialColumnTarget: (columnId: string | null) => void;
 
 	// ============================================================================
@@ -145,13 +147,8 @@ interface CanvasState {
 	bringSelectedToFront: () => void;
 	sendSelectedToBack: () => void;
 
-	// ============================================================================
-	// Z-Index Management
-	// ============================================================================
-
 	/**
-	 * Automatically bring cards to front when they're moved or clicked
-	 * This should be called whenever a card interaction begins
+	 * Utility to bring cards to front when interacted with
 	 */
 	bringCardsToFrontOnInteraction: (cardIds: string[]) => Map<string, string>;
 
@@ -167,285 +164,302 @@ interface CanvasState {
 
 export const useCanvasStore = create<CanvasState>()(
 	devtools(
-		immer((set, get) => ({
-			// Initial state
-			cards: new Map(),
-			viewport: { x: 0, y: 0, zoom: 1 },
-			selectedCardIds: new Set(),
-			selectionBox: null,
-			isDragging: false,
-			isPanning: false,
-			isDrawingSelection: false,
-			isResizing: false,
-			showGrid: true,
-			editingCardId: null,
-			potentialColumnTarget: null,
-			snapToGrid: false,
-			dragPreview: null,
+		temporal(
+			immer((set, get) => ({
+				// Initial state
+				cards: new Map(),
+				viewport: { x: 0, y: 0, zoom: 1 },
+				selectedCardIds: new Set(),
+				selectionBox: null,
+				isDragging: false,
+				isPanning: false,
+				isDrawingSelection: false,
+				isResizing: false,
+				showGrid: true,
+				editingCardId: null,
+				potentialColumnTarget: null,
+				snapToGrid: false,
+				dragPreview: null,
 
-			// ============================================================================
-			// CARD ACTIONS
-			// ============================================================================
+				// ============================================================================
+				// CARD ACTIONS
+				// ============================================================================
 
-			loadCards: (cards) =>
-					set({ cards: new Map(cards.map(c => [c.id, c])) }),
+				loadCards: (cards) =>
+						set({ cards: new Map(cards.map(c => [c.id, c])) }),
 
-			addCard: (card) =>
-				set((state) => {
-					state.cards.set(card.id, card);
-				}),
+				addCard: (card) =>
+					set((state) => {
+						state.cards.set(card.id, card);
+					}),
 
-			updateCard: (id, updates) =>
-				set((state) => {
-					const card = state.cards.get(id);
-					if (card) {
-						state.cards.set(id, { ...card, ...updates });
-					}
-				}),
-
-			updateCardPosition: (id, position) =>
-				set((state) => {
-					const card = state.cards.get(id);
-					if (card) {
-						state.cards.set(id, {
-							...card,
-							position_x: position.x,
-							position_y: position.y,
-						});
-					}
-				}),
-
-			deleteCard: async (id) => {
-				// Delete from local state first for immediate UI feedback
-				set((state) => {
-					state.cards.delete(id);
-					state.selectedCardIds.delete(id);
-					if (state.editingCardId === id) {
-						state.editingCardId = null;
-					}
-				});
-
-				// Then delete from database
-				try {
-					await deleteCardFromDB(id);
-				} catch (error) {
-					console.error('Failed to delete card from database:', error);
-					// Optionally: re-fetch cards to sync state if deletion failed
-				}
-			},
-
-			deleteCards: async (ids) => {
-				// Delete from local state first for immediate UI feedback
-				set((state) => {
-					ids.forEach((id) => {
-						const card = state.getCard(id);
-						if (card?.card_type === 'column') {
-							card.column_cards.column_items?.forEach((card) => {
-								state.cards.delete(card.card_id);
-								ids.push(card.card_id);
-							})
+				updateCard: (id, updates) =>
+					set((state) => {
+						const card = state.cards.get(id);
+						if (card) {
+							state.cards.set(id, { ...card, ...updates });
 						}
+					}),
+
+				updateCardPosition: (id, position) =>
+					set((state) => {
+						const card = state.cards.get(id);
+						if (card) {
+							state.cards.set(id, {
+								...card,
+								position_x: position.x,
+								position_y: position.y,
+							});
+						}
+					}),
+
+				deleteCard: async (id) => {
+					// Delete from local state first for immediate UI feedback
+					set((state) => {
 						state.cards.delete(id);
 						state.selectedCardIds.delete(id);
 						if (state.editingCardId === id) {
 							state.editingCardId = null;
 						}
 					});
-				});
 
-				// Then delete from database
-				try {
-					await Promise.all(ids.map(id => deleteCardFromDB(id)));
-				} catch (error) {
-					console.error('Failed to delete cards from database:', error);
-					// Optionally: re-fetch cards to sync state if deletion failed
-				}
-			},
+					// Then delete from database
+					try {
+						await deleteCardFromDB(id);
+					} catch (error) {
+						console.error('Failed to delete card from database:', error);
+						// Optionally: re-fetch cards to sync state if deletion failed
+					}
+				},
 
-			updateCards: (updates) =>
-				set((state) => {
-					updates.forEach(({ id, updates }) => {
-						const card = state.cards.get(id);
-						if (card) {
-							state.cards.set(id, { ...card, ...updates });
-						}
-					});
-				}),
-
-			// ============================================================================
-			// SELECTION ACTIONS
-			// ============================================================================
-
-			selectCard: (id, multi = false) =>
-				set((state) => {
-					if (multi) {
-						if (state.selectedCardIds.has(id)) {
+				deleteCards: async (ids) => {
+					// Delete from local state first for immediate UI feedback
+					set((state) => {
+						ids.forEach((id) => {
+							const card = state.cards.get(id);
+							if (card?.card_type === 'column') {
+								card.column_cards.column_items?.forEach((card) => {
+									state.cards.delete(card.card_id);
+									ids.push(card.card_id);
+								})
+							}
+							state.cards.delete(id);
 							state.selectedCardIds.delete(id);
+							if (state.editingCardId === id) {
+								state.editingCardId = null;
+							}
+						});
+					});
+
+					// Then delete from database
+					try {
+						await Promise.all(ids.map(id => deleteCardFromDB(id)));
+					} catch (error) {
+						console.error('Failed to delete cards from database:', error);
+						// Optionally: re-fetch cards to sync state if deletion failed
+					}
+				},
+
+				updateCards: (updates) =>
+					set((state) => {
+						updates.forEach(({ id, updates }) => {
+							const card = state.cards.get(id);
+							if (card) {
+								state.cards.set(id, { ...card, ...updates });
+							}
+						});
+					}),
+
+				// ============================================================================
+				// SELECTION ACTIONS
+				// ============================================================================
+
+				selectCard: (id, multi = false) =>
+					set((state) => {
+						if (multi) {
+							if (state.selectedCardIds.has(id)) {
+								state.selectedCardIds.delete(id);
+							} else {
+								state.selectedCardIds.add(id);
+							}
 						} else {
+							state.selectedCardIds.clear();
 							state.selectedCardIds.add(id);
 						}
-					} else {
+					}),
+
+				selectCards: (ids) =>
+					set((state) => {
 						state.selectedCardIds.clear();
-						state.selectedCardIds.add(id);
-					}
-				}),
+						ids.forEach((id) => state.selectedCardIds.add(id));
+					}),
 
-			selectCards: (ids) =>
-				set((state) => {
-					state.selectedCardIds.clear();
-					ids.forEach((id) => state.selectedCardIds.add(id));
-				}),
+				clearSelection: () =>
+					set((state) => {
+						state.selectedCardIds.clear();
+					}),
 
-			clearSelection: () =>
-				set((state) => {
-					state.selectedCardIds.clear();
-				}),
+				selectAll: () =>
+					set((state) => {
+						state.selectedCardIds.clear();
+						state.cards.forEach((_, id) => state.selectedCardIds.add(id));
+					}),
 
-			selectAll: () =>
-				set((state) => {
-					state.selectedCardIds.clear();
-					state.cards.forEach((_, id) => state.selectedCardIds.add(id));
-				}),
+				setSelectionBox: (box) =>
+					set((state) => {
+						state.selectionBox = box;
+					}),
 
-			setSelectionBox: (box) =>
-				set((state) => {
-					state.selectionBox = box;
-				}),
+				// ============================================================================
+				// VIEWPORT ACTIONS
+				// ============================================================================
 
-			// ============================================================================
-			// VIEWPORT ACTIONS
-			// ============================================================================
+				setViewport: (viewport) =>
+					set((state) => {
+						state.viewport = { ...state.viewport, ...viewport };
+					}),
 
-			setViewport: (viewport) =>
-				set((state) => {
-					state.viewport = { ...state.viewport, ...viewport };
-				}),
+				resetViewport: () =>
+					set((state) => {
+						state.viewport = { x: 0, y: 0, zoom: 1 };
+					}),
 
-			resetViewport: () =>
-				set((state) => {
-					state.viewport = { x: 0, y: 0, zoom: 1 };
-				}),
+				zoomIn: () =>
+					set((state) => {
+						const newZoom = Math.min(1.9, state.viewport.zoom + 0.15);
+						state.viewport.zoom = newZoom;
+					}),
 
-			zoomIn: () =>
-				set((state) => {
-					const newZoom = Math.min(1.9, state.viewport.zoom + 0.15);
-					state.viewport.zoom = newZoom;
-				}),
+				zoomOut: () =>
+					set((state) => {
+						const newZoom = Math.max(0.1, state.viewport.zoom - 0.15);
+						state.viewport.zoom = newZoom;
+					}),
 
-			zoomOut: () =>
-				set((state) => {
-					const newZoom = Math.max(0.1, state.viewport.zoom - 0.15);
-					state.viewport.zoom = newZoom;
-				}),
+				zoomToFit: () =>
+					set((state) => {
+						if (state.cards.size === 0) return;
 
-			zoomToFit: () =>
-				set((state) => {
-					if (state.cards.size === 0) return;
+						let minX = Infinity,
+							minY = Infinity,
+							maxX = -Infinity,
+							maxY = -Infinity;
 
-					let minX = Infinity,
-						minY = Infinity,
-						maxX = -Infinity,
-						maxY = -Infinity;
+						state.cards.forEach((card) => {
+							minX = Math.min(minX, card.position_x);
+							minY = Math.min(minY, card.position_y);
+							maxX = Math.max(maxX, card.position_x + card.width);
+							maxY = Math.max(maxY, card.position_y + (card.height || 150));
+						});
 
-					state.cards.forEach((card) => {
-						minX = Math.min(minX, card.position_x);
-						minY = Math.min(minY, card.position_y);
-						maxX = Math.max(maxX, card.position_x + card.width);
-						maxY = Math.max(maxY, card.position_y + (card.height || 150));
-					});
+						const width = maxX - minX;
+						const height = maxY - minY;
+						const padding = 100;
 
-					const width = maxX - minX;
-					const height = maxY - minY;
-					const padding = 100;
+						const viewportWidth = window.innerWidth;
+						const viewportHeight = window.innerHeight;
 
-					const viewportWidth = window.innerWidth;
-					const viewportHeight = window.innerHeight;
+						const zoom = Math.min(
+							(viewportWidth - padding * 2) / width,
+							(viewportHeight - padding * 2) / height,
+							1
+						);
 
-					const zoom = Math.min(
-						(viewportWidth - padding * 2) / width,
-						(viewportHeight - padding * 2) / height,
-						1
-					);
+						state.viewport = {
+							x: -minX * zoom + padding,
+							y: -minY * zoom + padding,
+							zoom,
+						};
+					}),
 
-					state.viewport = {
-						x: -minX * zoom + padding,
-						y: -minY * zoom + padding,
-						zoom,
-					};
-				}),
+				// ============================================================================
+				// INTERACTION STATE ACTIONS
+				// ============================================================================
 
-			// ============================================================================
-			// INTERACTION STATE ACTIONS
-			// ============================================================================
+				setIsDragging: (isDragging) =>
+					set((state) => {
+						state.isDragging = isDragging;
+					}),
 
-			setIsDragging: (isDragging) =>
-				set((state) => {
-					state.isDragging = isDragging;
-				}),
+				setIsPanning: (isPanning) =>
+					set((state) => {
+						state.isPanning = isPanning;
+					}),
 
-			setIsPanning: (isPanning) =>
-				set((state) => {
-					state.isPanning = isPanning;
-				}),
+				setIsDrawingSelection: (isDrawing) =>
+					set((state) => {
+						state.isDrawingSelection = isDrawing;
+					}),
 
-			setIsDrawingSelection: (isDrawing) =>
-				set((state) => {
-					state.isDrawingSelection = isDrawing;
-				}),
+				setIsResizing: (isResizing) =>
+					set((state) => {
+						state.isResizing = isResizing;
+					}),
 
-			setIsResizing: (isResizing) =>
-				set((state) => {
-					state.isResizing = isResizing;
-				}),
+				setEditingCardId: (id) =>
+					set((state) => {
+						state.editingCardId = id;
+					}),
 
-			setEditingCardId: (id) =>
-				set((state) => {
-					state.editingCardId = id;
-				}),
+				setSnapToGrid: (snapToGrid) =>
+					set((state) => {
+						state.snapToGrid = snapToGrid;
+					}),
 
-			setSnapToGrid: (snapToGrid) =>
-				set((state) => {
-					state.snapToGrid = snapToGrid;
-				}),
+				// Column
 
-			// Column
+				setPotentialColumnTarget: (columnId) =>
+					set((state) => {
+						state.potentialColumnTarget = columnId;
+					}),
 
-			setPotentialColumnTarget: (columnId) =>
-				set((state) => {
-					state.potentialColumnTarget = columnId;
-				}),
+				// ============================================================================
+				// VISUAL STATE ACTIONS
+				// ============================================================================
 
-			// ============================================================================
-			// VISUAL STATE ACTIONS
-			// ============================================================================
+				setShowGrid: (showGrid) =>
+					set((state) => {
+						state.showGrid = showGrid;
+					}),
 
-			setShowGrid: (showGrid) =>
-				set((state) => {
-					state.showGrid = showGrid;
-				}),
+				setDragPreview: (preview) =>
+					set({ dragPreview: preview }),
 
-			setDragPreview: (preview) =>
-				set({ dragPreview: preview }),
+				// ============================================================================
+				// UTILITY ACTIONS
+				// ============================================================================
 
-			// ============================================================================
-			// UTILITY ACTIONS
-			// ============================================================================
+				getCard: (id) => {
+					return get().cards.get(id);
+				},
 
-			getCard: (id) => {
-				return get().cards.get(id);
-			},
+				getSelectedCards: () => {
+					const state = get();
+					return Array.from(state.selectedCardIds)
+						.map((id) => state.cards.get(id))
+						.filter((card): card is Card => card !== undefined);
+				},
 
-			getSelectedCards: () => {
-				const state = get();
-				return Array.from(state.selectedCardIds)
-					.map((id) => state.cards.get(id))
-					.filter((card): card is Card => card !== undefined);
-			},
+				bringToFront: (id) =>
+					set((state) => {
+						const allCards = Array.from(state.cards.values());
+						const updates = orderKeyBringToFront([id], cardsToOrderKeyList(allCards));
 
-			bringToFront: (id) =>
-				set((state) => {
+						updates.forEach((orderKey, cardId) => {
+							const card = state.cards.get(cardId);
+							if (card) {
+								state.cards.set(cardId, {
+									...card,
+									order_key: orderKey,
+									z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+								});
+							}
+						});
+					}),
+
+				sendToBack: (id) => set((state) => {
 					const allCards = Array.from(state.cards.values());
-					const updates = orderKeyBringToFront([id], cardsToOrderKeyList(allCards));
+					const updates = orderKeySendToBack([id], cardsToOrderKeyList(allCards));
 
 					updates.forEach((orderKey, cardId) => {
 						const card = state.cards.get(cardId);
@@ -453,79 +467,18 @@ export const useCanvasStore = create<CanvasState>()(
 							state.cards.set(cardId, {
 								...card,
 								order_key: orderKey,
+								// ⚠️ DUAL-WRITE: Also update z_index during migration
 								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
 							});
 						}
 					});
 				}),
 
-			sendToBack: (id) => set((state) => {
-				const allCards = Array.from(state.cards.values());
-				const updates = orderKeySendToBack([id], cardsToOrderKeyList(allCards));
+				bringSelectedToFront: () => set((state) => {
+					const allCards = Array.from(state.cards.values());
+					const selectedIds = Array.from(state.selectedCardIds);
+					const updates = orderKeyBringToFront(selectedIds, cardsToOrderKeyList(allCards));
 
-				updates.forEach((orderKey, cardId) => {
-					const card = state.cards.get(cardId);
-					if (card) {
-						state.cards.set(cardId, {
-							...card,
-							order_key: orderKey,
-							// ⚠️ DUAL-WRITE: Also update z_index during migration
-							z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-						});
-					}
-				});
-			}),
-
-			bringSelectedToFront: () => set((state) => {
-				const allCards = Array.from(state.cards.values());
-				const selectedIds = Array.from(state.selectedCardIds);
-				const updates = orderKeyBringToFront(selectedIds, cardsToOrderKeyList(allCards));
-
-				updates.forEach((orderKey, cardId) => {
-					const card = state.cards.get(cardId);
-					if (card) {
-						state.cards.set(cardId, {
-							...card,
-							order_key: orderKey,
-							// ⚠️ DUAL-WRITE
-							z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-						});
-					}
-				});
-			}),
-
-			sendSelectedToBack: () => set((state) => {
-				const allCards = Array.from(state.cards.values());
-				const selectedIds = Array.from(state.selectedCardIds);
-				const updates = orderKeySendToBack(selectedIds, cardsToOrderKeyList(allCards));
-
-				updates.forEach((orderKey, cardId) => {
-					const card = state.cards.get(cardId);
-					if (card) {
-						state.cards.set(cardId, {
-							...card,
-							order_key: orderKey,
-							// ⚠️ DUAL-WRITE
-							z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-						});
-					}
-				});
-			}),
-
-			// ============================================================================
-			// UTILITY ACTIONS
-			// ============================================================================
-
-			bringCardsToFrontOnInteraction: (cardIds) => {
-				const state = get();
-				const allCards = Array.from(state.cards.values());
-				const updates = bringCardsToFrontOnInteraction(
-					cardIds,
-					cardsToOrderKeyList(allCards)
-				);
-
-				// Apply updates to store
-				set((state) => {
 					updates.forEach((orderKey, cardId) => {
 						const card = state.cards.get(cardId);
 						if (card) {
@@ -537,18 +490,190 @@ export const useCanvasStore = create<CanvasState>()(
 							});
 						}
 					});
-				});
+				}),
 
-				return updates;
-			},
+				sendSelectedToBack: () => set((state) => {
+					const allCards = Array.from(state.cards.values());
+					const selectedIds = Array.from(state.selectedCardIds);
+					const updates = orderKeySendToBack(selectedIds, cardsToOrderKeyList(allCards));
 
-			getNewCardOrderKey: () => {
-				const state = get();
-				const allCards = Array.from(state.cards.values());
-				return getOrderKeyForNewCard(cardsToOrderKeyList(allCards));
-			},
+					updates.forEach((orderKey, cardId) => {
+						const card = state.cards.get(cardId);
+						if (card) {
+							state.cards.set(cardId, {
+								...card,
+								order_key: orderKey,
+								// ⚠️ DUAL-WRITE
+								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+							});
+						}
+					});
+				}),
 
-		})),
+				// ============================================================================
+				// UTILITY ACTIONS
+				// ============================================================================
+
+				bringCardsToFrontOnInteraction: (cardIds) => {
+					const state = get();
+					const allCards = Array.from(state.cards.values());
+					const updates = bringCardsToFrontOnInteraction(
+						cardIds,
+						cardsToOrderKeyList(allCards)
+					);
+
+					// Apply updates to store
+					set((state) => {
+						updates.forEach((orderKey, cardId) => {
+							const card = state.cards.get(cardId);
+							if (card) {
+								state.cards.set(cardId, {
+									...card,
+									order_key: orderKey,
+									// ⚠️ DUAL-WRITE
+									z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+								});
+							}
+						});
+					});
+
+					return updates;
+				},
+
+				getNewCardOrderKey: () => {
+					const state = get();
+					const allCards = Array.from(state.cards.values());
+					return getOrderKeyForNewCard(cardsToOrderKeyList(allCards));
+				},
+
+			})),
+			{
+				// ============================================================================
+				// ZUNDO TEMPORAL OPTIONS
+				// ============================================================================
+				
+				// Only track meaningful state changes - exclude transient UI states
+				partialize: (state) => {
+					const { 
+						isDragging, 
+						isPanning, 
+						isDrawingSelection, 
+						isResizing,
+						dragPreview,
+						potentialColumnTarget,
+						...tracked 
+					} = state;
+					
+					// Track: cards, viewport, selectedCardIds, selectionBox, 
+					// editingCardId, snapToGrid, showGrid
+					return tracked;
+				},
+
+				// Limit history to 50 states
+				limit: 50,
+
+				// Use equality check to prevent storing duplicate states
+				equality: (pastState, currentState) => {
+					// Quick checks for size differences
+					if (pastState.cards.size !== currentState.cards.size) return false;
+					if (pastState.selectedCardIds.size !== currentState.selectedCardIds.size) return false;
+					
+					// Check viewport changes (with tolerance for floating point precision)
+					const viewportChanged = 
+						Math.abs(pastState.viewport.x - currentState.viewport.x) > 0.1 ||
+						Math.abs(pastState.viewport.y - currentState.viewport.y) > 0.1 ||
+						Math.abs(pastState.viewport.zoom - currentState.viewport.zoom) > 0.001;
+					
+					if (viewportChanged) return false;
+
+					// Check if editing state changed
+					if (pastState.editingCardId !== currentState.editingCardId) return false;
+					
+					// Check if grid/snap settings changed
+					if (pastState.showGrid !== currentState.showGrid) return false;
+					if (pastState.snapToGrid !== currentState.snapToGrid) return false;
+
+					// Check selection box
+					const selectionBoxChanged = JSON.stringify(pastState.selectionBox) !== 
+						JSON.stringify(currentState.selectionBox);
+					if (selectionBoxChanged) return false;
+
+					// For cards Map - check if any card references changed
+					for (const [id, card] of pastState.cards) {
+						const currentCard = currentState.cards.get(id);
+						if (!currentCard || currentCard !== card) return false;
+					}
+
+					// For selected card IDs Set
+					for (const id of pastState.selectedCardIds) {
+						if (!currentState.selectedCardIds.has(id)) return false;
+					}
+
+					return true;
+				},
+			}
+		),
 		{ name: 'CanvasStore' }
 	)
 );
+
+// ============================================================================
+// HELPER HOOKS FOR UNDO/REDO
+// ============================================================================
+
+/**
+ * Hook to access undo/redo functionality
+ * 
+ * @example
+ * const { undo, redo, clear } = useCanvasHistory();
+ * 
+ * <button onClick={() => undo()}>Undo</button>
+ * <button onClick={() => redo()}>Redo</button>
+ */
+export const useCanvasHistory = () => {
+	return useCanvasStore.temporal.getState();
+};
+
+/**
+ * Hook to reactively check if undo/redo is available
+ * 
+ * @example
+ * const { canUndo, canRedo } = useCanUndoRedo();
+ * 
+ * <button disabled={!canUndo} onClick={() => undo()}>Undo</button>
+ * <button disabled={!canRedo} onClick={() => redo()}>Redo</button>
+ */
+export const useCanUndoRedo = () => {
+	// Note: We need to use a selector to make this reactive
+	// Otherwise the component won't re-render when history changes
+	const pastStates = useCanvasStore.temporal((state) => state.pastStates);
+	const futureStates = useCanvasStore.temporal((state) => state.futureStates);
+	
+	return {
+		canUndo: pastStates.length > 0,
+		canRedo: futureStates.length > 0,
+		undoDepth: pastStates.length,
+		redoDepth: futureStates.length,
+	};
+};
+
+/**
+ * Hook to pause/resume history tracking
+ * Useful when you want to make multiple changes without creating history entries
+ * 
+ * @example
+ * const { pause, resume, isTracking } = useHistoryTracking();
+ * 
+ * pause();
+ * // Make multiple state changes
+ * resume();
+ */
+export const useHistoryTracking = () => {
+	const { pause, resume, isTracking } = useCanvasStore.temporal.getState();
+	
+	return {
+		pause,
+		resume,
+		isTracking,
+	};
+};

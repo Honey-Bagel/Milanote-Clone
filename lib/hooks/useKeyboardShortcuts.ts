@@ -2,10 +2,11 @@
  * useKeyboardShortcuts Hook
  * 
  * Handles all keyboard shortcuts for the canvas
+ * Updated to work with Zundo undo/redo
  */
 
 import { useEffect } from 'react';
-import { useCanvasStore } from '@/lib/stores/canvas-store';
+import { useCanvasStore, useCanvasHistory } from '../stores/canvas-store';
 
 interface UseKeyboardShortcutsOptions {
 	/**
@@ -24,8 +25,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 		copySelected,
 		cutSelected,
 		paste,
-		undo,
-		redo,
 		selectAll,
 		duplicateCard,
 		bringToFront,
@@ -35,6 +34,8 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 		resetViewport,
 		zoomToFit,
 	} = useCanvasStore();
+
+	const { undo, redo, clear } = useCanvasHistory();
 
 	useEffect(() => {
 		if (!enabled) return;
@@ -109,7 +110,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 			}
 
 			// ============================================================================
-			// UNDO/REDO SHORTCUTS
+			// UNDO/REDO SHORTCUTS (powered by Zundo)
 			// ============================================================================
 
 			// Undo: Cmd/Ctrl + Z
