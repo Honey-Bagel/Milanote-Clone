@@ -7,10 +7,86 @@ import { createClient } from '@/lib/supabase/client';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { getDefaultCardDimensions } from '../utils';
 
+// Maximum file size before compression (1MB)
+const MAX_IMAGE_SIZE = 1024 * 1024;
+// Target quality for JPEG compression
+const COMPRESSION_QUALITY = 0.8;
+// Maximum dimension for images
+const MAX_IMAGE_DIMENSION = 2000;
+
+/**
+ * Compress an image file using canvas
+ */
+async function compressImage(file: File): Promise<File> {
+	// Skip non-images or small images
+	if (!file.type.startsWith('image/') || file.size <= MAX_IMAGE_SIZE) {
+		return file;
+	}
+
+	// Skip GIFs (to preserve animation)
+	if (file.type === 'image/gif') {
+		return file;
+	}
+
+	return new Promise((resolve) => {
+		const img = new Image();
+		const url = URL.createObjectURL(file);
+
+		img.onload = () => {
+			URL.revokeObjectURL(url);
+
+			// Calculate new dimensions while maintaining aspect ratio
+			let { width, height } = img;
+			if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+				const ratio = Math.min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height);
+				width = Math.round(width * ratio);
+				height = Math.round(height * ratio);
+			}
+
+			// Create canvas and draw scaled image
+			const canvas = document.createElement('canvas');
+			canvas.width = width;
+			canvas.height = height;
+			const ctx = canvas.getContext('2d');
+			if (!ctx) {
+				resolve(file);
+				return;
+			}
+
+			ctx.drawImage(img, 0, 0, width, height);
+
+			// Convert to blob
+			canvas.toBlob(
+				(blob) => {
+					if (blob && blob.size < file.size) {
+						// Create new file with compressed data
+						const compressedFile = new File([blob], file.name, {
+							type: 'image/jpeg',
+							lastModified: Date.now(),
+						});
+						resolve(compressedFile);
+					} else {
+						// Compression didn't help, use original
+						resolve(file);
+					}
+				},
+				'image/jpeg',
+				COMPRESSION_QUALITY
+			);
+		};
+
+		img.onerror = () => {
+			URL.revokeObjectURL(url);
+			resolve(file);
+		};
+
+		img.src = url;
+	});
+}
 
 export function useCanvasDrop(boardId: string) {
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
-	const { addCard, viewport, getNewCardOrderKey } = useCanvasStore();
+	const { addCard, viewport, getNewCardOrderKey, addUploadingCard, removeUploadingCard } = useCanvasStore();
 	const supabase = createClient();
 
 	const getDefaultCardData = (cardType: Card['card_type']) => {
@@ -130,16 +206,32 @@ export function useCanvasDrop(boardId: string) {
 		let yOffset = 0;
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
-			
+			const cardType = getCardTypeFromFile(file);
+			const { defaultWidth, defaultHeight } = getDefaultCardDimensions(cardType);
+
+			// Generate a temporary ID for the uploading card
+			const tempId = `uploading-${Date.now()}-${i}`;
+			const posX = canvasX - defaultWidth / 2;
+			const posY = (canvasY + yOffset) - (defaultHeight || 150) / 2;
+
+			// Add uploading placeholder immediately
+			addUploadingCard({
+				id: tempId,
+				filename: file.name,
+				x: posX,
+				y: posY,
+				type: cardType,
+			});
+
 			try {
 				// Get order key
 				const orderKey = getNewCardOrderKey();
 
-				// Upload file to supabase
-				const fileUrl = await uploadFileToStorage(file, boardId);
+				// Compress image if needed
+				const processedFile = await compressImage(file);
 
-				// Determine the file type
-				const cardType = getCardTypeFromFile(file);
+				// Upload file to supabase
+				const fileUrl = await uploadFileToStorage(processedFile, boardId);
 
 				// Prepare card data based on type
 				let cardData: any;
@@ -153,19 +245,17 @@ export function useCanvasDrop(boardId: string) {
 						file_name: file.name,
 						file_url: fileUrl,
 						file_type: getFileTypeExtension(file),
-						file_size: file.size
+						file_size: processedFile.size
 					};
 				}
-
-				const { defaultWidth, defaultHeight } = getDefaultCardDimensions(cardType);
 
 				// Create card in database with stacked positioning
 				const cardId = await createCard(
 					boardId,
 					cardType,
 					{
-						position_x: canvasX - defaultWidth / 2,
-						position_y: (canvasY + yOffset) - defaultHeight / 2,
+						position_x: posX,
+						position_y: posY,
 						width: defaultWidth,
 						height: defaultHeight,
 						order_key: orderKey,
@@ -184,6 +274,8 @@ export function useCanvasDrop(boardId: string) {
 					.eq('id', cardId)
 					.single();
 
+				// Remove uploading placeholder and add the real card
+				removeUploadingCard(tempId);
 				if (data) {
 					addCard(data as Card);
 				}
@@ -192,9 +284,11 @@ export function useCanvasDrop(boardId: string) {
 				yOffset += 50;
 			} catch (error) {
 				console.error(`Failed to upload and create card for ${file.name}:`, error);
+				// Remove uploading placeholder on error
+				removeUploadingCard(tempId);
 			}
 		}
-	}, [boardId, viewport, addCard, supabase, getNewCardOrderKey, uploadFileToStorage]);
+	}, [boardId, viewport, addCard, supabase, getNewCardOrderKey, uploadFileToStorage, addUploadingCard, removeUploadingCard]);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();

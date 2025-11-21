@@ -53,6 +53,14 @@ export interface DragPreviewState {
 	canvasY: number;
 }
 
+export interface UploadingCard {
+	id: string;
+	filename: string;
+	x: number;
+	y: number;
+	type: 'image' | 'file';
+}
+
 // ============================================================================
 // STORE INTERFACE
 // ============================================================================
@@ -92,6 +100,9 @@ interface CanvasState {
 	// Visual states
 	showGrid: boolean;
 	dragPreview: DragPreviewState | null;
+
+	// Uploading cards (loading state)
+	uploadingCards: Map<string, UploadingCard>;
 
 	// History tracking for edits
 	_preEditCards: Map<string, Card> | null;
@@ -168,6 +179,8 @@ interface CanvasState {
 
 	setShowGrid: (showGrid: boolean) => void;
 	setDragPreview: (preview: DragPreviewState | null) => void;
+	addUploadingCard: (card: UploadingCard) => void;
+	removeUploadingCard: (id: string) => void;
 
 	// ============================================================================
 	// UTILITY ACTIONS
@@ -217,6 +230,7 @@ export const useCanvasStore = create<CanvasState>()(
 				isDraggingLineEndpoint: false,
 				snapToGrid: false,
 				dragPreview: null,
+				uploadingCards: new Map(),
 				_preEditCards: null,
 
 				// ============================================================================
@@ -704,6 +718,16 @@ export const useCanvasStore = create<CanvasState>()(
 
 				setDragPreview: (preview) =>
 					set({ dragPreview: preview }),
+
+				addUploadingCard: (card) =>
+					set((state) => {
+						state.uploadingCards.set(card.id, card);
+					}),
+
+				removeUploadingCard: (id) =>
+					set((state) => {
+						state.uploadingCards.delete(id);
+					}),
 
 				// ============================================================================
 				// UTILITY ACTIONS

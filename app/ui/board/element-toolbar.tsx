@@ -175,8 +175,6 @@ export default function ElementToolbar({
 						onClick={() => {}}
 					/>
 
-					<div className="w-px h-6 bg-gray-700"></div>
-
 					{/* Line Tool */}
 					<DraggableToolbarButton
 						icon={Spline}
@@ -215,7 +213,7 @@ export default function ElementToolbar({
 						<TooltipTrigger asChild>
 							<Button 
 								onClick={() => setShowGrid(!showGrid)} 
-								className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${showGrid ? 'bg-gray-200' : ''}`}
+								className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${showGrid ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
 								title="Toggle Grid"
 								variant={"ghost"}
 								size={"sm"}
@@ -232,7 +230,7 @@ export default function ElementToolbar({
 						<TooltipTrigger asChild>
 							<Button
 								onClick={() => setSnapToGrid(!snapToGrid)}
-								className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${snapToGrid ? 'bg-gray-200' : ''}`}
+								className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${snapToGrid ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
 								title="Snap to Grid"
 								variant={"ghost"}
 								size={"sm"}

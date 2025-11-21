@@ -74,6 +74,7 @@ export function Canvas({
 		pendingConnection,
 		cancelConnection,
 		deleteConnection,
+		uploadingCards,
 	} = useCanvasStore();
 
 	// Mouse position tracking for connection preview
@@ -451,6 +452,47 @@ export function Canvas({
 								/>
 							))}
 						</div>
+
+						{/* Uploading Cards Placeholders */}
+						{Array.from(uploadingCards.values()).map((uploadingCard) => (
+							<div
+								key={uploadingCard.id}
+								className="uploading-card-placeholder"
+								style={{
+									position: 'absolute',
+									left: uploadingCard.x,
+									top: uploadingCard.y,
+									width: uploadingCard.type === 'image' ? 300 : 250,
+									minHeight: 100,
+									backgroundColor: 'white',
+									borderRadius: '8px',
+									boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+									display: 'flex',
+									flexDirection: 'column',
+									alignItems: 'center',
+									justifyContent: 'center',
+									padding: '16px',
+									gap: '12px',
+									border: '2px dashed #3b82f6',
+									zIndex: 9999,
+								}}
+							>
+								<div
+									className="loading-spinner"
+									style={{
+										width: 32,
+										height: 32,
+										border: '3px solid #e5e7eb',
+										borderTopColor: '#3b82f6',
+										borderRadius: '50%',
+										animation: 'spin 1s linear infinite',
+									}}
+								/>
+								<span style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', wordBreak: 'break-word' }}>
+									Uploading {uploadingCard.filename}...
+								</span>
+							</div>
+						))}
 
 						{/* Drag Preview Ghost Layer */}
 						{dragPreview && (
