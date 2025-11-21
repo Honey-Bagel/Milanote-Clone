@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Separator } from '@radix-ui/react-dropdown-menu';
 
 interface CanvasContextMenuProps {
@@ -11,6 +11,29 @@ interface CanvasContextMenuProps {
 
 export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
+
+	useLayoutEffect(() => {
+		if (isOpen && contextMenuRef.current) {
+			const menu = contextMenuRef.current;
+			const rect = menu.getBoundingClientRect();
+			const padding = 8;
+
+			let x = position.x;
+			let y = position.y;
+
+			if (x + rect.width > window.innerWidth - padding) {
+				x = window.innerWidth - rect.width - padding;
+			}
+			if (y + rect.height > window.innerHeight - padding) {
+				y = window.innerHeight - rect.height - padding;
+			}
+			if (x < padding) x = padding;
+			if (y < padding) y = padding;
+
+			menu.style.top = `${y}px`;
+			menu.style.left = `${x}px`;
+		}
+	}, [isOpen, position.x, position.y]);
 
 	useEffect(() => {
 		const handleClickOutside = (ev: MouseEvent) => {

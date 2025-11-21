@@ -2,13 +2,36 @@
 
 import { ContextMenuProps } from '@/lib/types';
 import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { GetCardTypeContextMenu } from '@/components/canvas/cards/CardComponentContextMenus';
 
 export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
 	const { setEditingCardId, deleteCard, bringToFront, sendToBack } = useCanvasStore();
+
+	useLayoutEffect(() => {
+		if (isOpen && contextMenuRef.current) {
+			const menu = contextMenuRef.current;
+			const rect = menu.getBoundingClientRect();
+			const padding = 8;
+
+			let x = data.position.x;
+			let y = data.position.y;
+
+			if (x + rect.width > window.innerWidth - padding) {
+				x = window.innerWidth - rect.width - padding;
+			}
+			if (y + rect.height > window.innerHeight - padding) {
+				y = window.innerHeight - rect.height - padding;
+			}
+			if (x < padding) x = padding;
+			if (y < padding) y = padding;
+
+			menu.style.top = `${y}px`;
+			menu.style.left = `${x}px`;
+		}
+	}, [isOpen, data.position.x, data.position.y]);
 
 	useEffect(() => {
 		const handleClickOutside = (ev: MouseEvent) => {
@@ -50,9 +73,9 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 		<div
 			ref={contextMenuRef}
 			className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[200px]"
-			style={{ 
-				top: `${data.position.y}px`, 
-				left: `${data.position.x}px` 
+			style={{
+				top: `${data.position.y}px`,
+				left: `${data.position.x}px`
 			}}
 		>
 			{data.card && (
