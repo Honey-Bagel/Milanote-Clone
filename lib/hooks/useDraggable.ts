@@ -35,7 +35,7 @@ export function useDraggable({
 	onDrag,
 	onDragEnd,
 	snapToGrid = false,
-	gridSize = 10,
+	gridSize = 20,
 	dragThreshold = 1,
 }: UseDraggableOptions) {
 	const {
@@ -178,25 +178,30 @@ export function useDraggable({
 
 				lastCanvasPosRef.current = currentCanvasPos;
 
-				const snapDelta = (value: number) =>
+				const snapPosition = (value: number) =>
 					snapToGrid ? Math.round(value / gridSize) * gridSize : value;
 
 				// Update card positions (these updates won't be recorded in history while paused)
 				const updates = cardsToMoveRef.current.map((id) => {
-					const currentCard = getCard(id);
-					
-					if (!currentCard) {
+					const initialPos = initialPositionsRef.current.get(id);
+
+					if (!initialPos) {
 						return { id, updates: {} };
 					}
 
-					const newX = currentCard.position_x + delta.x;
-					const newY = currentCard.position_y + delta.y;
+					// Calculate total delta from initial position
+					const totalDeltaX = lastCanvasPosRef.current.x - startPosRef.current.canvas.x;
+					const totalDeltaY = lastCanvasPosRef.current.y - startPosRef.current.canvas.y;
+
+					// Apply delta to initial position, then snap the absolute position
+					const newX = initialPos.x + totalDeltaX;
+					const newY = initialPos.y + totalDeltaY;
 
 					return {
 						id,
 						updates: {
-							position_x: snapDelta(newX),
-							position_y: snapDelta(newY),
+							position_x: snapPosition(newX),
+							position_y: snapPosition(newY),
 						},
 					};
 				});

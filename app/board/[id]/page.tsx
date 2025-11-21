@@ -31,7 +31,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
 				boardId={board.id}
 				boardTitle={board.title}
 				boardColor={board.color}
-				breadcrumbs={breadcrumbs}
+				initialBreadcrumbs={breadcrumbs}
 			/>
 			<main className="flex-1 overflow-hidden">
 

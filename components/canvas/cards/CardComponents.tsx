@@ -45,7 +45,7 @@ export function NoteCardComponent({
 				if (card.id === 'preview-card') return;
 				await updateCardContent(card.id, 'note', {
 					content,
-				});
+				}, card.board_id);
 			} catch (error) {
 				console.error('Failed to update note:', error);
 			}
@@ -229,7 +229,7 @@ export function ImageCardComponent({
 					image_url,
 					caption,
 					alt_text,
-				});
+				}, card.board_id);
 			} catch (error) {
 				console.error('Failed to update image card:', error);
 			}
@@ -392,7 +392,7 @@ export function TextCardComponent({
 				await updateCardContent(card.id, 'text', {
 					title,
 					content,
-				});
+				}, card.board_id);
 			} catch (error) {
 				console.error('Failed to update text card:', error);
 			}
@@ -489,7 +489,7 @@ export function TaskListCardComponent({
 			try {
 				await updateCardContent(card.id, 'task_list', {
 					title,
-				});
+				}, card.board_id);
 			} catch (error) {
 				console.error('Failed to update task list title:', error);
 			}
@@ -502,7 +502,7 @@ export function TaskListCardComponent({
 			try {
 				await updateCardContent(card.id, 'task_list', {
 					tasks,
-				});
+				}, card.board_id);
 			} catch (error) {
 				console.error('Failed to update tasks:', error);
 			}
@@ -763,7 +763,7 @@ export function LinkCardComponent({
 					title,
 					url,
 					favicon_url,
-				});
+				}, card.board_id);
 			} catch (error) {
 				console.error('Failed to update link card:', error);
 			}
@@ -940,7 +940,7 @@ export function ColorPaletteCardComponent({
 					title,
 					description,
 					colors,
-				});
+				}, card.board_id);
 			} catch (error) {
 				console.error('Failed to update color palette:', error);
 			}
@@ -1181,7 +1181,7 @@ export function ColumnCardComponent({
 					updateData.column_items = column_items;
 				}
 
-				await updateCardContent(card.id, 'column', updateData);
+				await updateCardContent(card.id, 'column', updateData, card.board_id);
 			} catch (error) {
 				console.error('Failed to update column:', error);
 			}
@@ -1693,13 +1693,13 @@ export function BoardCardComponent({
 	const [newBoardColor, setNewBoardColor] = useState('#3B82F6');
 
 	const debouncedSave = useDebouncedCallback(
-		async (linked_board_id: string, board_title: string, board_color: string) => {
+		async (linked_board_id: string, board_title: string, board_color: string, expectedBoardId: string) => {
 			try {
 				await updateCardContent(card.id, 'board', {
 					linked_board_id,
 					board_title,
 					board_color,
-				});
+				}, expectedBoardId);
 			} catch (error) {
 				console.error('Failed to update board card:', error);
 			}
@@ -1809,7 +1809,7 @@ export function BoardCardComponent({
 			},
 		});
 		
-		debouncedSave(card.board_cards.linked_board_id, newTitle, card.board_cards.board_color);
+		debouncedSave(card.board_cards.linked_board_id, newTitle, card.board_cards.board_color, card.board_id);
 	};
 
 	const handleNavigateToBoard = (e: React.MouseEvent) => {

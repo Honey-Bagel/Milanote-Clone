@@ -147,20 +147,40 @@ export async function updateCardTransform(
 
 /**
  * Update type-specific card content
+ * @param expectedBoardId - If provided, validates that the card belongs to this board before updating
 */
 export async function updateCardContent(
 	cardId: string,
 	cardType: Card["card_type"],
-	content: any
+	content: any,
+	expectedBoardId?: string
 ) {
 	const supabase = createClient();
+
+	// Validate board ownership if expectedBoardId provided
+	if (expectedBoardId) {
+		const { data: card, error: fetchError } = await supabase
+			.from("cards")
+			.select("board_id")
+			.eq("id", cardId)
+			.single();
+
+		if (fetchError) {
+			console.error("Error fetching card for board validation:", fetchError);
+			throw fetchError;
+		}
+
+		if (card?.board_id !== expectedBoardId) {
+			throw new Error("Card does not belong to the current board");
+		}
+	}
 
 	const tableName = `${cardType}_cards`;
 	const { error } = await supabase
 		.from(tableName as any)
 		.update(content)
 		.eq("id", cardId);
-	
+
 	if (error) {
 		console.error(`Error updating ${cardType} card content:`, error);
 		throw error;

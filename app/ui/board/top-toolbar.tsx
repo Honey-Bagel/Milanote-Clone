@@ -2,11 +2,12 @@
 
 import { ChevronDown, Minus, Plus, Maximize2, Share2, MoreHorizontal, Settings, Home } from 'lucide-react';
 import ShareModal from './share-modal';
-import { Fragment, useState, useEffect } from 'react';
+import { Fragment, useState, useMemo } from 'react';
 import SettingsModal from '../home/settings-modal';
 import Link from 'next/link';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { RealtimeAvatarStack } from '@/components/realtime-avatar-stack';
+import { useBreadcrumbs } from '@/lib/hooks/useBreadcrumbs';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -27,33 +28,29 @@ type TopToolbarProps = {
 	boardId: string;
 	boardTitle: string;
 	boardColor?: string;
-	breadcrumbs?: BreadcrumbItemType[];
+	initialBreadcrumbs?: BreadcrumbItemType[];
 };
 
 export default function TopToolbar({
 	boardId,
 	boardTitle,
 	boardColor,
-	breadcrumbs = []
+	initialBreadcrumbs = []
 }: TopToolbarProps) {
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 	const { viewport, zoomIn, zoomOut, zoomToFit } = useCanvasStore();
-	const [newBreadcrumbs, setNewBreadcrumbs] = useState<BreadcrumbItemType[]>(breadcrumbs);
-	const [isBreadcrumbsCondensed, setIsBreadcrumbsCondensed] = useState(false);
 
-	useEffect(() => {
+	const { breadcrumbs } = useBreadcrumbs(boardId, initialBreadcrumbs);
 
-		const checkLength = async () => {
-			if (breadcrumbs.length > 4) {
-				const temp = [...breadcrumbs];
-				temp.splice(1, temp.length - 4)
-				setNewBreadcrumbs(temp);
-				setIsBreadcrumbsCondensed(true);
-			}
+	const { displayBreadcrumbs, isBreadcrumbsCondensed } = useMemo(() => {
+		if (breadcrumbs.length > 4) {
+			const temp = [...breadcrumbs];
+			temp.splice(1, temp.length - 4);
+			return { displayBreadcrumbs: temp, isBreadcrumbsCondensed: true };
 		}
-		checkLength();
-	}, [breadcrumbs, setNewBreadcrumbs]);
+		return { displayBreadcrumbs: breadcrumbs, isBreadcrumbsCondensed: false };
+	}, [breadcrumbs]);
 
 	return (
 		<>
@@ -75,8 +72,8 @@ export default function TopToolbar({
 							</BreadcrumbItem>
 
 							{/* Parent Boards */}
-							{newBreadcrumbs.map((crumb, index) => {
-								const isLast = index === newBreadcrumbs.length - 1;
+							{displayBreadcrumbs.map((crumb: BreadcrumbItemType, index: number) => {
+								const isLast = index === displayBreadcrumbs.length - 1;
 
 								return (
 									<Fragment key={`bc-${crumb.id}`}>
