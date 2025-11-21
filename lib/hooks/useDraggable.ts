@@ -5,6 +5,8 @@
  * 1. When dragging a card INTO a column -> add to column_items
  * 2. When dragging a card OUT of a column -> remove from column_items  
  * 3. Cards remain independent CanvasElements always
+ * 
+ * FIXED: Now pauses history tracking during drag to prevent recording every position change
  */
 
 import { useRef, useCallback, useState, useEffect } from 'react';
@@ -13,6 +15,7 @@ import { screenToCanvas } from '@/lib/utils/transform';
 import { updateCardTransform, addCardToColumn, removeCardFromColumn } from '@/lib/data/cards-client';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import type { Card } from '@/lib/types';
+import { useCanvasHistory } from '@/lib/stores/canvas-store';
 
 interface UseDraggableOptions {
 	card: Card;
@@ -48,6 +51,7 @@ export function useDraggable({
 		cards,
 		setDragPreview
 	} = useCanvasStore();
+	const { pastStates } = useCanvasHistory();
 
 	const [isDragging, setIsDragging] = useState(false);
 	const isDraggingRef = useRef(false);
@@ -61,6 +65,7 @@ export function useDraggable({
 	const cardsToMoveRef = useRef<string[]>([]);
 	const zIndexUpdatesRef = useRef<Map<string, number>>(new Map());
 	const startingColumnRef = useRef<string | null>(null); // Track which column card started in
+	const preDragStateRef = useRef<Map<string, Card> | null>(null); // Store pre-drag card state
 	const cardId = card.id;
 	const canvas = document.querySelector('div.canvas-viewport');
 
@@ -102,7 +107,12 @@ export function useDraggable({
 				startingColumnRef.current = findCardColumn(cardsToMoveRef.current[0]);
 			}
 
-			// Bring cards to front
+			// Save pre-drag state and pause history before z-index update
+			// This ensures z-index changes are bundled with the drag
+			preDragStateRef.current = new Map(useCanvasStore.getState().cards);
+			useCanvasStore.temporal.getState().pause();
+
+			// Bring cards to front (now happens while history is paused)
 			zIndexUpdatesRef.current = bringCardsToFrontOnInteraction(cardsToMoveRef.current);
 
 			isDraggingRef.current = false;
@@ -171,7 +181,7 @@ export function useDraggable({
 				const snapDelta = (value: number) =>
 					snapToGrid ? Math.round(value / gridSize) * gridSize : value;
 
-				// Update card positions
+				// Update card positions (these updates won't be recorded in history while paused)
 				const updates = cardsToMoveRef.current.map((id) => {
 					const currentCard = getCard(id);
 					
@@ -223,6 +233,28 @@ export function useDraggable({
 				const wasDragging = isDraggingRef.current;
 				const potentialTarget = useCanvasStore.getState().potentialColumnTarget;
 				const startingColumn = startingColumnRef.current;
+
+				// ============================================================================
+				// Handle history based on whether user actually dragged
+				const temporal = useCanvasStore.temporal.getState();
+
+				if (wasDragging && preDragStateRef.current) {
+					// User actually dragged - add pre-drag state to history
+					const currentState = useCanvasStore.getState();
+					const preDragPartialState = {
+						cards: preDragStateRef.current,
+						viewport: currentState.viewport
+					};
+
+					temporal.pastStates.push(preDragPartialState);
+					temporal.futureStates.length = 0;
+					temporal.resume();
+					preDragStateRef.current = null;
+				} else if (preDragStateRef.current) {
+					// User just clicked (didn't drag) - resume without creating history
+					temporal.resume();
+					preDragStateRef.current = null;
+				}
 				
 				// Clear dragging state immediately
 				isDraggingRef.current = false;
@@ -241,7 +273,7 @@ export function useDraggable({
 					if (draggedCard && draggedCard.card_type !== 'column') {
 						// Case 1: Dropped onto a column
 						if (potentialTarget) {
-							const targetColumn = getCard(potentialTarget) as ColumnCard | undefined;
+							const targetColumn = getCard(potentialTarget) as any; // ColumnCard type
 							
 							if (targetColumn) {
 								try {
@@ -250,11 +282,11 @@ export function useDraggable({
 										await removeCardFromColumn(startingColumn, draggedCardId);
 										
 										// Update local state for starting column
-										const startCol = getCard(startingColumn) as ColumnCard;
+										const startCol = getCard(startingColumn) as any;
 										if (startCol) {
 											const updatedItems = (startCol.column_cards.column_items || [])
-												.filter(item => item.card_id !== draggedCardId)
-												.map((item, index) => ({ ...item, position: index }));
+												.filter((item: any) => item.card_id !== draggedCardId)
+												.map((item: any, index: number) => ({ ...item, position: index }));
 											
 											updateCard(startingColumn, {
 												...startCol,
@@ -286,25 +318,25 @@ export function useDraggable({
 												column_items: updatedColumnItems
 											}
 										});
-										
-										console.log(`Added card ${draggedCardId} to column ${potentialTarget}`);
 									}
 								} catch (error) {
-									console.error('Failed to update column membership:', error);
+									console.error('Failed to move card between columns:', error);
 								}
 							}
+							
+							setPotentialColumnTarget(null);
 						}
-						// Case 2: Dragged out of column (no overlap with any column)
+						// Case 2: Card was in a column but dropped outside
 						else if (startingColumn) {
 							try {
 								await removeCardFromColumn(startingColumn, draggedCardId);
 								
 								// Update local state
-								const startCol = getCard(startingColumn) as ColumnCard;
+								const startCol = getCard(startingColumn) as any;
 								if (startCol) {
 									const updatedItems = (startCol.column_cards.column_items || [])
-										.filter(item => item.card_id !== draggedCardId)
-										.map((item, index) => ({ ...item, position: index }));
+										.filter((item: any) => item.card_id !== draggedCardId)
+										.map((item: any, index: number) => ({ ...item, position: index }));
 									
 									updateCard(startingColumn, {
 										...startCol,
@@ -314,8 +346,6 @@ export function useDraggable({
 										}
 									});
 								}
-								
-								console.log(`Removed card ${draggedCardId} from column ${startingColumn}`);
 							} catch (error) {
 								console.error('Failed to remove card from column:', error);
 							}
@@ -323,14 +353,45 @@ export function useDraggable({
 					}
 				}
 
-				// Clear potential target
-				setPotentialColumnTarget(null);
-				startingColumnRef.current = null;
-
+				// ============================================================================
+				// SYNC TO DATABASE
+				// ============================================================================
 				if (wasDragging) {
-					const card = getCard(cardId);
-					if (card) {
-						onDragEnd?.({ x: card.position_x, y: card.position_y });
+					// Calculate final position delta from initial
+					const finalDelta = {
+						x: lastCanvasPosRef.current.x - startPosRef.current.canvas.x,
+						y: lastCanvasPosRef.current.y - startPosRef.current.canvas.y,
+					};
+
+					onDragEnd?.(finalDelta);
+
+					// Reset to initial position stored
+					if (initialPositionsRef.current.size > 0) {
+						const firstCard = getCard(cardsToMoveRef.current[0]);
+						if (firstCard) {
+							const initialPos = initialPositionsRef.current.get(cardsToMoveRef.current[0]);
+							if (initialPos) {
+								finalDelta.x = firstCard.position_x - initialPos.x;
+								finalDelta.y = firstCard.position_y - initialPos.y;
+							}
+						}
+					}
+
+					// Only sync positions that actually changed
+					if (Math.abs(finalDelta.x) > 0.1 || Math.abs(finalDelta.y) > 0.1) {
+						const initialPos = initialPositionsRef.current.get(cardsToMoveRef.current[0]);
+						if (initialPos) {
+							const card = getCard(cardsToMoveRef.current[0]);
+							if (card) {
+								const hasMoved = 
+									Math.abs(card.position_x - initialPos.x) > 0.1 ||
+									Math.abs(card.position_y - initialPos.y) > 0.1;
+								
+								if (!hasMoved) {
+									return;
+								}
+							}
+						}
 						
 						// Sync moved cards to Supabase
 						cardsToMoveRef.current.forEach(async (id) => {

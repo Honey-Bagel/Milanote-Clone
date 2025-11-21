@@ -1,12 +1,117 @@
 /**
  * useKeyboardShortcuts Hook
- * 
+ *
  * Handles all keyboard shortcuts for the canvas
  * Updated to work with Zundo undo/redo
  */
 
 import { useEffect } from 'react';
 import { useCanvasStore, useCanvasHistory } from '../stores/canvas-store';
+import { updateCardTransform, updateCardContent } from '../data/cards-client';
+import type { Card } from '../types';
+
+/**
+ * Sync cards to database after undo/redo
+ * Compares old and new state and persists any changes
+ */
+async function syncCardsToDatabase(
+	oldCards: Map<string, Card>,
+	newCards: Map<string, Card>
+) {
+	const promises: Promise<void>[] = [];
+
+	for (const [id, newCard] of newCards) {
+		const oldCard = oldCards.get(id);
+		if (!oldCard) continue;
+
+		// Check for transform changes (position, size, z-index)
+		const transformChanged =
+			oldCard.position_x !== newCard.position_x ||
+			oldCard.position_y !== newCard.position_y ||
+			oldCard.width !== newCard.width ||
+			oldCard.height !== newCard.height ||
+			oldCard.order_key !== newCard.order_key;
+
+		if (transformChanged) {
+			promises.push(
+				updateCardTransform(id, {
+					position_x: newCard.position_x,
+					position_y: newCard.position_y,
+					width: newCard.width,
+					height: newCard.height ?? undefined,
+					order_key: newCard.order_key,
+				})
+			);
+		}
+
+		// Check for content changes based on card type
+		if (newCard.card_type === 'note' && oldCard.card_type === 'note') {
+			if (oldCard.note_cards.content !== newCard.note_cards.content ||
+				oldCard.note_cards.color !== newCard.note_cards.color) {
+				promises.push(
+					updateCardContent(id, 'note', {
+						content: newCard.note_cards.content,
+						color: newCard.note_cards.color,
+					})
+				);
+			}
+		} else if (newCard.card_type === 'text' && oldCard.card_type === 'text') {
+			if (oldCard.text_cards.content !== newCard.text_cards.content ||
+				oldCard.text_cards.title !== newCard.text_cards.title) {
+				promises.push(
+					updateCardContent(id, 'text', {
+						content: newCard.text_cards.content,
+						title: newCard.text_cards.title,
+					})
+				);
+			}
+		} else if (newCard.card_type === 'link' && oldCard.card_type === 'link') {
+			if (oldCard.link_cards.url !== newCard.link_cards.url ||
+				oldCard.link_cards.title !== newCard.link_cards.title) {
+				promises.push(
+					updateCardContent(id, 'link', {
+						url: newCard.link_cards.url,
+						title: newCard.link_cards.title,
+					})
+				);
+			}
+		} else if (newCard.card_type === 'task_list' && oldCard.card_type === 'task_list') {
+			if (oldCard.task_list_cards.title !== newCard.task_list_cards.title ||
+				JSON.stringify(oldCard.task_list_cards.tasks) !== JSON.stringify(newCard.task_list_cards.tasks)) {
+				promises.push(
+					updateCardContent(id, 'task_list', {
+						title: newCard.task_list_cards.title,
+						tasks: newCard.task_list_cards.tasks,
+					})
+				);
+			}
+		} else if (newCard.card_type === 'image' && oldCard.card_type === 'image') {
+			if (oldCard.image_cards.caption !== newCard.image_cards.caption ||
+				oldCard.image_cards.alt_text !== newCard.image_cards.alt_text) {
+				promises.push(
+					updateCardContent(id, 'image', {
+						caption: newCard.image_cards.caption,
+						alt_text: newCard.image_cards.alt_text,
+					})
+				);
+			}
+		} else if (newCard.card_type === 'column' && oldCard.card_type === 'column') {
+			if (oldCard.column_cards.title !== newCard.column_cards.title) {
+				promises.push(
+					updateCardContent(id, 'column', {
+						title: newCard.column_cards.title,
+					})
+				);
+			}
+		}
+	}
+
+	try {
+		await Promise.all(promises);
+	} catch (error) {
+		console.error('Failed to sync undo/redo changes:', error);
+	}
+}
 
 interface UseKeyboardShortcutsOptions {
 	/**
@@ -116,7 +221,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 			// Undo: Cmd/Ctrl + Z
 			if (isMod && e.key === 'z' && !e.shiftKey && !isEditing) {
 				e.preventDefault();
+				const oldCards = new Map(useCanvasStore.getState().cards);
 				undo();
+				const newCards = useCanvasStore.getState().cards;
+				syncCardsToDatabase(oldCards, newCards);
 				return;
 			}
 
@@ -126,7 +234,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 				!isEditing
 			) {
 				e.preventDefault();
+				const oldCards = new Map(useCanvasStore.getState().cards);
 				redo();
+				const newCards = useCanvasStore.getState().cards;
+				syncCardsToDatabase(oldCards, newCards);
 				return;
 			}
 

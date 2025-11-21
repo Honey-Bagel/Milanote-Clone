@@ -5,6 +5,8 @@ import { X, User, Settings as SettingsIcon, LogOut, Bell, Palette, Lock } from '
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ThemeSwitcherList } from '@/components/ui/theme-switcher';
+import Image from 'next/image';
+import { Input } from '@/components/ui/input';
 
 interface SettingsModalProps {
 	isOpen: boolean;
@@ -16,7 +18,7 @@ type TabType = 'profile' | 'preferences' | 'account';
 interface UserProfile {
 	id: string;
 	email: string;
-	full_name: string | null;
+	display_name: string | null;
 	avatar_url: string | null;
 }
 
@@ -31,7 +33,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 	const modalRef = useRef<HTMLDivElement | null>(null);
 
 	// Form states
-	const [fullName, setFullName] = useState('');
+	const [displayName, setDisplayName] = useState('');
 	const [avatarUrl, setAvatarUrl] = useState('');
 	const [currentPassword, setCurrentPassword] = useState('');
 	const [newPassword, setNewPassword] = useState('');
@@ -73,12 +75,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 			const userProfile: UserProfile = {
 				id: user.id,
 				email: user.email || '',
-				full_name: profile?.full_name || user.user_metadata?.full_name || null,
+				display_name: profile?.display_name || user.user_metadata?.full_name || null,
 				avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || null,
 			};
 
 			setUserProfile(userProfile);
-			setFullName(userProfile.full_name || '');
+			setDisplayName(userProfile.display_name || '');
 			setAvatarUrl(userProfile.avatar_url || '');
 		} catch (error) {
 			console.error('Error fetching profile:', error);
@@ -104,7 +106,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 				.from('profiles')
 				.upsert({
 					id: user.id,
-					full_name: fullName,
+					display_name: displayName,
 					avatar_url: avatarUrl,
 					updated_at: new Date().toISOString(),
 				});
@@ -116,7 +118,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 			// Update auth metadata
 			const { error: metadataError } = await supabase.auth.updateUser({
 				data: {
-					full_name: fullName,
+					display_name: displayName,
 					avatar_url: avatarUrl,
 				},
 			});
@@ -213,7 +215,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
 	return (
 		<div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-			<div ref={modalRef} className="bg-[var(--background)] rounded-xl shadow-2xl w-full max-w-2xl h-[90vh] overflow-hidden flex flex-col">
+			<div ref={modalRef} className="bg-[var(--background)] rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] overflow-hidden flex flex-col">
 				{/* Header */}
 				<div className="flex items-center justify-between p-6 border-b border-[var(--border)]">
 					<h2 className="text-2xl font-bold text-[var(--foreground)]">Settings</h2>
@@ -298,42 +300,36 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 											
 											{/* Avatar */}
 											<div className="mb-6">
-												<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-													Profile Picture
-												</label>
-												<div className="flex items-center gap-4">
-													<div className="w-20 h-20 rounded-full bg-[var(--secondary)] flex items-center justify-center overflow-hidden">
-														{avatarUrl ? (
-															<img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-														) : (
-															<User className="w-10 h-10 text-[var(--muted)]" />
-														)}
+												<div className="flex flex-row space-x-6">
+													<div className="flex flex-col">
+														<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+															Profile Picture
+														</label>
+														<div className="flex items-center gap-4">
+															<div className="w-20 h-20 rounded-full bg-[var(--secondary)] flex items-center justify-center overflow-hidden">
+																{avatarUrl ? (
+																	<Image src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+																) : (
+																	<User className="w-10 h-10 text-[var(--muted)]" />
+																)}
+															</div>
+														</div>
 													</div>
-													<div className="flex-1">
-														<input
-															type="url"
-															value={avatarUrl}
-															onChange={(e) => setAvatarUrl(e.target.value)}
-															placeholder="https://example.com/avatar.jpg"
-															className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--input)] text-[var(--foreground)] rounded-lg focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none text-sm"
-														/>
-														<p className="text-xs text-[var(--muted)] mt-1">Enter a URL for your profile picture</p>
+
+													<div className="flex flex-col">
+														{/* Display Name */}
+														<div className="flex flex-col">
+															<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+																Display Name
+															</label>
+															<Input
+																type="text"
+																value={displayName}
+																onChange={(e) => setDisplayName(e.target.value)}
+															/>
+														</div>
 													</div>
 												</div>
-											</div>
-
-											{/* Full Name */}
-											<div className="mb-4">
-												<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-													Full Name
-												</label>
-												<input
-													type="text"
-													value={fullName}
-													onChange={(e) => setFullName(e.target.value)}
-													placeholder="Enter your name"
-													className="w-full px-3 py-2 border border-[var(--border)] bg-[var(--input)] text-[var(--foreground)] rounded-lg focus:ring-2 focus:ring-[var(--ring)] focus:border-transparent outline-none"
-												/>
 											</div>
 
 											{/* Email (Read-only) */}

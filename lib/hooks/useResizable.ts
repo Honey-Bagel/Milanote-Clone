@@ -1,7 +1,7 @@
 /**
- * useResizable Hook
+ * useResizable Hook - With Manual History Tracking
  * 
- * Handles resizing cards and syncing to Supabase
+ * Only creates history entries when you explicitly save after resize completes
  */
 
 import { useCallback, useState, useRef } from "react";
@@ -34,7 +34,7 @@ export function useResizable({
 	onResize,
 	onResizeEnd,
 }: UseResizableOptions) {
-	const { getCard, updateCard, viewport, setIsResizing } = useCanvasStore();
+	const { getCard, updateCard, viewport, setIsResizing, saveStateToHistory } = useCanvasStore();
 	const [isResizing, setLocalIsResizing] = useState(false);
 	
 	const startPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -48,18 +48,15 @@ export function useResizable({
 		const card = getCard(cardId);
 		if (!card) return;
 
-		// Get default data per card type
 		const { minWidth, minHeight, defaultHeight, canResize, keepAspectRatio: maintainAspectRatio } = getDefaultCardDimensions(card.card_type);
 
-		// Store initial state
 		const startCanvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
 		startPosRef.current = startCanvasPos;
 		startDimensionsRef.current = {
 			width: card.width,
-			height: card.height || null,
+			height: card.height || 0,
 		};
 		
-		// Calculate aspect ratio if needed
 		if (maintainAspectRatio) {
 			aspectRatioRef.current = card.width / (card.height || minHeight);
 		}
@@ -71,7 +68,6 @@ export function useResizable({
 		const handleMouseMove = (e: MouseEvent) => {
 			const currentCanvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
 			
-			// Calculate deltas based on handle direction
 			let deltaX = 0;
 			let deltaY = 0;
 			
@@ -88,11 +84,10 @@ export function useResizable({
 				deltaY = startPosRef.current.y - currentCanvasPos.y;
 			}
 
-			// Calculate new dimensions
 			let newWidth = Math.max(minWidth, Math.min(maxWidth, startDimensionsRef.current.width + deltaX));
-			let newHeight = defaultHeight ? Math.max(minHeight, Math.min(maxHeight, startDimensionsRef.current.height + deltaY)) : null;
+			let newHeight = defaultHeight ?
+				Math.max(minHeight, Math.min(maxHeight, startDimensionsRef.current.height + deltaY)) : null;
 
-			// Maintain aspect ratio if needed
 			if (maintainAspectRatio) {
 				if (Math.abs(deltaX) > Math.abs(deltaY)) {
 					newHeight = newWidth / aspectRatioRef.current;
@@ -101,7 +96,6 @@ export function useResizable({
 				}
 			}
 
-			// Handle position changes for north/west handles
 			let newX = card.position_x;
 			let newY = card.position_y;
 			
@@ -112,7 +106,6 @@ export function useResizable({
 				newY = card.position_y - (newHeight - (card.height || minHeight));
 			}
 
-			// Update card in store
 			updateCard(cardId, {
 				...card,
 				width: newWidth,
@@ -132,19 +125,30 @@ export function useResizable({
 
 			document.removeEventListener('mousemove', handleMouseMove);
 			document.removeEventListener('mouseup', handleMouseUp);
+			
 			if (card) {
 				onResizeEnd?.(card.width, card.height);
 
-				// Sync to database
-				try {
-					await updateCardTransform(cardId, {
-						width: card.width,
-						height: card.height,
-						position_x: card.position_x,
-						position_y: card.position_y,
-					});
-				} catch (error) {
-					console.error('Failed to sync card dimensions:', error);
+				// Check if size actually changed
+				const sizeChanged = 
+					Math.abs(card.width - startDimensionsRef.current.width) > 1 ||
+					Math.abs((card.height || 0) - startDimensionsRef.current.height) > 1;
+
+				if (sizeChanged) {
+					// 🔧 Manually save to history after resize
+					saveStateToHistory();
+
+					// Sync to database
+					try {
+						await updateCardTransform(cardId, {
+							width: card.width,
+							height: card.height,
+							position_x: card.position_x,
+							position_y: card.position_y,
+						});
+					} catch (error) {
+						console.error('Failed to sync card dimensions:', error);
+					}
 				}
 			}
 		};
@@ -163,6 +167,7 @@ export function useResizable({
 		onResizeStart,
 		onResize,
 		onResizeEnd,
+		saveStateToHistory, // 🔧 Include in dependencies
 	]);
 
 	return {

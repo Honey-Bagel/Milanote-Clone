@@ -28,16 +28,16 @@ import { CardRenderer } from './CardRenderer';
 // NOTE CARD - WITH TIPTAP
 // ============================================================================
 
-export function NoteCardComponent({ 
-	card, 
+export function NoteCardComponent({
+	card,
 	isEditing,
 	onEditorReady
-}: { 
-	card: NoteCard; 
+}: {
+	card: NoteCard;
 	isEditing: boolean;
 	onEditorReady?: (editor: TipTapEditor) => void;
 }) {
-	const { updateCard, setEditingCardId } = useCanvasStore();
+	const { updateCard, setEditingCardId, isDragging } = useCanvasStore();
 
 	const debouncedSave = useDebouncedCallback(
 		async (content: string) => {
@@ -84,8 +84,13 @@ export function NoteCardComponent({
 			},
 		},
 		onUpdate: ({ editor }) => {
+			// Don't update during drag to prevent interference with undo/redo
+			if (isDragging) {
+				return;
+			}
+
 			const html = editor.getHTML();
-			
+
 			// Update local state
 			updateCard(card.id, {
 				...card,
@@ -724,7 +729,6 @@ export function LinkCardComponent({
 			if (fullURL === null) return;
 			const domain = new URL(fullURL).hostname;
 			setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=64`);
-			console.log('test');
 		};
 
 		getFaviconUrl();

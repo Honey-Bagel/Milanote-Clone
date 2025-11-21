@@ -1,7 +1,7 @@
-import { create } from 'zustand';
+import { create, useStore } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { devtools } from 'zustand/middleware';
-import { temporal } from 'zundo';
+import { temporal, TemporalState } from 'zundo';
 import { enableMapSet } from 'immer';
 import type { Card } from '@/lib/types';
 import { deleteCard as deleteCardFromDB } from '@/lib/data/cards-client';
@@ -57,7 +57,7 @@ export interface DragPreviewState {
 interface CanvasState {
 	// Data - using your Card type from types.ts
 	cards: Map<string, Card>;
-	
+
 	// Viewport
 	viewport: Viewport;
 
@@ -79,6 +79,9 @@ interface CanvasState {
 	// Visual states
 	showGrid: boolean;
 	dragPreview: DragPreviewState | null;
+
+	// History tracking for edits
+	_preEditCards: Map<string, Card> | null;
 
 	// ============================================================================
 	// CARD ACTIONS
@@ -180,13 +183,36 @@ export const useCanvasStore = create<CanvasState>()(
 				potentialColumnTarget: null,
 				snapToGrid: false,
 				dragPreview: null,
+				_preEditCards: null,
 
 				// ============================================================================
 				// CARD ACTIONS
 				// ============================================================================
 
-				loadCards: (cards) =>
-						set({ cards: new Map(cards.map(c => [c.id, c])) }),
+				loadCards: (cards) => {
+					const temporal = useCanvasStore.temporal.getState();
+					const wasTracking = temporal.isTracking;
+
+					if (wasTracking) {
+						temporal.pause();
+					}
+
+					set({ cards: new Map(cards.map(c => [c.id, c])) })
+
+					if (wasTracking) {
+						temporal.resume();
+
+						setTimeout(() => {
+							const currentPastStates = temporal.pastStates;
+							if(currentPastStates.length > 0 && currentPastStates[currentPastStates.length - 1]) {
+								const lastState = currentPastStates[currentPastStates.length - 1];
+								if (lastState.cards?.size === cards.length) {
+									temporal.clear();
+								}
+							}
+						}, 0);
+					}
+				},
 
 				addCard: (card) =>
 					set((state) => {
@@ -396,10 +422,71 @@ export const useCanvasStore = create<CanvasState>()(
 						state.isResizing = isResizing;
 					}),
 
-				setEditingCardId: (id) =>
-					set((state) => {
-						state.editingCardId = id;
-					}),
+				setEditingCardId: (id) => {
+					const currentEditingId = get().editingCardId;
+					const temporal = useCanvasStore.temporal.getState();
+
+					// Starting to edit a card
+					if (id !== null && currentEditingId === null) {
+						set((state) => {
+							state._preEditCards = new Map(state.cards);
+							state.editingCardId = id;
+						});
+						temporal.pause();
+					}
+					// Stopping editing
+					else if (id === null && currentEditingId !== null) {
+						const preEditCards = get()._preEditCards;
+
+						if (preEditCards) {
+							const currentCards = get().cards;
+							const editedCard = currentCards.get(currentEditingId);
+							const originalCard = preEditCards.get(currentEditingId);
+
+							let contentChanged = false;
+							if (editedCard && originalCard) {
+								if (editedCard.card_type === 'note' && originalCard.card_type === 'note') {
+									contentChanged = editedCard.note_cards.content !== originalCard.note_cards.content ||
+										editedCard.note_cards.color !== originalCard.note_cards.color;
+								} else if (editedCard.card_type === 'text' && originalCard.card_type === 'text') {
+									contentChanged = editedCard.text_cards.content !== originalCard.text_cards.content ||
+										editedCard.text_cards.title !== originalCard.text_cards.title;
+								} else if (editedCard.card_type === 'link' && originalCard.card_type === 'link') {
+									contentChanged = editedCard.link_cards.url !== originalCard.link_cards.url ||
+										editedCard.link_cards.title !== originalCard.link_cards.title;
+								} else if (editedCard.card_type === 'task_list' && originalCard.card_type === 'task_list') {
+									contentChanged = editedCard.task_list_cards.title !== originalCard.task_list_cards.title ||
+										JSON.stringify(editedCard.task_list_cards.tasks) !== JSON.stringify(originalCard.task_list_cards.tasks);
+								} else if (editedCard.card_type === 'image' && originalCard.card_type === 'image') {
+									contentChanged = editedCard.image_cards.caption !== originalCard.image_cards.caption ||
+										editedCard.image_cards.alt_text !== originalCard.image_cards.alt_text;
+								} else if (editedCard.card_type === 'column' && originalCard.card_type === 'column') {
+									contentChanged = editedCard.column_cards.title !== originalCard.column_cards.title;
+								}
+							}
+
+							if (contentChanged) {
+								const preDragPartialState = {
+									cards: preEditCards,
+									viewport: get().viewport
+								};
+								temporal.pastStates.push(preDragPartialState);
+								temporal.futureStates.length = 0;
+							}
+						}
+
+						temporal.resume();
+						set((state) => {
+							state._preEditCards = null;
+							state.editingCardId = null;
+						});
+					}
+					else {
+						set((state) => {
+							state.editingCardId = id;
+						});
+					}
+				},
 
 				setSnapToGrid: (snapToGrid) =>
 					set((state) => {
@@ -530,7 +617,7 @@ export const useCanvasStore = create<CanvasState>()(
 								state.cards.set(cardId, {
 									...card,
 									order_key: orderKey,
-									// ⚠️ DUAL-WRITE
+									// DUAL-WRITE
 									z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
 								});
 							}
@@ -554,18 +641,23 @@ export const useCanvasStore = create<CanvasState>()(
 				
 				// Only track meaningful state changes - exclude transient UI states
 				partialize: (state) => {
-					const { 
-						isDragging, 
-						isPanning, 
-						isDrawingSelection, 
+					const {
+						isDragging,
+						isPanning,
+						isDrawingSelection,
 						isResizing,
 						dragPreview,
 						potentialColumnTarget,
-						...tracked 
+						snapToGrid,
+						showGrid,
+						selectionBox,
+						editingCardId,
+						selectedCardIds,
+						_preEditCards,
+						...tracked
 					} = state;
-					
-					// Track: cards, viewport, selectedCardIds, selectionBox, 
-					// editingCardId, snapToGrid, showGrid
+
+					// Track: cards, viewport
 					return tracked;
 				},
 
@@ -574,39 +666,78 @@ export const useCanvasStore = create<CanvasState>()(
 
 				// Use equality check to prevent storing duplicate states
 				equality: (pastState, currentState) => {
-					// Quick checks for size differences
 					if (pastState.cards.size !== currentState.cards.size) return false;
-					if (pastState.selectedCardIds.size !== currentState.selectedCardIds.size) return false;
-					
-					// Check viewport changes (with tolerance for floating point precision)
-					const viewportChanged = 
+
+					const viewportChanged =
 						Math.abs(pastState.viewport.x - currentState.viewport.x) > 0.1 ||
 						Math.abs(pastState.viewport.y - currentState.viewport.y) > 0.1 ||
 						Math.abs(pastState.viewport.zoom - currentState.viewport.zoom) > 0.001;
-					
+
 					if (viewportChanged) return false;
 
-					// Check if editing state changed
-					if (pastState.editingCardId !== currentState.editingCardId) return false;
-					
-					// Check if grid/snap settings changed
-					if (pastState.showGrid !== currentState.showGrid) return false;
-					if (pastState.snapToGrid !== currentState.snapToGrid) return false;
-
-					// Check selection box
-					const selectionBoxChanged = JSON.stringify(pastState.selectionBox) !== 
-						JSON.stringify(currentState.selectionBox);
-					if (selectionBoxChanged) return false;
-
-					// For cards Map - check if any card references changed
 					for (const [id, card] of pastState.cards) {
 						const currentCard = currentState.cards.get(id);
-						if (!currentCard || currentCard !== card) return false;
-					}
+						if (!currentCard) return false;
 
-					// For selected card IDs Set
-					for (const id of pastState.selectedCardIds) {
-						if (!currentState.selectedCardIds.has(id)) return false;
+						// Check position changes
+						if (
+							Math.abs(card.position_x - currentCard.position_x) > 0.1 ||
+							Math.abs(card.position_y - currentCard.position_y) > 0.1
+						) {
+							return false;
+						}
+
+						// Check dimension changes
+						if (card.width !== currentCard.width || card.height !== currentCard.height) {
+							return false;
+						}
+
+						// Check order key changes
+						if (card.order_key !== currentCard.order_key) return false;
+
+						// Check content changes based on card type
+						if (card.card_type === 'note' && currentCard.card_type === 'note') {
+							if (card.note_cards.content !== currentCard.note_cards.content ||
+								card.note_cards.color !== currentCard.note_cards.color) {
+								return false;
+							}
+						}
+
+						if (card.card_type === 'text' && currentCard.card_type === 'text') {
+							if (card.text_cards.content !== currentCard.text_cards.content ||
+								card.text_cards.title !== currentCard.text_cards.title) {
+								return false;
+							}
+						}
+
+						if (card.card_type === 'image' && currentCard.card_type === 'image') {
+							if (card.image_cards.image_url !== currentCard.image_cards.image_url ||
+								card.image_cards.caption !== currentCard.image_cards.caption ||
+								card.image_cards.alt_text !== currentCard.image_cards.alt_text) {
+								return false;
+							}
+						}
+
+						if (card.card_type === 'link' && currentCard.card_type === 'link') {
+							if (card.link_cards.url !== currentCard.link_cards.url ||
+								card.link_cards.title !== currentCard.link_cards.title) {
+								return false;
+							}
+						}
+
+						if (card.card_type === 'task_list' && currentCard.card_type === 'task_list') {
+							if (card.task_list_cards.title !== currentCard.task_list_cards.title ||
+								JSON.stringify(card.task_list_cards.tasks) !== JSON.stringify(currentCard.task_list_cards.tasks)) {
+								return false;
+							}
+						}
+
+						if (card.card_type === 'column' && currentCard.card_type === 'column') {
+							if (card.column_cards.title !== currentCard.column_cards.title ||
+								JSON.stringify(card.column_cards.column_items) !== JSON.stringify(currentCard.column_cards.column_items)) {
+								return false;
+							}
+						}
 					}
 
 					return true;
@@ -633,6 +764,12 @@ export const useCanvasStore = create<CanvasState>()(
 export const useCanvasHistory = () => {
 	return useCanvasStore.temporal.getState();
 };
+
+export const useTemporalStore = <T extends unknown>(
+	selector: (state: TemporalState<CanvasState>) => T,
+	equality?: (a: T, b: T) => boolean,
+) => useStore(useCanvasStore.temporal, selector, equality);
+
 
 /**
  * Hook to reactively check if undo/redo is available

@@ -2,6 +2,8 @@
 
 import { LucideIcon } from 'lucide-react';
 import { Card } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
+import { Button } from './button';
 
 interface DraggableToolbarButtonProps {
 	icon: LucideIcon;
@@ -29,18 +31,27 @@ export function DraggableToolbarButton({
 	};
 
 	return (
-		<button
-			draggable
-			onDragStart={handleDragStart}
-			onDragEnd={handleDragEnd}
-			onClick={onClick}
-			className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors cursor-grab active:cursor-grabbing"
-		style={{
-		outline: "none"
-		}}
-			title={title}
-		>
-			<Icon className="w-4 h-4" />
-		</button>
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<Button
+					draggable
+					onDragStart={handleDragStart}
+					onDragEnd={handleDragEnd}
+					onClick={onClick}
+					variant={"ghost"}
+					size={"sm"}
+					className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-gray-200 transition-colors cursor-grab active:cursor-grabbing"
+					style={{
+					outline: "none"
+					}}
+						title={title}
+					>
+					<Icon className="w-4 h-4" />
+				</Button>
+			</TooltipTrigger>
+			<TooltipContent>
+				<p>{title}</p>
+			</TooltipContent>
+		</Tooltip>
 	);
 }
