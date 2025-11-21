@@ -61,6 +61,12 @@ export interface UploadingCard {
 	type: 'image' | 'file';
 }
 
+export interface OptimisticCard {
+	tempId: string;
+	card: Card;
+	status: 'pending' | 'error';
+}
+
 // ============================================================================
 // STORE INTERFACE
 // ============================================================================
@@ -103,6 +109,9 @@ interface CanvasState {
 
 	// Uploading cards (loading state)
 	uploadingCards: Map<string, UploadingCard>;
+
+	// Optimistic cards (cards pending database confirmation)
+	optimisticCards: Map<string, OptimisticCard>;
 
 	// History tracking for edits
 	_preEditCards: Map<string, Card> | null;
@@ -182,6 +191,11 @@ interface CanvasState {
 	addUploadingCard: (card: UploadingCard) => void;
 	removeUploadingCard: (id: string) => void;
 
+	// Optimistic card actions
+	addOptimisticCard: (tempId: string, card: Card) => void;
+	confirmOptimisticCard: (tempId: string, realCard: Card) => void;
+	removeOptimisticCard: (tempId: string) => void;
+
 	// ============================================================================
 	// UTILITY ACTIONS
 	// ============================================================================
@@ -231,6 +245,7 @@ export const useCanvasStore = create<CanvasState>()(
 				snapToGrid: false,
 				dragPreview: null,
 				uploadingCards: new Map(),
+				optimisticCards: new Map(),
 				_preEditCards: null,
 
 				// ============================================================================
@@ -729,12 +744,40 @@ export const useCanvasStore = create<CanvasState>()(
 						state.uploadingCards.delete(id);
 					}),
 
+				// Optimistic card actions
+				addOptimisticCard: (tempId, card) =>
+					set((state) => {
+						state.optimisticCards.set(tempId, { tempId, card, status: 'pending' });
+					}),
+
+				confirmOptimisticCard: (tempId, realCard) =>
+					set((state) => {
+						state.optimisticCards.delete(tempId);
+						state.cards.set(realCard.id, realCard);
+						// If the optimistic card was selected, update selection to real ID
+						if (state.selectedCardIds.has(tempId)) {
+							state.selectedCardIds.delete(tempId);
+							state.selectedCardIds.add(realCard.id);
+						}
+					}),
+
+				removeOptimisticCard: (tempId) =>
+					set((state) => {
+						state.optimisticCards.delete(tempId);
+						state.selectedCardIds.delete(tempId);
+					}),
+
 				// ============================================================================
 				// UTILITY ACTIONS
 				// ============================================================================
 
 				getCard: (id) => {
-					return get().cards.get(id);
+					const state = get();
+					// Check regular cards first, then optimistic cards
+					const card = state.cards.get(id);
+					if (card) return card;
+					const optimistic = state.optimisticCards.get(id);
+					return optimistic?.card;
 				},
 
 				getSelectedCards: () => {

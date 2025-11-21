@@ -75,7 +75,14 @@ export function Canvas({
 		cancelConnection,
 		deleteConnection,
 		uploadingCards,
+		optimisticCards,
 	} = useCanvasStore();
+
+	// Merge real cards with optimistic cards for rendering
+	const allCardsMap = new Map(cards);
+	optimisticCards.forEach((optimistic) => {
+		allCardsMap.set(optimistic.tempId, optimistic.card);
+	});
 
 	// Mouse position tracking for connection preview
 	const [mousePosition, setMousePosition] = useState<Point | null>(null);
@@ -192,9 +199,9 @@ export function Canvas({
 	 * Helper to check if a card is inside any column
 	 */
 	const isCardInColumn = (cardId: string): boolean => {
-		const allCards = Array.from(cards.values());
-		return allCards.some(c => 
-			c.card_type === 'column' && 
+		const allCardsArray = Array.from(allCardsMap.values());
+		return allCardsArray.some(c =>
+			c.card_type === 'column' &&
 			c.column_cards?.column_items?.some(item => item.card_id === cardId)
 		);
 	};
@@ -203,10 +210,11 @@ export function Canvas({
 	 * Separate cards into:
 	 * - Column cards (will render their own children)
 	 * - Free cards (not in any column)
+	 * Uses allCardsMap which includes optimistic cards
 	 */
-	const allCards = getCanvasCards(cards);
+	const allCards = getCanvasCards(allCardsMap);
 	const columnCards = allCards.filter(c => c.card_type === 'column');
-	const freeCards = allCards.filter(c => 
+	const freeCards = allCards.filter(c =>
 		c.card_type !== 'column' && !isCardInColumn(c.id)
 	);
 

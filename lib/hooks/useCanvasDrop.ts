@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Card } from '@/lib/types';
-import { createCard } from '@/lib/data/cards-client';
+import { Card, ColumnCard } from '@/lib/types';
+import { createCard, addCardToColumn } from '@/lib/data/cards-client';
 import { createClient } from '@/lib/supabase/client';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { getDefaultCardDimensions } from '../utils';
+import { getCardRect } from '@/lib/utils/collision-detection';
 
 // Maximum file size before compression (1MB)
 const MAX_IMAGE_SIZE = 1024 * 1024;
@@ -84,9 +85,108 @@ async function compressImage(file: File): Promise<File> {
 	});
 }
 
+/**
+ * Find a column card at a given canvas position
+ */
+function findColumnAtPoint(
+	canvasX: number,
+	canvasY: number,
+	cards: Map<string, Card>
+): ColumnCard | null {
+	const columns: ColumnCard[] = [];
+
+	cards.forEach((card) => {
+		if (card.card_type === 'column') {
+			const rect = getCardRect(card);
+			// Check if point is inside the column bounds
+			if (
+				canvasX >= rect.x &&
+				canvasX <= rect.x + rect.width &&
+				canvasY >= rect.y &&
+				canvasY <= rect.y + rect.height
+			) {
+				columns.push(card as ColumnCard);
+			}
+		}
+	});
+
+	// Return the topmost column (highest order_key) if multiple overlap
+	if (columns.length === 0) return null;
+	return columns.sort((a, b) => a.order_key > b.order_key ? -1 : 1)[0];
+}
+
+/**
+ * Build an optimistic card object with default type-specific data
+ */
+function buildOptimisticCard(
+	id: string,
+	boardId: string,
+	cardType: Card['card_type'],
+	posX: number,
+	posY: number,
+	width: number,
+	height: number | null,
+	orderKey: string,
+	typeSpecificData: any,
+	timestamp: string
+): Card {
+	const baseCard = {
+		id,
+		board_id: boardId,
+		card_type: cardType,
+		position_x: posX,
+		position_y: posY,
+		width,
+		height,
+		z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+		order_key: orderKey,
+		created_by: null,
+		created_at: timestamp,
+		updated_at: timestamp,
+	};
+
+	// Build type-specific card structure
+	switch (cardType) {
+		case 'note':
+			return { ...baseCard, card_type: 'note', note_cards: typeSpecificData } as Card;
+		case 'image':
+			return { ...baseCard, card_type: 'image', image_cards: typeSpecificData } as Card;
+		case 'text':
+			return { ...baseCard, card_type: 'text', text_cards: typeSpecificData } as Card;
+		case 'task_list':
+			return { ...baseCard, card_type: 'task_list', task_list_cards: typeSpecificData } as Card;
+		case 'link':
+			return { ...baseCard, card_type: 'link', link_cards: typeSpecificData } as Card;
+		case 'file':
+			return { ...baseCard, card_type: 'file', file_cards: typeSpecificData } as Card;
+		case 'color_palette':
+			return { ...baseCard, card_type: 'color_palette', color_palette_cards: typeSpecificData } as Card;
+		case 'column':
+			return { ...baseCard, card_type: 'column', column_cards: { ...typeSpecificData, column_items: [] } } as Card;
+		case 'board':
+			return { ...baseCard, card_type: 'board', board_cards: typeSpecificData } as Card;
+		case 'line':
+			return { ...baseCard, card_type: 'line', line_cards: typeSpecificData } as Card;
+		default:
+			return baseCard as Card;
+	}
+}
+
 export function useCanvasDrop(boardId: string) {
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
-	const { addCard, viewport, getNewCardOrderKey, addUploadingCard, removeUploadingCard } = useCanvasStore();
+	const {
+		addCard,
+		viewport,
+		getNewCardOrderKey,
+		addUploadingCard,
+		removeUploadingCard,
+		cards,
+		updateCard,
+		setPotentialColumnTarget,
+		addOptimisticCard,
+		confirmOptimisticCard,
+		removeOptimisticCard
+	} = useCanvasStore();
 	const supabase = createClient();
 
 	const getDefaultCardData = (cardType: Card['card_type']) => {
@@ -294,18 +394,38 @@ export function useCanvasDrop(boardId: string) {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = 'copy';
 		setIsDraggingOver(true);
-	}, []);
+
+		// Check if dragging over a column for visual feedback
+		const cardType = e.dataTransfer.types.includes('cardtype')
+			? e.dataTransfer.getData('cardType')
+			: null;
+
+		// Only highlight columns for droppable card types
+		if (cardType !== 'column' && cardType !== 'line') {
+			const canvasElement = e.currentTarget as HTMLElement;
+			const rect = canvasElement.getBoundingClientRect();
+			const clientX = e.clientX - rect.left;
+			const clientY = e.clientY - rect.top;
+			const canvasX = (clientX - viewport.x) / viewport.zoom;
+			const canvasY = (clientY - viewport.y) / viewport.zoom;
+
+			const targetColumn = findColumnAtPoint(canvasX, canvasY, cards);
+			setPotentialColumnTarget(targetColumn?.id || null);
+		}
+	}, [viewport, cards, setPotentialColumnTarget]);
 
 	const handleDragLeave = useCallback((e: React.DragEvent) => {
 		// Only set to false if we're leaving the canvas entirely
 		if (e.currentTarget === e.target) {
 			setIsDraggingOver(false);
+			setPotentialColumnTarget(null);
 		}
-	}, []);
+	}, [setPotentialColumnTarget]);
 
 	const handleDrop = useCallback(async (e: React.DragEvent) => {
 		e.preventDefault();
 		setIsDraggingOver(false);
+		setPotentialColumnTarget(null);
 
 		// Check if the files are being dropped from computer
 		const files = e.dataTransfer.files;
@@ -318,33 +438,79 @@ export function useCanvasDrop(boardId: string) {
 		const cardType = e.dataTransfer.getData('cardType') as Card['card_type'];
 		if (!cardType) return;
 
+		// Don't allow dropping columns into columns
+		if (cardType === 'column' || cardType === 'line') {
+			// These card types should not be dropped into columns, handle normally
+		}
+
 		const { defaultWidth, defaultHeight, minHeight } = getDefaultCardDimensions(cardType);
 
 		// Get the canvas element to calculate relative position
 		const canvasElement = e.currentTarget as HTMLElement;
 		const rect = canvasElement.getBoundingClientRect();
-		
+
 		// Calculate position relative to canvas, accounting for viewport transform
 		const clientX = e.clientX - rect.left;
 		const clientY = e.clientY - rect.top;
-		
+
 		// Transform client coordinates to canvas coordinates
 		const canvasX = (clientX - viewport.x) / viewport.zoom;
 		const canvasY = (clientY - viewport.y) / viewport.zoom;
 
+		// Check if dropping over a column (only for non-column, non-line card types)
+		const targetColumn = (cardType !== 'column' && cardType !== 'line')
+			? findColumnAtPoint(canvasX, canvasY, cards)
+			: null;
+
+		// Generate temporary ID and order key for optimistic card
+		const tempId = `temp_${crypto.randomUUID()}`;
+		const orderKey = getNewCardOrderKey();
+		const defaultData = getDefaultCardData(cardType);
+
+		// Build optimistic card object
+		const posX = canvasX - defaultWidth / 2;
+		const posY = canvasY - (defaultHeight || minHeight || 100) / 2;
+		const now = new Date().toISOString();
+
+		const optimisticCard = buildOptimisticCard(
+			tempId,
+			boardId,
+			cardType,
+			posX,
+			posY,
+			defaultWidth,
+			defaultHeight,
+			orderKey,
+			defaultData,
+			now
+		);
+
+		// Add optimistic card immediately for instant UI feedback
+		if (targetColumn) {
+			// If dropping into column, update column state first
+			const columnItems = targetColumn.column_cards?.column_items || [];
+			const newPosition = columnItems.length;
+			const updatedColumnItems = [
+				...columnItems,
+				{ card_id: tempId, position: newPosition }
+			];
+			updateCard(targetColumn.id, {
+				column_cards: {
+					...targetColumn.column_cards,
+					column_items: updatedColumnItems
+				}
+			});
+		}
+		addOptimisticCard(tempId, optimisticCard);
+
+		// Now create in database asynchronously
 		try {
-			// Get order-key for new card
-			const orderKey = getNewCardOrderKey();
-
-			const defaultData = getDefaultCardData(cardType);
-
-			// Create card in database
 			const cardId = await createCard(
 				boardId,
 				cardType,
 				{
-					position_x: canvasX - defaultWidth / 2,
-					position_y: canvasY - (defaultHeight || minHeight || 100) / 2,
+					position_x: posX,
+					position_y: posY,
 					width: defaultWidth,
 					height: defaultHeight,
 					order_key: orderKey,
@@ -354,7 +520,6 @@ export function useCanvasDrop(boardId: string) {
 			);
 
 			// Fetch the created card with all related data
-			// Use FK hint for line_cards to avoid ambiguous relationship error
 			const selectQuery = cardType === 'line'
 				? `*, line_cards!line_cards_id_fkey(*)`
 				: `*, ${cardType}_cards(*)`;
@@ -366,12 +531,44 @@ export function useCanvasDrop(boardId: string) {
 				.single();
 
 			if (data) {
-				addCard(data as Card);
+				// If was in column, update column to use real ID
+				if (targetColumn) {
+					const columnItems = targetColumn.column_cards?.column_items || [];
+					const updatedColumnItems = columnItems.map((item: { card_id: string; position: number }) =>
+						item.card_id === tempId ? { ...item, card_id: cardId } : item
+					);
+					updateCard(targetColumn.id, {
+						column_cards: {
+							...targetColumn.column_cards,
+							column_items: updatedColumnItems
+						}
+					});
+					addCardToColumn(targetColumn.id, cardId, columnItems.length);
+				}
+
+				// Replace optimistic card with real card
+				confirmOptimisticCard(tempId, data as Card);
+			} else {
+				// No data returned, remove optimistic card
+				removeOptimisticCard(tempId);
 			}
 		} catch (error) {
 			console.error('Failed to create card on drop:', error);
+			// Remove optimistic card on error
+			removeOptimisticCard(tempId);
+			// If was in column, remove from column items
+			if (targetColumn) {
+				const columnItems = targetColumn.column_cards?.column_items || [];
+				const filteredItems = columnItems.filter((item: { card_id: string }) => item.card_id !== tempId);
+				updateCard(targetColumn.id, {
+					column_cards: {
+						...targetColumn.column_cards,
+						column_items: filteredItems
+					}
+				});
+			}
 		}
-	}, [boardId, viewport, addCard, supabase, handleFileDrop, getNewCardOrderKey]);
+	}, [boardId, viewport, addCard, supabase, handleFileDrop, getNewCardOrderKey, cards, updateCard, setPotentialColumnTarget, addOptimisticCard, confirmOptimisticCard, removeOptimisticCard]);
 
 	return {
 		isDraggingOver,

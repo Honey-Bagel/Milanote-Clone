@@ -168,6 +168,65 @@ export async function updateCardContent(
 }
 
 /**
+ * Restore a card with a specific ID (for undo/redo)
+ */
+export async function restoreCard(
+	cardId: string,
+	boardId: string,
+	cardType: Card["card_type"],
+	cardData: {
+		position_x: number,
+		position_y: number,
+		width?: number,
+		height?: number,
+		order_key: string,
+		z_index?: number,
+	},
+	typeSpecificData: any
+) {
+	const supabase = createClient();
+
+	const { data: { user } } = await supabase.auth.getUser();
+	if (!user) {
+		throw new Error("User not authenticated");
+	}
+
+	const { error: cardError } = await supabase
+		.from("cards")
+		.insert({
+			id: cardId,
+			board_id: boardId,
+			card_type: cardType,
+			position_x: cardData.position_x,
+			position_y: cardData.position_y,
+			width: cardData.width || 250,
+			height: cardData.height,
+			order_key: cardData.order_key,
+			z_index: cardData.z_index || 0,
+			created_by: user.id
+		});
+
+	if (cardError) {
+		console.error("Error restoring card:", cardError);
+		throw cardError;
+	}
+
+	const tableName = `${cardType}_cards`;
+	const { error: typeError } = await supabase
+		.from(tableName as any)
+		.insert({
+			id: cardId,
+			...typeSpecificData
+		});
+
+	if (typeError) {
+		await supabase.from("cards").delete().eq("id", cardId);
+		console.error(`Error restoring ${cardType} card data:`, typeError);
+		throw typeError;
+	}
+}
+
+/**
  * Delete a card (cascades to type-specific data)
  */
 export async function deleteCard(cardId: string) {

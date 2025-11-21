@@ -7,8 +7,50 @@
 
 import { useEffect } from 'react';
 import { useCanvasStore, useCanvasHistory } from '../stores/canvas-store';
-import { updateCardTransform, updateCardContent } from '../data/cards-client';
+import { updateCardTransform, updateCardContent, deleteCard, restoreCard } from '../data/cards-client';
 import type { Card } from '../types';
+
+/**
+ * Extract type-specific data from a card for re-creation
+ */
+function getTypeSpecificData(card: Card): any {
+	switch (card.card_type) {
+		case 'note':
+			return {
+				content: card.note_cards.content,
+				color: card.note_cards.color,
+			};
+		case 'text':
+			return {
+				content: card.text_cards.content,
+				title: card.text_cards.title,
+			};
+		case 'image':
+			return {
+				image_url: card.image_cards.image_url,
+				caption: card.image_cards.caption,
+				alt_text: card.image_cards.alt_text,
+			};
+		case 'link':
+			return {
+				url: card.link_cards.url,
+				title: card.link_cards.title,
+				favicon_url: card.link_cards.favicon_url,
+			};
+		case 'task_list':
+			return {
+				title: card.task_list_cards.title,
+				tasks: card.task_list_cards.tasks,
+			};
+		case 'column':
+			return {
+				title: card.column_cards.title,
+				column_items: card.column_cards.column_items,
+			};
+		default:
+			return {};
+	}
+}
 
 /**
  * Sync cards to database after undo/redo
@@ -20,7 +62,36 @@ async function syncCardsToDatabase(
 ) {
 	const promises: Promise<void>[] = [];
 
+	// Handle deleted cards (existed in old, not in new)
+	for (const [id] of oldCards) {
+		if (!newCards.has(id)) {
+			promises.push(deleteCard(id));
+		}
+	}
+
+	// Handle added cards (exists in new, not in old) - restore with original ID
 	for (const [id, newCard] of newCards) {
+		if (!oldCards.has(id)) {
+			const typeSpecificData = getTypeSpecificData(newCard);
+			promises.push(
+				restoreCard(
+					id,
+					newCard.board_id,
+					newCard.card_type,
+					{
+						position_x: newCard.position_x,
+						position_y: newCard.position_y,
+						width: newCard.width,
+						height: newCard.height ?? undefined,
+						order_key: newCard.order_key,
+						z_index: newCard.z_index,
+					},
+					typeSpecificData
+				)
+			);
+			continue;
+		}
+
 		const oldCard = oldCards.get(id);
 		if (!oldCard) continue;
 

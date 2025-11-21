@@ -62,10 +62,6 @@ export function CardBase({
 		overflow: 'hidden',
 		boxSizing: 'border-box',
         ...style,
-        userSelect: isEditing ? 'text' : 'none',
-        WebkitUserSelect: isEditing ? 'text' : 'none',
-        MozUserSelect: isEditing ? 'text' : 'none',
-        msUserSelect: isEditing ? 'text' : 'none',
       }}
     >
       {children}

@@ -9,6 +9,7 @@ import { useCanvasStore } from "../stores/canvas-store";
 import { screenToCanvas } from "../utils/transform";
 import { updateCardTransform } from "../data/cards-client";
 import { getDefaultCardDimensions } from "../utils";
+import type { Card } from "@/lib/types";
 
 interface UseResizableOptions {
 	cardId: string;
@@ -34,12 +35,13 @@ export function useResizable({
 	onResize,
 	onResizeEnd,
 }: UseResizableOptions) {
-	const { getCard, updateCard, viewport, setIsResizing, saveStateToHistory } = useCanvasStore();
+	const { getCard, updateCard, viewport, setIsResizing } = useCanvasStore();
 	const [isResizing, setLocalIsResizing] = useState(false);
-	
+
 	const startPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 	const startDimensionsRef = useRef<Dimensions>({ width: 0, height: 0 });
 	const aspectRatioRef = useRef<number>(1);
+	const preResizeStateRef = useRef<Map<string, Card> | null>(null);
 
 	const handleMouseDown = useCallback((e: React.MouseEvent, handle: 'se' | 'e' | 's' | 'sw' | 'ne' | 'nw' | 'n' | 'w' = 'se') => {
 		e.preventDefault();
@@ -60,6 +62,10 @@ export function useResizable({
 		if (maintainAspectRatio) {
 			aspectRatioRef.current = card.width / (card.height || minHeight);
 		}
+
+		// Save pre-resize state and pause history tracking
+		preResizeStateRef.current = new Map(useCanvasStore.getState().cards);
+		useCanvasStore.temporal.getState().pause();
 
 		setLocalIsResizing(true);
 		setIsResizing(true);
@@ -125,19 +131,36 @@ export function useResizable({
 
 			document.removeEventListener('mousemove', handleMouseMove);
 			document.removeEventListener('mouseup', handleMouseUp);
-			
+
+			// Handle history based on whether size actually changed
+			const temporal = useCanvasStore.temporal.getState();
+			const sizeChanged = card && (
+				Math.abs(card.width - startDimensionsRef.current.width) > 1 ||
+				Math.abs((card.height || 0) - startDimensionsRef.current.height) > 1
+			);
+
+			if (sizeChanged && preResizeStateRef.current) {
+				// Size changed - add pre-resize state to history
+				const currentState = useCanvasStore.getState();
+				const preResizePartialState = {
+					cards: preResizeStateRef.current,
+					viewport: currentState.viewport
+				};
+
+				temporal.pastStates.push(preResizePartialState);
+				temporal.futureStates.length = 0;
+				temporal.resume();
+				preResizeStateRef.current = null;
+			} else if (preResizeStateRef.current) {
+				// No change - just resume without creating history
+				temporal.resume();
+				preResizeStateRef.current = null;
+			}
+
 			if (card) {
 				onResizeEnd?.(card.width, card.height);
 
-				// Check if size actually changed
-				const sizeChanged = 
-					Math.abs(card.width - startDimensionsRef.current.width) > 1 ||
-					Math.abs((card.height || 0) - startDimensionsRef.current.height) > 1;
-
 				if (sizeChanged) {
-					// 🔧 Manually save to history after resize
-					saveStateToHistory();
-
 					// Sync to database
 					try {
 						await updateCardTransform(cardId, {
@@ -167,7 +190,6 @@ export function useResizable({
 		onResizeStart,
 		onResize,
 		onResizeEnd,
-		saveStateToHistory, // 🔧 Include in dependencies
 	]);
 
 	return {

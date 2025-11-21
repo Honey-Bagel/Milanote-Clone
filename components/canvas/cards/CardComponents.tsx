@@ -606,8 +606,8 @@ export function TaskListCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} >
-			<div className="task-list-card p-4 h-full flex flex-col overflow-auto">
+		<CardBase isEditing={isEditing} style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
+			<div className="task-list-card p-4 h-full flex flex-col" style={{ overflow: isEditing ? 'visible' : 'auto' }}>
 				{isEditing ? (
 					<input
 						type="text"
@@ -622,7 +622,7 @@ export function TaskListCardComponent({
 					</h3>
 				)}
 				
-				<div className="space-y-2 flex-1 overflow-auto">
+				<div className="space-y-2 flex-1" style={{ overflow: isEditing ? 'visible' : 'auto' }}>
 					{[...card.task_list_cards.tasks || []]
 						.sort((a, b) => a.position - b.position)
 						.map(task => (
@@ -634,7 +634,8 @@ export function TaskListCardComponent({
 								type="checkbox"
 								checked={task.completed}
 								onChange={() => handleToggleTask(task.id)}
-								className="mt-1 cursor-pointer"
+								className="mt-1"
+								style={{ cursor: 'pointer' }}
 								onClick={(e) => e.stopPropagation()}
 							/>
 							{isEditing && editingTaskId === task.id ? (
@@ -673,6 +674,7 @@ export function TaskListCardComponent({
 										handleDeleteTask(task.id);
 									}}
 									className="opacity-0 group-hover:opacity-100 text-red-500 text-xs hover:text-red-700"
+									style={{ cursor: 'pointer' }}
 								>
 									×
 								</button>
@@ -687,7 +689,8 @@ export function TaskListCardComponent({
 							e.stopPropagation();
 							handleAddTask();
 						}}
-						className="mt-3 text-sm text-blue-600 hover:text-blue-700 flex-shrink-0"
+						className="mt-3 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-md transition-colors flex-shrink-0"
+						style={{ cursor: 'pointer' }}
 					>
 						+ Add task
 					</button>
@@ -1028,8 +1031,8 @@ export function ColorPaletteCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing}>
-			<div className="color-palette-card p-4">
+		<CardBase isEditing={isEditing} style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
+			<div className="color-palette-card p-4" style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
 				{isEditing ? (
 					<input
 						type="text"
@@ -1078,6 +1081,7 @@ export function ColorPaletteCardComponent({
 											handleRemoveColor(index);
 										}}
 										className="text-xs text-red-500 hover:text-red-700"
+										style={{ cursor: 'pointer' }}
 									>
 										Remove
 									</button>
@@ -1108,6 +1112,7 @@ export function ColorPaletteCardComponent({
 								handleAddColor();
 							}}
 							className="text-sm text-blue-600 hover:text-blue-700"
+							style={{ cursor: 'pointer' }}
 						>
 							+ Add color
 						</button>
@@ -1860,6 +1865,7 @@ export function BoardCardComponent({
 										handleCreateNewBoard();
 									}}
 									className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+									style={{ cursor: 'pointer' }}
 								>
 									Create
 								</button>
@@ -1869,6 +1875,7 @@ export function BoardCardComponent({
 										setIsCreatingNew(false);
 									}}
 									className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+									style={{ cursor: 'pointer' }}
 								>
 									Cancel
 								</button>
@@ -1882,6 +1889,7 @@ export function BoardCardComponent({
 									setIsCreatingNew(true);
 								}}
 								className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+								style={{ cursor: 'pointer' }}
 							>
 								+ Create New Board
 							</button>
