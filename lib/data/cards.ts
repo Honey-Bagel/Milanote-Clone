@@ -20,7 +20,8 @@ export async function getBoardCards(boardId: string) {
 			file_cards(*),
 			color_palette_cards(*),
 			column_cards(*),
-			board_cards(*)
+			board_cards(*),
+			line_cards!line_cards_id_fkey(*)
 		`)
 		.eq("board_id", boardId)
 		.order("z_index", { ascending: true });

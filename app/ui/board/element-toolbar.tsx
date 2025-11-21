@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
-import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet } from 'lucide-react';
+import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from './add-element-modal';
@@ -18,7 +18,7 @@ export default function ElementToolbar({
 	onCreateCard,
 	canvasRef,
 }: ElementToolbarProps) {
-	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview } = useCanvasStore();
+	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
 	
 	// Track dragging state
@@ -177,13 +177,36 @@ export default function ElementToolbar({
 
 					<div className="w-px h-6 bg-gray-700"></div>
 
-					{/* Drawing Tools */}
-					<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors" title="Draw Line">
-						<Minus className="w-4 h-4 rotate-45" />
-					</button>
-					<button className="p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors" title="Draw Arrow">
-						<ArrowRight className="w-4 h-4" />
-					</button>
+					{/* Line Tool */}
+					<DraggableToolbarButton
+						icon={Spline}
+						title="Add Line"
+						cardType="line"
+						onDragStart={handleDragStart}
+						onDragEnd={handleDragEnd}
+						onClick={() => {}}
+					/>
+
+					<div className="w-px h-6 bg-gray-700"></div>
+
+					{/* Connection Tools */}
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<Button
+								onClick={() => setConnectionMode(!isConnectionMode)}
+								className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${isConnectionMode ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
+								title="Connection Mode"
+								variant={"ghost"}
+								size={"sm"}
+							>
+								<ArrowRight className="w-4 h-4" />
+							</Button>
+						</TooltipTrigger>
+						<TooltipContent>
+							<p>{isConnectionMode ? "Exit Connection Mode" : "Enter Connection Mode"}</p>
+							<p className="text-xs text-gray-400">Click card anchors to connect</p>
+						</TooltipContent>
+					</Tooltip>
 
 					<div className="flex-1"></div>
 

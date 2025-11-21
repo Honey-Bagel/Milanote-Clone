@@ -68,6 +68,8 @@ export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 			return { canResize: false, minWidth: 250, minHeight: 60, defaultWidth: 250, defaultHeight: null };
 		case 'board':
 			return { canResize: true, minWidth: 200, minHeight: 200, defaultWidth: 250, defaultHeight: 250 };
+		case 'line':
+			return { canResize: false, minWidth: 0, minHeight: 0, defaultWidth: 200, defaultHeight: 100 };
 		default:
 			return { canResize: true, minWidth: 100, minHeight: 60, defaultWidth: 250, defaultHeight: 70 };
 	}

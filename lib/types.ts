@@ -218,6 +218,44 @@ export type ColumnCard = BaseCard & {
 	};
 };
 
+// Reroute node for line breaks (like UE5 Blueprint reroute nodes)
+export interface RerouteNode {
+	id: string;
+	x: number; // relative to card position
+	y: number;
+	// Control point offset for the segment BEFORE this node (from previous point to this node)
+	control_offset?: number;
+}
+
+export type LineCard = BaseCard & {
+	card_type: "line";
+	line_cards: {
+		// Start and end points (relative to card position)
+		start_x: number;
+		start_y: number;
+		end_x: number;
+		end_y: number;
+		// Styling
+		color: string;
+		stroke_width: number;
+		line_style: "solid" | "dashed" | "dotted";
+		// End caps
+		start_cap: "none" | "arrow" | "dot" | "diamond";
+		end_cap: "none" | "arrow" | "dot" | "diamond";
+		// Curvature: 0 = straight, positive/negative = curve direction & amount
+		curvature: number;
+		// Control point offset (perpendicular distance from midpoint, can be negative)
+		control_point_offset: number;
+		// Reroute nodes - intermediate points for line routing
+		reroute_nodes: RerouteNode[] | null;
+		// Optional card attachments
+		start_attached_card_id: string | null;
+		start_attached_side: "top" | "right" | "bottom" | "left" | null;
+		end_attached_card_id: string | null;
+		end_attached_side: "top" | "right" | "bottom" | "left" | null;
+	};
+};
+
 export type Card =
 	| NoteCard
 	| ImageCard
@@ -227,7 +265,8 @@ export type Card =
 	| FileCard
 	| ColorPaletteCard
 	| ColumnCard
-	| BoardCard;
+	| BoardCard
+	| LineCard;
 
 // Type-specific data for creating cards
 export type NoteCardData = {
@@ -281,6 +320,23 @@ export type ColumnCardData = {
 	}>;
 };
 
+export type LineCardData = {
+	start_x?: number;
+	start_y?: number;
+	end_x?: number;
+	end_y?: number;
+	color?: string;
+	stroke_width?: number;
+	line_style?: "solid" | "dashed" | "dotted";
+	start_cap?: "none" | "arrow" | "dot" | "diamond";
+	end_cap?: "none" | "arrow" | "dot" | "diamond";
+	curvature?: number;
+	start_attached_card_id?: string | null;
+	start_attached_side?: "top" | "right" | "bottom" | "left" | null;
+	end_attached_card_id?: string | null;
+	end_attached_side?: "top" | "right" | "bottom" | "left" | null;
+};
+
 // Union type for all card-specific data
 export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? NoteCardData
@@ -300,6 +356,8 @@ export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? ColumnCardData
 	: T extends "board"
 	? BoardCardData
+	: T extends "line"
+	? LineCardData
 	: never;
 
 export type BoardCard = BaseCard & {
@@ -339,3 +397,46 @@ export interface CardOrderKey {
 	id: string;
 	order_key: string;
 };
+
+// ============================================================================
+// CONNECTION / LINE TYPES
+// ============================================================================
+
+export type ConnectionSide = 'top' | 'right' | 'bottom' | 'left';
+
+export type ConnectionEndStyle = 'none' | 'arrow' | 'dot' | 'diamond';
+
+export type ConnectionLineStyle = 'solid' | 'dashed' | 'dotted';
+
+export interface ConnectionAnchor {
+	cardId: string;
+	side: ConnectionSide;
+	offset: number; // 0-1, position along the edge (0.5 = center)
+}
+
+export interface Connection {
+	id: string;
+	board_id: string;
+
+	// Source and target anchors
+	fromAnchor: ConnectionAnchor;
+	toAnchor: ConnectionAnchor;
+
+	// Styling
+	color: string;
+	lineStyle: ConnectionLineStyle;
+	strokeWidth: number;
+
+	// End caps
+	startEndStyle: ConnectionEndStyle;
+	endEndStyle: ConnectionEndStyle;
+
+	// Curvature: 0 = straight line, 1 = full bezier curve
+	curvature: number;
+
+	// Metadata
+	created_at: string;
+	updated_at: string;
+}
+
+export type ConnectionData = Omit<Connection, 'id' | 'created_at' | 'updated_at'>;

@@ -10,7 +10,7 @@ import type { Card } from '@/lib/types';
 import type { Editor } from '@tiptap/react';
 
 // Import your card components
-import { 
+import {
   NoteCardComponent,
   ImageCardComponent,
   TextCardComponent,
@@ -21,6 +21,7 @@ import {
   ColumnCardComponent,
   BoardCardComponent
 } from './CardComponents';
+import { LineCardComponent } from './LineCardComponent';
 
 interface CardRendererProps {
   card: Card;
@@ -61,7 +62,10 @@ export function CardRenderer({ card, isEditing, isSelected, onEditorReady }: Car
     
     case 'board':
       return <BoardCardComponent card={card} isEditing={isEditing} />;
-    
+
+    case 'line':
+      return <LineCardComponent card={card} isEditing={isEditing} isSelected={isSelected ?? false} />;
+
     default:
       // TypeScript should prevent this, but just in case
       return (

@@ -1,12 +1,14 @@
 'use client';
 
-import type { Card } from '@/lib/types';
+import type { Card, ConnectionSide } from '@/lib/types';
 import type { Editor } from '@tiptap/react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useDraggable } from '@/lib/hooks/useDraggable';
 import { CardRenderer } from './cards/CardRenderer';
 import { useResizable } from '@/lib/hooks/useResizable';
 import { getDefaultCardDimensions } from '@/lib/utils';
+import { ConnectionHandles } from './ConnectionHandle';
+import { useCallback } from 'react';
 
 interface CanvasElementProps {
 	card: Card;
@@ -47,7 +49,18 @@ export function CanvasElement({
 	onEditorReady,
 	isInsideColumn = false // Default to false for backwards compatibility
 }: CanvasElementProps) {
-	const { selectedCardIds, setEditingCardId, editingCardId, cards: allCards, snapToGrid } = useCanvasStore();
+	const {
+		selectedCardIds,
+		setEditingCardId,
+		editingCardId,
+		cards: allCards,
+		snapToGrid,
+		isConnectionMode,
+		isDraggingLineEndpoint,
+		pendingConnection,
+		startConnection,
+		completeConnection,
+	} = useCanvasStore();
 	
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
@@ -107,6 +120,19 @@ export function CanvasElement({
 			onEditorReady(card.id, editor);
 		}
 	};
+
+	// Connection handling
+	const handleStartConnection = useCallback((cardId: string, side: ConnectionSide, offset: number) => {
+		startConnection(cardId, side, offset);
+	}, [startConnection]);
+
+	const handleCompleteConnection = useCallback((cardId: string, side: ConnectionSide, offset: number) => {
+		if (pendingConnection) {
+			completeConnection(cardId, side, offset);
+		} else {
+			startConnection(cardId, side, offset);
+		}
+	}, [pendingConnection, completeConnection, startConnection]);
 
 	// Different styling for in-column vs canvas rendering
 	if (isInsideColumn) {
@@ -189,7 +215,7 @@ export function CanvasElement({
 			>
 				<div
 					className={`
-						card drag-handle
+						card drag-handle group
 						${isSelected ? 'selected' : ''}
 						${isEditing ? 'editing' : ''}
 						${selectedCardIds.size === 1 && isSelected ? 'selected-single' : ''}
@@ -200,27 +226,42 @@ export function CanvasElement({
 					onContextMenu={handleContextMenu}
 					style={{
 						display: 'block',
-						width: card.width,
-						height: card.height || 'auto',
-						minHeight: card.height ? card.height : 'auto',
+						// Line cards need no width/height constraint - they render their own SVG
+						width: card.card_type === 'line' ? 0 : card.width,
+						height: card.card_type === 'line' ? 0 : (card.height || 'auto'),
+						minHeight: card.card_type === 'line' ? 0 : (card.height ? card.height : 'auto'),
+						overflow: card.card_type === 'line' ? 'visible' : undefined,
 						userSelect: isEditing ? 'auto' : 'none',
 						WebkitUserSelect: isEditing ? 'auto' : 'none',
-						cursor: isEditing ? 'auto' : 'pointer',
+						cursor: isEditing ? 'auto' : (isConnectionMode ? 'crosshair' : 'pointer'),
 						pointerEvents: isEditing || !isDragging ? 'auto' : 'none',
 						position: 'relative'
 					}}
 				>
 					{/* Render the actual card content based on type */}
-					<CardRenderer 
-						card={card} 
+					<CardRenderer
+						card={card}
 						isEditing={isEditing}
 						isSelected={isSelected}
 						onEditorReady={handleEditorReady}
 					/>
-					
-					{/* Selection indicator */}
-					{isSelected && (
+
+					{/* Selection indicator - not for line cards (they have their own) */}
+					{isSelected && card.card_type !== 'line' && (
 						<div className="selection-outline" />
+					)}
+
+					{/* Connection Handles - Show in connection mode or when dragging line endpoint (not for lines) */}
+					{card.card_type !== 'line' && (
+						<ConnectionHandles
+							cardId={card.id}
+							isConnectionMode={isConnectionMode || !!pendingConnection || isDraggingLineEndpoint}
+							hasPendingConnection={!!pendingConnection}
+							pendingSourceCardId={pendingConnection?.fromCardId}
+							pendingSourceSide={pendingConnection?.fromSide}
+							onStartConnection={handleStartConnection}
+							onCompleteConnection={handleCompleteConnection}
+						/>
 					)}
 
 					{/* Resize Handle - Only show when selected and editing */}

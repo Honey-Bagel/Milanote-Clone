@@ -211,8 +211,8 @@ export function useDraggable({
 					const draggedCardId = cardsToMoveRef.current[0];
 					const draggedCard = getCard(draggedCardId);
 					
-					// Only check for columns if dragging a non-column card
-					if (draggedCard && draggedCard.card_type !== 'column') {
+					// Only check for columns if dragging a non-column, non-line card
+					if (draggedCard && draggedCard.card_type !== 'column' && draggedCard.card_type !== 'line') {
 						const allCards = new Map(Array.from(useCanvasStore.getState().cards.entries()));
 						const overlappingColumns = findOverlappingColumns(draggedCardId, allCards);
 						

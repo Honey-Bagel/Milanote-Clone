@@ -711,6 +711,7 @@ export function LinkCardComponent({
 	const { updateCard, clearSelection, setEditingCardId } = useCanvasStore();
 	const [faviconUrl, setFaviconUrl] = useState<string>('');
 	const [fullURL, setFullURL] = useState<string | null>(null);
+	const [faviconError, setFaviconError] = useState(false);
 
 	useEffect(() => {
 		const getFullUrl = async () => {
@@ -726,9 +727,10 @@ export function LinkCardComponent({
 
 	useEffect(() => {
 		const getFaviconUrl = async () => {
-			if (fullURL === null) return;
+			if (!fullURL) return;
 			const domain = new URL(fullURL).hostname;
 			setFaviconUrl(`https://www.google.com/s2/favicons?domain=${domain}&sz=64`);
+			setFaviconError(false);
 		};
 
 		getFaviconUrl();
@@ -841,13 +843,16 @@ export function LinkCardComponent({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-start gap-3">
-					{faviconUrl && (
+					{!faviconError && faviconUrl && (
 						<Image 
 							src={faviconUrl} 
 							alt=""
 							className="w-5 h-5 mt-1 flex-shrink-0"
 							width={5}
 							height={5}
+							onError={() => {
+								setFaviconError(true);
+							}}
 						/>
 					)}
 					<div className="flex-1 min-w-0">

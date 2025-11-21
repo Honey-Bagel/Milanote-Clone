@@ -3,8 +3,11 @@ import { immer } from 'zustand/middleware/immer';
 import { devtools } from 'zustand/middleware';
 import { temporal, TemporalState } from 'zundo';
 import { enableMapSet } from 'immer';
-import type { Card } from '@/lib/types';
-import { deleteCard as deleteCardFromDB } from '@/lib/data/cards-client';
+import type { Card, Connection, LineCard } from '@/lib/types';
+export type { Connection } from '@/lib/types';
+import { deleteCard as deleteCardFromDB, createCard } from '@/lib/data/cards-client';
+import { getAnchorPosition } from '@/lib/utils/connection-path';
+import { createClient } from '@/lib/supabase/client';
 import {
 	bringToFront as orderKeyBringToFront,
 	sendToBack as orderKeySendToBack,
@@ -57,6 +60,7 @@ export interface DragPreviewState {
 interface CanvasState {
 	// Data - using your Card type from types.ts
 	cards: Map<string, Card>;
+	connections: Map<string, Connection>;
 
 	// Viewport
 	viewport: Viewport;
@@ -75,6 +79,15 @@ interface CanvasState {
 
 	// Column interaction state
 	potentialColumnTarget: string | null; // Column card id
+
+	// Connection mode
+	isConnectionMode: boolean;
+	pendingConnection: {
+		fromCardId: string;
+		fromSide: 'top' | 'right' | 'bottom' | 'left';
+		fromOffset: number;
+	} | null;
+	isDraggingLineEndpoint: boolean;
 
 	// Visual states
 	showGrid: boolean;
@@ -96,6 +109,23 @@ interface CanvasState {
 
 	// Batch operations
 	updateCards: (updates: Array<{ id: string; updates: Partial<Card> }>) => void;
+
+	// ============================================================================
+	// CONNECTION ACTIONS
+	// ============================================================================
+
+	loadConnections: (connections: Connection[]) => void;
+	addConnection: (connection: Connection) => void;
+	updateConnection: (id: string, updates: Partial<Connection>) => void;
+	deleteConnection: (id: string) => void;
+	deleteConnectionsForCard: (cardId: string) => void;
+
+	// Connection mode
+	setConnectionMode: (enabled: boolean) => void;
+	startConnection: (cardId: string, side: 'top' | 'right' | 'bottom' | 'left', offset?: number) => void;
+	completeConnection: (cardId: string, side: 'top' | 'right' | 'bottom' | 'left', offset?: number) => Promise<LineCard | null>;
+	cancelConnection: () => void;
+	setDraggingLineEndpoint: (isDragging: boolean) => void;
 
 	// ============================================================================
 	// SELECTION ACTIONS
@@ -171,6 +201,7 @@ export const useCanvasStore = create<CanvasState>()(
 			immer((set, get) => ({
 				// Initial state
 				cards: new Map(),
+				connections: new Map(),
 				viewport: { x: 0, y: 0, zoom: 1 },
 				selectedCardIds: new Set(),
 				selectionBox: null,
@@ -181,6 +212,9 @@ export const useCanvasStore = create<CanvasState>()(
 				showGrid: true,
 				editingCardId: null,
 				potentialColumnTarget: null,
+				isConnectionMode: false,
+				pendingConnection: null,
+				isDraggingLineEndpoint: false,
 				snapToGrid: false,
 				dragPreview: null,
 				_preEditCards: null,
@@ -294,6 +328,165 @@ export const useCanvasStore = create<CanvasState>()(
 								state.cards.set(id, { ...card, ...updates });
 							}
 						});
+					}),
+
+				// ============================================================================
+				// CONNECTION ACTIONS
+				// ============================================================================
+
+				loadConnections: (connections) =>
+					set((state) => {
+						state.connections = new Map(connections.map(c => [c.id, c]));
+					}),
+
+				addConnection: (connection) =>
+					set((state) => {
+						state.connections.set(connection.id, connection);
+					}),
+
+				updateConnection: (id, updates) =>
+					set((state) => {
+						const connection = state.connections.get(id);
+						if (connection) {
+							state.connections.set(id, { ...connection, ...updates });
+						}
+					}),
+
+				deleteConnection: (id) =>
+					set((state) => {
+						state.connections.delete(id);
+					}),
+
+				deleteConnectionsForCard: (cardId) =>
+					set((state) => {
+						for (const [id, conn] of state.connections) {
+							if (conn.fromAnchor.cardId === cardId || conn.toAnchor.cardId === cardId) {
+								state.connections.delete(id);
+							}
+						}
+					}),
+
+				setConnectionMode: (enabled) =>
+					set((state) => {
+						state.isConnectionMode = enabled;
+						if (!enabled) {
+							state.pendingConnection = null;
+						}
+					}),
+
+				startConnection: (cardId, side, offset = 0.5) =>
+					set((state) => {
+						state.pendingConnection = { fromCardId: cardId, fromSide: side, fromOffset: offset };
+					}),
+
+				completeConnection: async (cardId, side, offset = 0.5) => {
+					const state = get();
+					const pending = state.pendingConnection;
+
+					if (!pending || pending.fromCardId === cardId) {
+						set((s) => { s.pendingConnection = null; });
+						return null;
+					}
+
+					// Get the source and target cards to calculate positions
+					const fromCard = state.cards.get(pending.fromCardId);
+					const toCard = state.cards.get(cardId);
+
+					if (!fromCard || !toCard) {
+						set((s) => { s.pendingConnection = null; });
+						return null;
+					}
+
+					// Calculate anchor positions
+					const fromAnchor = getAnchorPosition(fromCard, pending.fromSide, pending.fromOffset);
+					const toAnchor = getAnchorPosition(toCard, side, offset);
+
+					// Calculate line card position (use fromAnchor as the base position)
+					const posX = fromAnchor.x;
+					const posY = fromAnchor.y;
+
+					// Calculate a nice default curve based on distance
+					const endX = toAnchor.x - posX;
+					const endY = toAnchor.y - posY;
+					const distance = Math.sqrt(endX * endX + endY * endY);
+					// Auto-curve: use ~20% of distance, direction based on source side
+					let controlOffset = distance * 0.2;
+					// Flip curve direction based on which sides are connected
+					if (pending.fromSide === 'left' || pending.fromSide === 'top') {
+						controlOffset = -controlOffset;
+					}
+
+					// Create line card data with endpoints relative to position
+					const lineData = {
+						start_x: 0,
+						start_y: 0,
+						end_x: endX,
+						end_y: endY,
+						color: '#6b7280',
+						stroke_width: 2,
+						line_style: 'solid' as const,
+						start_cap: 'none' as const,
+						end_cap: 'arrow' as const,
+						curvature: 0,
+						control_point_offset: controlOffset,
+						reroute_nodes: null,
+						start_attached_card_id: pending.fromCardId,
+						start_attached_side: pending.fromSide,
+						end_attached_card_id: cardId,
+						end_attached_side: side,
+					};
+
+					// Clear pending connection immediately
+					set((s) => { s.pendingConnection = null; });
+
+					try {
+						// Get order key for new card
+						const orderKey = state.getNewCardOrderKey();
+
+						// Create the line card in the database
+						const lineCardId = await createCard(
+							fromCard.board_id,
+							'line',
+							{
+								position_x: posX,
+								position_y: posY,
+								width: 0,
+								height: 0,
+								order_key: orderKey,
+								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
+							},
+							lineData
+						);
+
+						// Fetch the created card with all related data
+						const supabase = createClient();
+						const { data } = await supabase
+							.from('cards')
+							.select(`*, line_cards!line_cards_id_fkey(*)`)
+							.eq('id', lineCardId)
+							.single();
+
+						if (data) {
+							set((s) => {
+								s.cards.set(data.id, data as LineCard);
+							});
+						}
+
+						return data as LineCard;
+					} catch (error) {
+						console.error('Failed to create line card connection:', error);
+						return null;
+					}
+				},
+
+				cancelConnection: () =>
+					set((state) => {
+						state.pendingConnection = null;
+					}),
+
+				setDraggingLineEndpoint: (isDragging) =>
+					set((state) => {
+						state.isDraggingLineEndpoint = isDragging;
 					}),
 
 				// ============================================================================

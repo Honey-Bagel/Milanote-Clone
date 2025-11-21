@@ -31,6 +31,25 @@ export function useCanvasDrop(boardId: string) {
 				return { title: 'Column', background_color: '#f3f4f6' };
 			case 'board':
 				return { linked_board_id: boardId, board_title: 'New Board', board_color: '#3B82F6', card_count: 0 };
+			case 'line':
+				return {
+					start_x: 0,
+					start_y: 50,
+					end_x: 200,
+					end_y: 50,
+					color: '#6b7280',
+					stroke_width: 2,
+					line_style: 'solid',
+					start_cap: 'none',
+					end_cap: 'arrow',
+					curvature: 0,
+					control_point_offset: 0,
+					reroute_nodes: null,
+					start_attached_card_id: null,
+					start_attached_side: null,
+					end_attached_card_id: null,
+					end_attached_side: null,
+				};
 			default:
 				return {};
 		}
@@ -241,12 +260,14 @@ export function useCanvasDrop(boardId: string) {
 			);
 
 			// Fetch the created card with all related data
+			// Use FK hint for line_cards to avoid ambiguous relationship error
+			const selectQuery = cardType === 'line'
+				? `*, line_cards!line_cards_id_fkey(*)`
+				: `*, ${cardType}_cards(*)`;
+
 			const { data } = await supabase
 				.from('cards')
-				.select(`
-					*,
-					${cardType}_cards(*)
-				`)
+				.select(selectQuery)
 				.eq('id', cardId)
 				.single();
 
@@ -256,7 +277,7 @@ export function useCanvasDrop(boardId: string) {
 		} catch (error) {
 			console.error('Failed to create card on drop:', error);
 		}
-	}, [boardId, viewport, addCard, supabase, getDefaultCardData, handleFileDrop, getNewCardOrderKey]);
+	}, [boardId, viewport, addCard, supabase, handleFileDrop, getNewCardOrderKey]);
 
 	return {
 		isDraggingOver,

@@ -1,24 +1,27 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { createViewportMatrix } from '@/lib/utils/transform';
+import { createViewportMatrix, screenToCanvas } from '@/lib/utils/transform';
 import { useCanvasInteractions } from '@/lib/hooks/useCanvasInteractions';
 import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
 import { useSelectionBox } from '@/lib/hooks/useSelectionBox';
 import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
-import type { Card } from '@/lib/types';
+import { ConnectionLayer } from './ConnectionLayer';
+import type { Card, LineCard } from '@/lib/types';
 import { type Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/element-toolbar';
 import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
+import LinePropertiesToolbar from '@/app/ui/board/line-properties-toolbar';
 import ContextMenu from '@/app/ui/board/context-menu';
 import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
 import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
 import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
 import { CardRenderer } from './cards/CardRenderer';
 import { getDefaultCardDimensions } from '@/lib/utils';
+import type { Point } from '@/lib/utils/connection-path';
 
 interface CanvasProps {
 	initialCards?: Card[];
@@ -56,7 +59,26 @@ export function Canvas({
 	const [cardContextMenuData, setCardContextMenuData] = useState<{ card: null | Card, position: { x: number, y: number }}>({card: null, position: { x: 0, y: 0}});
 	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
 
-	const { viewport, cards, loadCards, clearSelection, setEditingCardId, editingCardId, selectedCardIds, selectCard, showGrid, dragPreview } = useCanvasStore();
+	const {
+		viewport,
+		cards,
+		connections,
+		loadCards,
+		clearSelection,
+		setEditingCardId,
+		editingCardId,
+		selectedCardIds,
+		selectCard,
+		showGrid,
+		dragPreview,
+		pendingConnection,
+		cancelConnection,
+		deleteConnection,
+	} = useCanvasStore();
+
+	// Mouse position tracking for connection preview
+	const [mousePosition, setMousePosition] = useState<Point | null>(null);
+	const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
 
 	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop(boardId || '');
 
@@ -64,10 +86,53 @@ export function Canvas({
 		if (e.button !== 0) return;
 		if (e.target !== e.currentTarget) return;
 
+		// Cancel pending connection on canvas click
+		if (pendingConnection) {
+			cancelConnection();
+		}
+
 		clearSelection();
+		setSelectedConnectionId(null);
 		setEditingCardId(null);
 		setSelectedEditor(null);
-	}
+	};
+
+	// Track mouse position for connection preview
+	const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
+		if (pendingConnection && canvasViewportRef.current) {
+			const rect = canvasViewportRef.current.getBoundingClientRect();
+			const canvasPos = screenToCanvas(
+				e.clientX - rect.left,
+				e.clientY - rect.top,
+				viewport
+			);
+			setMousePosition(canvasPos);
+		}
+	}, [pendingConnection, viewport]);
+
+	// Handle connection click
+	const handleConnectionClick = useCallback((connectionId: string, event: React.MouseEvent) => {
+		event.stopPropagation();
+		setSelectedConnectionId(connectionId);
+		clearSelection();
+	}, [clearSelection]);
+
+	// Handle delete key for connections
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (selectedConnectionId && (e.key === 'Delete' || e.key === 'Backspace')) {
+				deleteConnection(selectedConnectionId);
+				setSelectedConnectionId(null);
+			}
+			// Escape cancels pending connection
+			if (e.key === 'Escape' && pendingConnection) {
+				cancelConnection();
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [selectedConnectionId, deleteConnection, pendingConnection, cancelConnection]);
 
 	useEffect(() => {
 		if (initialCards.length > 0) {
@@ -264,11 +329,43 @@ export function Canvas({
 						card_count: 0,
 					},
 				} as Card;
-			
+
+			case 'line':
+				return {
+					...baseCard,
+					card_type: 'line',
+					line_cards: {
+						start_x: 0,
+						start_y: 50,
+						end_x: 200,
+						end_y: 50,
+						color: '#6b7280',
+						stroke_width: 2,
+						line_style: 'solid',
+						start_cap: 'none',
+						end_cap: 'arrow',
+						curvature: 0,
+						control_point_offset: 0,
+						start_attached_card_id: null,
+						start_attached_side: null,
+						end_attached_card_id: null,
+						end_attached_side: null,
+					},
+				} as Card;
+
 			default:
 				return null;
 		}
 	};
+
+	// Check if a single line card is selected
+	const selectedLineCard = selectedCardIds.size === 1
+		? (() => {
+			const cardId = Array.from(selectedCardIds)[0];
+			const card = cards.get(cardId);
+			return card?.card_type === 'line' ? card as LineCard : null;
+		})()
+		: null;
 
 	return (
 		<div className="flex flex-col h-screen">
@@ -276,9 +373,11 @@ export function Canvas({
 			<div className="h-[56px] flex-shrink-0">
 				{selectedEditor ? (
 					<TextEditorToolbar editor={selectedEditor} />
+				) : selectedLineCard ? (
+					<LinePropertiesToolbar card={selectedLineCard} />
 				) : (
-					<ElementToolbar 
-						onCreateCard={() => {}} 
+					<ElementToolbar
+						onCreateCard={() => {}}
 						canvasRef={canvasViewportRef}
 					/>
 				)}
@@ -295,6 +394,7 @@ export function Canvas({
 				onDragLeave={handleDragLeave}
 				onDrop={handleDrop}
 				onContextMenu={handleCanvasContextMenu}
+				onMouseMove={handleCanvasMouseMove}
 			>
 				<div ref={canvasRef} className="canvas-scroll-area w-full h-full">
 					<div
@@ -311,7 +411,17 @@ export function Canvas({
 					>
 						{/* Background Grid */}
 						{showGrid && <Grid />}
-						
+
+						{/* Connection Layer - Renders below cards */}
+						<ConnectionLayer
+							connections={connections}
+							cards={cards}
+							pendingConnection={pendingConnection}
+							mousePosition={mousePosition}
+							selectedConnectionId={selectedConnectionId}
+							onConnectionClick={handleConnectionClick}
+						/>
+
 						{/* Column Cards Layer (renders first, includes their child cards) */}
 						<div className="columns-layer">
 							{columnCards.map((card) => (
