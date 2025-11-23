@@ -6,7 +6,6 @@ import { useMemo } from 'react'
 
 export const RealtimeAvatarStack = ({ roomName }: { roomName: string }) => {
   const { users: usersMap } = useRealtimePresenceRoom(roomName)
-  console.log(usersMap);
   const avatars = useMemo(() => {
     return Object.values(usersMap).map((user) => ({
       name: user.name,

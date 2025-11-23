@@ -16,6 +16,7 @@ import { updateCardTransform, addCardToColumn, removeCardFromColumn } from '@/li
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import type { Card } from '@/lib/types';
 import { useCanvasHistory } from '@/lib/stores/canvas-store';
+import { useAutoPan } from '@/lib/hooks/useAutoPan';
 
 interface UseDraggableOptions {
 	card: Card;
@@ -52,6 +53,11 @@ export function useDraggable({
 		setDragPreview
 	} = useCanvasStore();
 	const { pastStates } = useCanvasHistory();
+	const { startAutoPan, updateMousePosition, stopAutoPan } = useAutoPan({
+		edgeThreshold: 50,
+		maxSpeed: 20,
+		enabled: true,
+	});
 
 	const [isDragging, setIsDragging] = useState(false);
 	const isDraggingRef = useRef(false);
@@ -138,22 +144,27 @@ export function useDraggable({
 			});
 
 			const handleMouseMove = (e: MouseEvent) => {
-				const currentCanvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
+				// Get the current viewport state (not from closure) to account for auto-panning
+				const currentViewport = useCanvasStore.getState().viewport;
+				const currentCanvasPos = screenToCanvas(e.clientX, e.clientY, currentViewport);
 
 				if (findCardColumn(cardId) && canvas) {
 					const rect = canvas.getBoundingClientRect();
 					const clientX = e.clientX - rect.left;
 					const clientY = e.clientY - rect.top;
-					
-					const canvasX = (clientX - viewport.x) / viewport.zoom;
-					const canvasY = (clientY - viewport.y) / viewport.zoom;
+
+					const canvasX = (clientX - currentViewport.x) / currentViewport.zoom;
+					const canvasY = (clientY - currentViewport.y) / currentViewport.zoom;
 					setDragPreview({
 						cardType: card.card_type,
 						canvasX,
 						canvasY
 					});
 				}
-				
+
+				// Update auto-pan with current mouse position
+				updateMousePosition(e.clientX, e.clientY);
+
 				if (!hasMovedRef.current) {
 					const distanceMoved = Math.sqrt(
 						Math.pow(e.clientX - startPosRef.current.screen.x, 2) +
@@ -169,6 +180,9 @@ export function useDraggable({
 					setIsDragging(true);
 					setGlobalDragging(true);
 					onDragStart?.();
+
+					// Start auto-pan when drag begins
+					startAutoPan(e.clientX, e.clientY);
 				}
 
 				const delta = {
@@ -267,6 +281,9 @@ export function useDraggable({
 				setIsDragging(false);
 				setGlobalDragging(false);
 				setDragPreview(null);
+
+				// Stop auto-pan when drag ends
+				stopAutoPan();
 
 				// ============================================================================
 				// HANDLE COLUMN MEMBERSHIP CHANGES
@@ -459,7 +476,10 @@ export function useDraggable({
 			gridSize,
 			dragThreshold,
 			findCardColumn,
-			setDragPreview
+			setDragPreview,
+			startAutoPan,
+			updateMousePosition,
+			stopAutoPan
 		]
 	);
 
