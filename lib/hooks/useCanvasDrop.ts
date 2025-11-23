@@ -568,7 +568,7 @@ export function useCanvasDrop(boardId: string) {
 				});
 			}
 		}
-	}, [boardId, viewport, addCard, supabase, handleFileDrop, getNewCardOrderKey, cards, updateCard, setPotentialColumnTarget, addOptimisticCard, confirmOptimisticCard, removeOptimisticCard]);
+	}, [boardId, viewport, supabase, handleFileDrop, getNewCardOrderKey, cards, updateCard, setPotentialColumnTarget, addOptimisticCard, confirmOptimisticCard, removeOptimisticCard, getDefaultCardData]);
 
 	return {
 		isDraggingOver,

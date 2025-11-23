@@ -243,7 +243,6 @@ button:disabled,
 .card.editing,
 .card.editing * {
   user-select: text !important;
-  cursor: text !important;
 }
 
 .card:not(.editing) {

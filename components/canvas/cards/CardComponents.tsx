@@ -1935,7 +1935,7 @@ export function BoardCardComponent({
 					className="h-32 flex items-center justify-center relative"
 					style={{ backgroundColor: card.board_cards.board_color }}
 				>
-					<div className="absolute inset-0 bg-black bg-opacity-10"></div>
+					<div className="absolute inset-0 bg-opacity-10"></div>
 					<svg 
 						className="w-16 h-16 text-white opacity-80 relative z-10" 
 						fill="none" 

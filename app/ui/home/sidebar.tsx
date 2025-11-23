@@ -127,64 +127,6 @@ export default function Sidebar() {
 						<span>Trash</span>
 					</Link>
 				</div>
-
-				{/* Boards Section */}
-				<div>
-					<div className="flex items-center justify-between mb-3">
-						<h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">My Boards</h3>
-						<button className="text-[var(--muted)] hover:text-[var(--foreground)]">
-							<Plus className="w-3 h-3" />
-						</button>
-					</div>
-
-					<div className="space-y-1">
-						<a href="/board" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
-							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#ef4444' }}></div>
-							<span className="flex-1 truncate">Design System</span>
-							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
-						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
-							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: 'var(--primary)' }}></div>
-							<span className="flex-1 truncate">Marketing Campaign</span>
-							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
-						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
-							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#10b981' }}></div>
-							<span className="flex-1 truncate">Product Roadmap</span>
-							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
-						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
-							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: 'var(--accent)' }}></div>
-							<span className="flex-1 truncate">UX Research</span>
-							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
-						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
-							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#f59e0b' }}></div>
-							<span className="flex-1 truncate">Brand Guidelines</span>
-							<MoreHorizontal className="text-[var(--muted)] opacity-0 group-hover:opacity-100 w-4 h-4" />
-						</a>
-					</div>
-				</div>
-
-				{/* Shared Section */}
-				<div className="mt-6">
-					<div className="flex items-center justify-between mb-3">
-						<h3 className="text-xs font-semibold text-[var(--muted)] uppercase tracking-wider">Shared with me</h3>
-					</div>
-
-					<div className="space-y-1">
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
-							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#ec4899' }}></div>
-							<span className="flex-1 truncate">Team Workshop</span>
-							<Users className="text-[var(--muted)] w-4 h-4" />
-						</a>
-						<a href="#" className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-[var(--foreground)] hover:bg-[var(--card-hover)] group">
-							<div className="w-5 h-5 rounded flex-shrink-0" style={{ backgroundColor: '#6366f1' }}></div>
-							<span className="flex-1 truncate">Client Projects</span>
-							<Users className="text-[var(--muted)] w-4 h-4" />
-						</a>
-					</div>
-				</div>
 			</nav>
 
 			{/* Bottom Actions */}

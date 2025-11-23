@@ -34,6 +34,7 @@
     "next": "16.0.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "react-easy-crop": "^5.5.5",
     "react-konva": "^19.2.0",
     "react-konva-utils": "^2.0.0",
     "swr": "^2.3.6",

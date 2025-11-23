@@ -93,6 +93,7 @@ export interface ColumnCardProps {
 }
 
 export interface ShareModalProps {
+	boardId: string;
 	isOpen: boolean;
 	onClose: () => void;
 }
@@ -440,3 +441,36 @@ export interface Connection {
 }
 
 export type ConnectionData = Omit<Connection, 'id' | 'created_at' | 'updated_at'>;
+
+// ============================================================================
+// USER SETTINGS TYPES
+// ============================================================================
+
+export interface UserProfile {
+	id: string;
+	email: string;
+	display_name: string | null;
+	avatar_url: string | null;
+}
+
+export interface UserPreferences {
+	// General Preferences
+	defaultBoardColor: string;
+	autoSaveEnabled: boolean;
+	gridSnapEnabled: boolean;
+
+	// Notification Preferences
+	emailNotifications: boolean;
+	boardActivityNotifications: boolean;
+	shareNotifications: boolean;
+	weeklyDigest: boolean;
+
+	// Collaboration Preferences
+	allowCommenting: boolean;
+	showPresenceIndicators: boolean;
+}
+
+export interface UserSettings {
+	profile: UserProfile;
+	preferences: UserPreferences;
+}

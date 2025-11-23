@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, User, Settings as SettingsIcon, LogOut, Bell, Palette, Lock } from 'lucide-react';
+import { X, User, Settings as SettingsIcon, LogOut, Bell, Palette, Lock, Camera } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { ThemeSwitcherList } from '@/components/ui/theme-switcher';
-import Image from 'next/image';
 import { Input } from '@/components/ui/input';
+import { UserProfile, UserPreferences } from '@/lib/types';
+import AvatarUploadCrop from '@/components/avatar-upload-crop';
+import { uploadAvatar, removeAvatar } from '@/lib/utils/avatar-storage';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface SettingsModalProps {
 	isOpen: boolean;
@@ -14,13 +17,6 @@ interface SettingsModalProps {
 }
 
 type TabType = 'profile' | 'preferences' | 'account';
-
-interface UserProfile {
-	id: string;
-	email: string;
-	display_name: string | null;
-	avatar_url: string | null;
-}
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 	const [activeTab, setActiveTab] = useState<TabType>('profile');
@@ -38,6 +34,20 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 	const [currentPassword, setCurrentPassword] = useState('');
 	const [newPassword, setNewPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
+	const [isAvatarUploadOpen, setIsAvatarUploadOpen] = useState(false);
+
+	// Preferences states
+	const [preferences, setPreferences] = useState<UserPreferences>({
+		defaultBoardColor: '#6366f1',
+		autoSaveEnabled: true,
+		gridSnapEnabled: true,
+		emailNotifications: true,
+		boardActivityNotifications: true,
+		shareNotifications: true,
+		weeklyDigest: false,
+		allowCommenting: true,
+		showPresenceIndicators: true,
+	});
 
 	useEffect(() => {
 
@@ -93,6 +103,61 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 	const showMessage = (type: 'success' | 'error', text: string) => {
 		setMessage({ type, text });
 		setTimeout(() => setMessage(null), 3000);
+	};
+
+	const handleAvatarUpload = async (croppedImageBlob: Blob) => {
+		try {
+			const { data: { user } } = await supabase.auth.getUser();
+			if (!user) throw new Error('No user found');
+
+			// Check if this is a removal (empty blob)
+			if (croppedImageBlob.size === 0) {
+				await removeAvatar(user.id);
+				await updateAvatarUrl(null);
+				showMessage('success', 'Avatar removed successfully!');
+				return;
+			}
+
+			// Upload avatar
+			const publicUrl = await uploadAvatar(croppedImageBlob, user.id);
+			await updateAvatarUrl(publicUrl);
+			showMessage('success', 'Avatar updated successfully!');
+		} catch (error) {
+			console.error('Error uploading avatar:', error);
+			showMessage('error', 'Failed to upload avatar');
+			throw error;
+		}
+	};
+
+	const updateAvatarUrl = async (url: string | null) => {
+		const { data: { user } } = await supabase.auth.getUser();
+		if (!user) throw new Error('No user found');
+
+		// Update profile table
+		const { error: profileError } = await supabase
+			.from('profiles')
+			.update({
+				avatar_url: url,
+				updated_at: new Date().toISOString(),
+			})
+			.eq("id", user.id);
+
+		if (profileError) {
+			console.error('Profile update error:', profileError);
+		}
+
+		// Update auth metadata
+		const { error: metadataError } = await supabase.auth.updateUser({
+			data: {
+				display_name: displayName,
+				avatar_url: url,
+			},
+		});
+
+		if (metadataError) throw metadataError;
+
+		setAvatarUrl(url || '');
+		await fetchUserProfile();
 	};
 
 	const handleSaveProfile = async () => {
@@ -297,39 +362,45 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 									<div className="space-y-6">
 										<div>
 											<h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Profile Information</h3>
-											
+
 											{/* Avatar */}
 											<div className="mb-6">
-												<div className="flex flex-row space-x-6">
-													<div className="flex flex-col">
-														<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-															Profile Picture
-														</label>
-														<div className="flex items-center gap-4">
-															<div className="w-20 h-20 rounded-full bg-[var(--secondary)] flex items-center justify-center overflow-hidden">
-																{avatarUrl ? (
-																	<Image src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-																) : (
-																	<User className="w-10 h-10 text-[var(--muted)]" />
-																)}
-															</div>
-														</div>
-													</div>
-
-													<div className="flex flex-col">
-														{/* Display Name */}
-														<div className="flex flex-col">
-															<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-																Display Name
-															</label>
-															<Input
-																type="text"
-																value={displayName}
-																onChange={(e) => setDisplayName(e.target.value)}
-															/>
-														</div>
+												<label className="block text-sm font-medium text-[var(--foreground)] mb-3">
+													Profile Picture
+												</label>
+												<div className="flex items-center gap-6">
+													<Avatar className="w-24 h-24">
+														<AvatarImage src={avatarUrl || ''} alt={displayName || 'User'} />
+														<AvatarFallback className="bg-[var(--secondary)] text-[var(--foreground)] text-2xl">
+															{displayName ? displayName.charAt(0).toUpperCase() : userProfile?.email?.charAt(0).toUpperCase() || 'U'}
+														</AvatarFallback>
+													</Avatar>
+													<div className="flex flex-col gap-2">
+														<button
+															onClick={() => setIsAvatarUploadOpen(true)}
+															className="px-4 py-2 bg-[var(--primary)] text-[var(--foreground)] rounded-lg hover:opacity-90 transition-all flex items-center gap-2"
+														>
+															<Camera className="w-4 h-4" />
+															{avatarUrl ? 'Change Avatar' : 'Upload Avatar'}
+														</button>
+														<p className="text-xs text-[var(--muted)]">
+															Click to upload or change your profile picture
+														</p>
 													</div>
 												</div>
+											</div>
+
+											{/* Display Name */}
+											<div className="mb-4">
+												<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+													Display Name
+												</label>
+												<Input
+													type="text"
+													value={displayName}
+													onChange={(e) => setDisplayName(e.target.value)}
+													placeholder="Enter your display name"
+												/>
 											</div>
 
 											{/* Email (Read-only) */}
@@ -359,40 +430,179 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
 								{/* Preferences Tab */}
 								{activeTab === 'preferences' && (
-									<div className="space-y-6">
+									<div className="space-y-8">
+										{/* Theme Section */}
 										<div>
-											<h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Preferences</h3>
-
-											{/* Theme */}
-											<div className="mb-6">
-												<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-													Theme
-												</label>
-												<ThemeSwitcherList />
-											</div>
-
-											{/* Notifications */}
-											<div className="mb-6">
-												<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
-													Notifications
-												</label>
-												<div className="space-y-3">
-													<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)]">
-														<div>
-															<div className="font-medium text-sm text-[var(--foreground)]">Email Notifications</div>
-															<div className="text-xs text-[var(--muted)]">Receive updates via email</div>
-														</div>
-														<input type="checkbox" defaultChecked className="rounded" style={{ accentColor: 'var(--primary)' }} />
+											<h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Appearance</h3>
+											<div className="space-y-4">
+												<div>
+													<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+														Theme
 													</label>
-													<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)]">
-														<div>
-															<div className="font-medium text-sm text-[var(--foreground)]">Board Activity</div>
-															<div className="text-xs text-[var(--muted)]">Get notified of board changes</div>
-														</div>
-														<input type="checkbox" defaultChecked className="rounded" style={{ accentColor: 'var(--primary)' }} />
-													</label>
+													<ThemeSwitcherList />
 												</div>
 											</div>
+										</div>
+
+										{/* General Preferences Section */}
+										<div className="pt-6 border-t border-[var(--border)]">
+											<h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">General Settings</h3>
+											<div className="space-y-3">
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Auto-save</div>
+														<div className="text-xs text-[var(--muted)]">Automatically save changes as you work</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.autoSaveEnabled}
+														onChange={(e) => setPreferences({ ...preferences, autoSaveEnabled: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Grid Snap</div>
+														<div className="text-xs text-[var(--muted)]">Snap cards to grid when moving</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.gridSnapEnabled}
+														onChange={(e) => setPreferences({ ...preferences, gridSnapEnabled: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+												<div className="p-3 border border-[var(--border)] rounded-lg">
+													<label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+														Default Board Color
+													</label>
+													<div className="flex items-center gap-3">
+														<input
+															type="color"
+															value={preferences.defaultBoardColor}
+															onChange={(e) => setPreferences({ ...preferences, defaultBoardColor: e.target.value })}
+															className="w-12 h-10 rounded border border-[var(--border)] cursor-pointer"
+														/>
+														<span className="text-sm text-[var(--muted)]">{preferences.defaultBoardColor}</span>
+													</div>
+												</div>
+											</div>
+										</div>
+
+										{/* Notification Preferences Section */}
+										<div className="pt-6 border-t border-[var(--border)]">
+											<h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Notifications</h3>
+											<div className="space-y-3">
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Email Notifications</div>
+														<div className="text-xs text-[var(--muted)]">Receive important updates via email</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.emailNotifications}
+														onChange={(e) => setPreferences({ ...preferences, emailNotifications: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Board Activity</div>
+														<div className="text-xs text-[var(--muted)]">Get notified when boards are updated</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.boardActivityNotifications}
+														onChange={(e) => setPreferences({ ...preferences, boardActivityNotifications: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Share Notifications</div>
+														<div className="text-xs text-[var(--muted)]">Notify when someone shares a board with you</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.shareNotifications}
+														onChange={(e) => setPreferences({ ...preferences, shareNotifications: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Weekly Digest</div>
+														<div className="text-xs text-[var(--muted)]">Receive a weekly summary of activity</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.weeklyDigest}
+														onChange={(e) => setPreferences({ ...preferences, weeklyDigest: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+											</div>
+										</div>
+
+										{/* Collaboration Preferences Section */}
+										<div className="pt-6 border-t border-[var(--border)]">
+											<h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Collaboration</h3>
+											<div className="space-y-3">
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Allow Comments</div>
+														<div className="text-xs text-[var(--muted)]">Let others comment on your boards</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.allowCommenting}
+														onChange={(e) => setPreferences({ ...preferences, allowCommenting: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+												<label className="flex items-center justify-between p-3 border border-[var(--border)] rounded-lg hover:bg-[var(--card-hover)] cursor-pointer transition-colors">
+													<div>
+														<div className="font-medium text-sm text-[var(--foreground)]">Show Presence Indicators</div>
+														<div className="text-xs text-[var(--muted)]">Display who else is viewing the board</div>
+													</div>
+													<input
+														type="checkbox"
+														checked={preferences.showPresenceIndicators}
+														onChange={(e) => setPreferences({ ...preferences, showPresenceIndicators: e.target.checked })}
+														className="w-4 h-4 rounded"
+														style={{ accentColor: 'var(--primary)' }}
+													/>
+												</label>
+											</div>
+										</div>
+
+										{/* Save Button */}
+										<div className="pt-4">
+											<button
+												onClick={async () => {
+													setSaving(true);
+													try {
+														// Here you would save preferences to Supabase
+														// For now, just show success message
+														showMessage('success', 'Preferences saved successfully!');
+													} catch (error) {
+														showMessage('error', 'Failed to save preferences');
+													} finally {
+														setSaving(false);
+													}
+												}}
+												disabled={saving}
+												className="px-4 py-2 bg-[var(--primary)] text-[var(--foreground)] rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+											>
+												{saving ? 'Saving...' : 'Save Preferences'}
+											</button>
 										</div>
 									</div>
 								)}
@@ -457,6 +667,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 						)}
 					</div>
 				</div>
+
+				{/* Avatar Upload Modal */}
+				<AvatarUploadCrop
+					isOpen={isAvatarUploadOpen}
+					onClose={() => setIsAvatarUploadOpen(false)}
+					onSave={handleAvatarUpload}
+					currentAvatarUrl={avatarUrl}
+				/>
 			</div>
 		</div>
 	);

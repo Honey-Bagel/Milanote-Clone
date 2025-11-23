@@ -3,9 +3,29 @@
 import { ShareModalProps } from '@/lib/types';
 import { X, Link as LinkIcon } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
-export default function ShareModal({ isOpen, onClose }: ShareModalProps) {
+export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps) {
 	const modalRef = useRef<HTMLDivElement | null>(null);
+	const supabase = createClient();
+
+	useEffect(() => {
+		const fetchCollaborators = async () => {
+			const { data, error } = await supabase
+				.from("board_collaborators")
+				.select("*")
+				.eq('board_id', boardId);
+
+			if (error) {
+				console.log("Error fetching board collaborators for board:", boardId);
+				return;
+			}
+
+			console.log(data);
+		}
+
+		fetchCollaborators();
+	}, [supabase, boardId]);
 
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
@@ -96,7 +116,7 @@ export default function ShareModal({ isOpen, onClose }: ShareModalProps) {
 							<LinkIcon className="text-gray-400 w-4 h-4" />
 							<input 
 								type="text" 
-								value="https://milanote.com/board/abc123" 
+								value={`http://localhost:3000/board/${boardId}`}
 								readOnly 
 								className="flex-1 bg-transparent text-sm text-gray-600 focus:outline-none"
 							/>

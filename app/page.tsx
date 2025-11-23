@@ -1,8 +1,23 @@
 'use client';
 
 import Link from "next/link";
+import { createClient } from '@/lib/supabase/client';
+import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
 
 export default function LandingPage() {
+	const supabase = createClient();
+	const [user, setUser] = useState<User | null>(null);
+
+	useEffect(() => {
+		const fetchUser = async () => {
+			const { data, error } = await supabase.auth.getUser();
+			if (error) return;
+			setUser(data.user);
+		}
+		fetchUser();
+	});
+
 	return (
 		<div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
 			{/* Navigation */}
@@ -14,7 +29,7 @@ export default function LandingPage() {
 							<div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, var(--primary), var(--accent))` }}>
 								<i className="fas fa-layer-group text-[var(--foreground)] text-lg"></i>
 							</div>
-							<span className="text-xl font-bold">Milanote</span>
+							<span className="text-xl font-bold">Note App</span>
 						</div>
 
 						{/* Navigation Links */}
@@ -34,24 +49,39 @@ export default function LandingPage() {
 						</div>
 
 						{/* Auth Buttons */}
-						<div className="flex items-center space-x-4">
-							<Link
-								href="/auth"
-								className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm font-medium"
-							>
-								Log In
-							</Link>
-							<Link
-								href="/auth?mode=signup"
-								className="px-5 py-2 rounded-lg font-medium text-sm transition-all shadow-lg hover:shadow-xl hover:opacity-90"
-								style={{
-									background: `linear-gradient(to right, var(--primary), var(--accent))`,
-									color: 'var(--foreground)'
-								}}
-							>
-								Sign Up Free
-							</Link>
-						</div>
+						{!user ? (
+								<div className="flex items-center space-x-4">
+									<Link
+										href="/auth"
+										className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm font-medium"
+									>
+										Log In
+									</Link>
+									<Link
+										href="/auth?mode=signup"
+										className="px-5 py-2 rounded-lg font-medium text-sm transition-all shadow-lg hover:shadow-xl hover:opacity-90"
+										style={{
+											background: `linear-gradient(to right, var(--primary), var(--accent))`,
+											color: 'var(--foreground)'
+										}}
+									>
+										Sign Up Free
+									</Link>
+								</div>
+							) : (
+								<div className="flex items-center">
+									<Link
+										href="/dashboard"
+										className="px-5 py-2 rounded-lg font-medium text-sm transition-all shadow-lg hover:shadow-xl hover:opacity-90"
+										style={{
+											background: `linear-gradient(to right, var(--primary), var(--accent))`,
+											color: 'var(--foreground)'
+										}}
+									>
+										Dashboard
+									</Link>
+								</div>
+							)}
 					</div>
 				</div>
 			</nav>

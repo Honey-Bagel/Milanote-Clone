@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Separator } from '@radix-ui/react-dropdown-menu';
+import { useCanvasStore } from '@/lib/stores/canvas-store';
 
 interface CanvasContextMenuProps {
 	isOpen: boolean;
@@ -10,6 +11,7 @@ interface CanvasContextMenuProps {
 };
 
 export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasContextMenuProps) {
+	const { selectAll } = useCanvasStore();
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
 	useLayoutEffect(() => {
@@ -49,6 +51,11 @@ export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasC
 		}
 	}, [onClose]);
 
+	const onSelectAll = (e: React.MouseEvent) => {
+		e.preventDefault();
+		selectAll();
+	}
+
 	if (!isOpen) return null;
 
 	return (
@@ -61,11 +68,11 @@ export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasC
 			}}
 		>
 			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-				<span>Select All</span>
+				<span>Add Note</span>
 			</button>
 			<Separator />
-			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-				<span>Add Note</span>
+			<button onClick={onSelectAll} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
+				<span>Select All</span>
 			</button>
 		</div>
 	)
