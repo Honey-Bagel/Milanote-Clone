@@ -209,6 +209,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 		zoomOut,
 		resetViewport,
 		zoomToFit,
+		alignTop,
+		alignBottom,
+		alignLeft,
+		alignRight,
 	} = useCanvasStore();
 
 	const { undo, redo, clear } = useCanvasHistory();
@@ -363,6 +367,41 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 			}
 
 			// ============================================================================
+			// ALIGNMENT SHORTCUTS (Arrow Keys)
+			// ============================================================================
+
+			// Only trigger alignment if multiple cards are selected and not editing
+			if (!isEditing && selectedCardIds.size >= 2) {
+				// Align Top: Up Arrow
+				if (e.key === 'ArrowUp' && !isMod) {
+					e.preventDefault();
+					alignTop();
+					return;
+				}
+
+				// Align Bottom: Down Arrow
+				if (e.key === 'ArrowDown' && !isMod) {
+					e.preventDefault();
+					alignBottom();
+					return;
+				}
+
+				// Align Left: Left Arrow
+				if (e.key === 'ArrowLeft' && !isMod) {
+					e.preventDefault();
+					alignLeft();
+					return;
+				}
+
+				// Align Right: Right Arrow
+				if (e.key === 'ArrowRight' && !isMod) {
+					e.preventDefault();
+					alignRight();
+					return;
+				}
+			}
+
+			// ============================================================================
 			// ESC - CLEAR SELECTION
 			// ============================================================================
 
@@ -395,6 +434,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 		zoomOut,
 		resetViewport,
 		zoomToFit,
+		alignTop,
+		alignBottom,
+		alignLeft,
+		alignRight,
 	]);
 }
 
@@ -433,5 +476,11 @@ export const KEYBOARD_SHORTCUTS = {
 	pan: {
 		'Space + Drag': 'Pan canvas',
 		'Middle Mouse + Drag': 'Pan canvas',
+	},
+	alignment: {
+		'Up Arrow': 'Align selected cards to top',
+		'Down Arrow': 'Align selected cards to bottom',
+		'Left Arrow': 'Align selected cards to left',
+		'Right Arrow': 'Align selected cards to right',
 	},
 } as const;

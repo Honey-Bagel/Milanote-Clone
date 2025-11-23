@@ -5,9 +5,10 @@ import { temporal, TemporalState } from 'zundo';
 import { enableMapSet } from 'immer';
 import type { Card, Connection, LineCard } from '@/lib/types';
 export type { Connection } from '@/lib/types';
-import { deleteCard as deleteCardFromDB, createCard } from '@/lib/data/cards-client';
+import { deleteCard as deleteCardFromDB, createCard, updateCardTransform } from '@/lib/data/cards-client';
 import { getAnchorPosition } from '@/lib/utils/connection-path';
 import { createClient } from '@/lib/supabase/client';
+import { getDefaultCardDimensions } from '@/lib/utils';
 import {
 	bringToFront as orderKeyBringToFront,
 	sendToBack as orderKeySendToBack,
@@ -216,6 +217,30 @@ interface CanvasState {
 	 * Get the z-index for a new card
 	 */
 	getNewCardOrderKey: () => string;
+
+	// ============================================================================
+	// ALIGNMENT ACTIONS
+	// ============================================================================
+
+	/**
+	 * Align selected cards to the top edge of the topmost card
+	 */
+	alignTop: () => Promise<void>;
+
+	/**
+	 * Align selected cards to the bottom edge of the bottommost card
+	 */
+	alignBottom: () => Promise<void>;
+
+	/**
+	 * Align selected cards to the left edge of the leftmost card
+	 */
+	alignLeft: () => Promise<void>;
+
+	/**
+	 * Align selected cards to the right edge of the rightmost card
+	 */
+	alignRight: () => Promise<void>;
 }
 
 // ============================================================================
@@ -891,6 +916,178 @@ export const useCanvasStore = create<CanvasState>()(
 					const state = get();
 					const allCards = Array.from(state.cards.values());
 					return getOrderKeyForNewCard(cardsToOrderKeyList(allCards));
+				},
+
+				// ============================================================================
+				// ALIGNMENT ACTIONS
+				// ============================================================================
+
+				alignTop: async () => {
+					const state = get();
+					const selectedCards = Array.from(state.selectedCardIds)
+						.map((id) => state.cards.get(id))
+						.filter((card): card is Card => card !== undefined);
+
+					if (selectedCards.length < 2) return;
+
+					// Find the topmost card (minimum position_y)
+					const minY = Math.min(...selectedCards.map((card) => card.position_y));
+
+					// Update local state first for immediate feedback
+					set((state) => {
+						selectedCards.forEach((card) => {
+							state.cards.set(card.id, {
+								...card,
+								position_y: minY,
+							});
+						});
+					});
+
+					// Sync to database
+					try {
+						await Promise.all(
+							selectedCards.map((card) =>
+								updateCardTransform(card.id, {
+									position_y: minY,
+								})
+							)
+						);
+					} catch (error) {
+						console.error('Failed to sync alignment to database:', error);
+					}
+				},
+
+				alignBottom: async () => {
+					const state = get();
+					const selectedCards = Array.from(state.selectedCardIds)
+						.map((id) => state.cards.get(id))
+						.filter((card): card is Card => card !== undefined);
+
+					if (selectedCards.length < 2) return;
+
+					// Helper function to get actual rendered height
+					const getActualHeight = (card: Card): number => {
+						if (card.height) {
+							return card.height;
+						}
+
+						// Try to get actual DOM height for auto-height cards
+						const cardElement = document.querySelector(`[data-element-id="${card.id}"]`);
+						if (cardElement) {
+							const screenHeight = cardElement.getBoundingClientRect().height;
+							return screenHeight / state.viewport.zoom;
+						}
+
+						// Fallback to default height
+						const defaults = getDefaultCardDimensions(card.card_type);
+						return defaults.defaultHeight || 200;
+					};
+
+					// Find the bottommost card (maximum position_y + actual height)
+					const maxBottom = Math.max(
+						...selectedCards.map((card) => card.position_y + getActualHeight(card))
+					);
+
+					// Update local state first for immediate feedback
+					set((state) => {
+						selectedCards.forEach((card) => {
+							const actualHeight = getActualHeight(card);
+							const newY = maxBottom - actualHeight;
+							state.cards.set(card.id, {
+								...card,
+								position_y: newY,
+							});
+						});
+					});
+
+					// Sync to database
+					try {
+						await Promise.all(
+							selectedCards.map((card) => {
+								const actualHeight = getActualHeight(card);
+								const newY = maxBottom - actualHeight;
+								return updateCardTransform(card.id, {
+									position_y: newY,
+								});
+							})
+						);
+					} catch (error) {
+						console.error('Failed to sync alignment to database:', error);
+					}
+				},
+
+				alignLeft: async () => {
+					const state = get();
+					const selectedCards = Array.from(state.selectedCardIds)
+						.map((id) => state.cards.get(id))
+						.filter((card): card is Card => card !== undefined);
+
+					if (selectedCards.length < 2) return;
+
+					// Find the leftmost card (minimum position_x)
+					const minX = Math.min(...selectedCards.map((card) => card.position_x));
+
+					// Update local state first for immediate feedback
+					set((state) => {
+						selectedCards.forEach((card) => {
+							state.cards.set(card.id, {
+								...card,
+								position_x: minX,
+							});
+						});
+					});
+
+					// Sync to database
+					try {
+						await Promise.all(
+							selectedCards.map((card) =>
+								updateCardTransform(card.id, {
+									position_x: minX,
+								})
+							)
+						);
+					} catch (error) {
+						console.error('Failed to sync alignment to database:', error);
+					}
+				},
+
+				alignRight: async () => {
+					const state = get();
+					const selectedCards = Array.from(state.selectedCardIds)
+						.map((id) => state.cards.get(id))
+						.filter((card): card is Card => card !== undefined);
+
+					if (selectedCards.length < 2) return;
+
+					// Find the rightmost card (maximum position_x + width)
+					const maxRight = Math.max(
+						...selectedCards.map((card) => card.position_x + card.width)
+					);
+
+					// Update local state first for immediate feedback
+					set((state) => {
+						selectedCards.forEach((card) => {
+							const newX = maxRight - card.width;
+							state.cards.set(card.id, {
+								...card,
+								position_x: newX,
+							});
+						});
+					});
+
+					// Sync to database
+					try {
+						await Promise.all(
+							selectedCards.map((card) => {
+								const newX = maxRight - card.width;
+								return updateCardTransform(card.id, {
+									position_x: newX,
+								});
+							})
+						);
+					} catch (error) {
+						console.error('Failed to sync alignment to database:', error);
+					}
 				},
 
 			})),
