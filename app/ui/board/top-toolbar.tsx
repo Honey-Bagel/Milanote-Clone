@@ -21,7 +21,8 @@ import {
 type BreadcrumbItemType = {
 	id: string,
 	title: string,
-	color?: string
+	color?: string,
+	shareToken?: string | null
 };
 
 type TopToolbarProps = {
@@ -29,19 +30,23 @@ type TopToolbarProps = {
 	boardTitle: string;
 	boardColor?: string;
 	initialBreadcrumbs?: BreadcrumbItemType[];
+	isPublicView?: boolean;
+	isViewerOnly?: boolean;
 };
 
 export default function TopToolbar({
 	boardId,
 	boardTitle,
 	boardColor,
-	initialBreadcrumbs = []
+	initialBreadcrumbs = [],
+	isPublicView = false,
+	isViewerOnly = false
 }: TopToolbarProps) {
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 	const { viewport, zoomIn, zoomOut, zoomToFit } = useCanvasStore();
 
-	const { breadcrumbs } = useBreadcrumbs(boardId, initialBreadcrumbs);
+	const { breadcrumbs } = useBreadcrumbs(boardId, initialBreadcrumbs, isPublicView);
 
 	const { displayBreadcrumbs, isBreadcrumbsCondensed } = useMemo(() => {
 		if (breadcrumbs.length > 4) {
@@ -96,7 +101,11 @@ export default function TopToolbar({
 												// Parent boards - clickable
 												<BreadcrumbLink asChild>
 													<Link
-														href={`/board/${crumb.id}`}
+														href={
+															isPublicView && crumb.shareToken
+																? `/board/public/${crumb.shareToken}`
+																: `/board/${crumb.id}`
+														}
 														className="flex items-center space-x-2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
 													>
 														{crumb.color && (

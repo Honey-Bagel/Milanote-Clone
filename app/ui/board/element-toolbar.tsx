@@ -12,11 +12,15 @@ import { Button } from "@/components/ui/button";
 interface ElementToolbarProps {
 	onCreateCard: (cardType: Card['card_type']) => void;
 	canvasRef: RefObject<HTMLDivElement | null>;
+	isPublicView?: boolean;
+	isViewerOnly?: boolean;
 }
 
-export default function ElementToolbar({ 
+export default function ElementToolbar({
 	onCreateCard,
 	canvasRef,
+	isPublicView = false,
+	isViewerOnly = false,
 }: ElementToolbarProps) {
 	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
@@ -101,16 +105,35 @@ export default function ElementToolbar({
 		setDragPreview(null);
 	}, [setDragPreview]);
 
+	// Show read-only message if in public view or viewer-only mode
+	if (isPublicView || isViewerOnly) {
+		const message = isViewerOnly ? 'Viewer mode (read-only)' : 'Viewing public board (read-only)';
+		const bgColor = isViewerOnly ? 'bg-purple-600' : 'bg-blue-600';
+		const borderColor = isViewerOnly ? 'border-purple-700' : 'border-blue-700';
+
+		return (
+			<div className={`${bgColor} border-b ${borderColor} px-6 py-3 h-full flex items-center justify-center`}>
+				<div className="flex items-center space-x-2 text-white">
+					<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+					</svg>
+					<span className="font-medium text-sm">{message}</span>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<TooltipProvider>
-			<div 
+			<div
 				className="bg-gray-800 border-b border-gray-700 px-6 py-3 h-full flex items-center"
 				onDrag={handleDrag}
 			>
 				<div className="flex items-center space-x-2">
 					{/* Add Elements */}
-					<button 
-						onClick={() => {setIsElementModalOpen(true)}} 
+					<button
+						onClick={() => {setIsElementModalOpen(true)}}
 						className="px-4 py-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 font-medium text-sm flex items-center space-x-2 transition-colors"
 					>
 						<Plus className="w-4 h-4" />

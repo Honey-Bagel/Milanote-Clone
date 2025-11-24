@@ -5,10 +5,12 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function useBreadcrumbs(
 	boardId: string,
-	fallbackData?: BreadcrumbItem[]
+	fallbackData?: BreadcrumbItem[],
+	isPublicView?: boolean
 ) {
+	// In public view, don't fetch from API - just use fallback data with share tokens
 	const { data, error, isLoading, mutate } = useSWR<BreadcrumbItem[]>(
-		`/api/boards/${boardId}/breadcrumbs`,
+		isPublicView ? null : `/api/boards/${boardId}/breadcrumbs`,
 		fetcher,
 		{
 			fallbackData,
@@ -18,7 +20,7 @@ export function useBreadcrumbs(
 	);
 
 	return {
-		breadcrumbs: data ?? [],
+		breadcrumbs: data ?? fallbackData ?? [],
 		isLoading,
 		isError: !!error,
 		mutate,

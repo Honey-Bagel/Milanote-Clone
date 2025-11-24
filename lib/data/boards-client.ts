@@ -1,69 +1,19 @@
-import { createClient } from "@/lib/supabase/server";
+'use client';
+
+import { createClient } from "@/lib/supabase/client";
 import { BoardCollaborator, BoardRole } from "@/lib/types";
 
-export async function getRecentBoards(limit = 4) {
-	const supabase = await createClient();
-
-	const { data, error } = await supabase
-		.from("boards")
-		.select("*")
-		.is("parent_board_id", null)
-		.order("updated_at", { ascending: false })
-		.limit(limit)
-	
-	if (error) {
-		console.error("Error fetching recent boards:", error);
-		return [];
-	}
-
-	return data;
-}
-
-export async function getFavoriteBoards(limit = 4) {
-	const supabase = await createClient();
-
-	const { data, error } = await supabase
-		.from("boards")
-		.select("*")
-		.eq("is_favorite", true)
-		.order("updated_at", { ascending: false })
-		.limit(limit)
-
-	if (error) {
-		console.error("Error fetching favorite boards:", error);
-		return [];
-	}
-
-	return data;
-}
-
-export async function getCollaboratorBoards(userId: string, limit = 4) {
-	const supabase = await createClient();
-
-	// Use RPC function to bypass RLS issues
-	const { data, error } = await supabase.rpc('get_collaborator_boards', {
-		p_user_id: userId,
-		p_limit: limit
-	});
-
-	if (error) {
-		console.error("Error fetching collaborator boards:", error);
-		return [];
-	}
-
-	return data || [];
-}
-
-// ============================================================================
-// BOARD COLLABORATOR FUNCTIONS
-// ============================================================================
+/**
+ * Client-side functions for board collaboration
+ * These are wrappers that use the browser client
+ */
 
 /**
  * Get all collaborators for a board with their user details
  * Uses RPC function to access auth.users data
  */
 export async function getBoardCollaborators(boardId: string): Promise<BoardCollaborator[]> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	const { data, error } = await supabase.rpc('get_board_collaborators_with_users', {
 		p_board_id: boardId
@@ -104,7 +54,7 @@ export async function addBoardCollaborator(
 	email: string,
 	role: BoardRole = 'viewer'
 ): Promise<{ success: boolean; error?: string; collaborator?: BoardCollaborator }> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	// First, check if the current user is the board owner
 	const { data: { user } } = await supabase.auth.getUser();
@@ -153,142 +103,68 @@ export async function addBoardCollaborator(
 }
 
 /**
- * Update a collaborator's role
+ * Update a collaborator's role - uses RPC to bypass RLS
  */
 export async function updateCollaboratorRole(
 	boardId: string,
 	userId: string,
 	role: BoardRole
 ): Promise<{ success: boolean; error?: string }> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
-	// Check if current user is board owner
-	const { data: { user } } = await supabase.auth.getUser();
-	if (!user) {
-		return { success: false, error: "Not authenticated" };
+	console.log('[updateCollaboratorRole] Starting:', { boardId, userId, role });
+
+	// Use RPC function to bypass RLS
+	const { data, error } = await supabase.rpc('update_board_collaborator_role', {
+		p_board_id: boardId,
+		p_user_id: userId,
+		p_role: role
+	});
+
+	console.log('[updateCollaboratorRole] RPC result:', { data, error });
+
+	if (error) {
+		console.error("Error updating collaborator role:", error);
+		return { success: false, error: error.message };
 	}
 
-	const { data: board, error: boardError } = await supabase
-		.from("boards")
-		.select("owner_id")
-		.eq("id", boardId)
-		.single();
-
-	if (boardError || !board) {
-		return { success: false, error: "Board not found" };
-	}
-
-	if (board.owner_id !== user.id) {
-		return { success: false, error: "Only board owner can update collaborator roles" };
-	}
-
-	// Update role
-	const { error: updateError } = await supabase
-		.from("board_collaborators")
-		.update({ role, updated_at: new Date().toISOString() })
-		.eq("board_id", boardId)
-		.eq("user_id", userId);
-
-	if (updateError) {
-		console.error("Error updating collaborator role:", updateError);
-		return { success: false, error: "Failed to update role" };
+	if (!data || !data.success) {
+		return { success: false, error: data?.error || "Failed to update role" };
 	}
 
 	return { success: true };
 }
 
 /**
- * Remove a collaborator from a board
+ * Remove a collaborator from a board - uses RPC to bypass RLS
  */
 export async function removeBoardCollaborator(
 	boardId: string,
 	userId: string
 ): Promise<{ success: boolean; error?: string }> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
-	// Check if current user is board owner
-	const { data: { user } } = await supabase.auth.getUser();
-	if (!user) {
-		return { success: false, error: "Not authenticated" };
+	console.log('[removeBoardCollaborator] Starting:', { boardId, userId });
+
+	// Use RPC function to bypass RLS
+	const { data, error } = await supabase.rpc('remove_board_collaborator', {
+		p_board_id: boardId,
+		p_user_id: userId
+	});
+
+	console.log('[removeBoardCollaborator] RPC result:', { data, error });
+
+	if (error) {
+		console.error("Error removing collaborator:", error);
+		return { success: false, error: error.message };
 	}
 
-	const { data: board, error: boardError } = await supabase
-		.from("boards")
-		.select("owner_id")
-		.eq("id", boardId)
-		.single();
-
-	if (boardError || !board) {
-		return { success: false, error: "Board not found" };
-	}
-
-	if (board.owner_id !== user.id) {
-		return { success: false, error: "Only board owner can remove collaborators" };
-	}
-
-	// Remove collaborator
-	const { error: deleteError } = await supabase
-		.from("board_collaborators")
-		.delete()
-		.eq("board_id", boardId)
-		.eq("user_id", userId);
-
-	if (deleteError) {
-		console.error("Error removing collaborator:", deleteError);
-		return { success: false, error: "Failed to remove collaborator" };
+	if (!data || !data.success) {
+		return { success: false, error: data?.error || "Failed to remove collaborator" };
 	}
 
 	return { success: true };
 }
-
-/**
- * Check if a user has access to a board and return their role
- */
-export async function checkBoardAccess(
-	boardId: string,
-	userId: string
-): Promise<{ hasAccess: boolean; role?: BoardRole }> {
-	const supabase = await createClient();
-
-	// Check if user is the owner
-	const { data: board, error: boardError } = await supabase
-		.from("boards")
-		.select("owner_id, is_public")
-		.eq("id", boardId)
-		.single();
-
-	if (boardError || !board) {
-		return { hasAccess: false };
-	}
-
-	// If user is owner, they have owner role
-	if (board.owner_id === userId) {
-		return { hasAccess: true, role: 'owner' };
-	}
-
-	// If board is public, user has viewer access
-	if (board.is_public) {
-		return { hasAccess: true, role: 'viewer' };
-	}
-
-	// Check if user is a collaborator
-	const { data: collab, error: collabError } = await supabase
-		.from("board_collaborators")
-		.select("role")
-		.eq("board_id", boardId)
-		.eq("user_id", userId)
-		.single();
-
-	if (collabError || !collab) {
-		return { hasAccess: false };
-	}
-
-	return { hasAccess: true, role: collab.role as BoardRole };
-}
-
-// ============================================================================
-// PUBLIC BOARD FUNCTIONS
-// ============================================================================
 
 /**
  * Toggle a board's public status
@@ -297,7 +173,7 @@ export async function toggleBoardPublic(
 	boardId: string,
 	isPublic: boolean
 ): Promise<{ success: boolean; error?: string; shareToken?: string }> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	// Check if current user is board owner
 	const { data: { user } } = await supabase.auth.getUser();
@@ -347,7 +223,7 @@ export async function toggleBoardPublic(
  * Get all child boards (boards referenced by board cards) for a given board
  */
 async function getChildBoards(boardId: string): Promise<string[]> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	// Get all board cards on this board
 	const { data: cards, error } = await supabase
@@ -401,7 +277,7 @@ export async function toggleBoardPublicRecursive(
 	boardId: string,
 	isPublic: boolean
 ): Promise<{ success: boolean; error?: string; boardsUpdated?: number }> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	// Check if current user is board owner
 	const { data: { user } } = await supabase.auth.getUser();
@@ -482,7 +358,7 @@ export async function toggleBoardPublicRecursive(
 export async function generateShareToken(
 	boardId: string
 ): Promise<{ success: boolean; error?: string; shareToken?: string }> {
-	const supabase = await createClient();
+	const supabase = createClient();
 
 	// Check if current user is board owner
 	const { data: { user } } = await supabase.auth.getUser();
@@ -524,20 +400,19 @@ export async function generateShareToken(
 }
 
 /**
- * Get a board by its public share token
+ * Get board info including public status and share token
  */
-export async function getBoardByShareToken(token: string) {
-	const supabase = await createClient();
+export async function getBoardInfo(boardId: string) {
+	const supabase = createClient();
 
 	const { data, error } = await supabase
 		.from("boards")
-		.select("*")
-		.eq("share_token", token)
-		.eq("is_public", true)
+		.select("id, owner_id, is_public, share_token")
+		.eq("id", boardId)
 		.single();
 
 	if (error) {
-		console.error("Error fetching board by share token:", error);
+		console.error("Error fetching board info:", error);
 		return null;
 	}
 

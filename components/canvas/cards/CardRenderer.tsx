@@ -27,6 +27,7 @@ interface CardRendererProps {
   card: Card;
   isEditing: boolean;
   isSelected?: boolean;
+  isPublicView?: boolean;
   onEditorReady?: (editor: Editor) => void;
 }
 
@@ -34,7 +35,7 @@ interface CardRendererProps {
  * Main router component for rendering different card types
  * Routes based on your database card_type field
  */
-export function CardRenderer({ card, isEditing, isSelected, onEditorReady }: CardRendererProps) {
+export function CardRenderer({ card, isEditing, isSelected, isPublicView, onEditorReady }: CardRendererProps) {
   switch (card.card_type) {
     case 'note':
       return <NoteCardComponent card={card} isEditing={isEditing} onEditorReady={onEditorReady} />;
@@ -61,7 +62,7 @@ export function CardRenderer({ card, isEditing, isSelected, onEditorReady }: Car
       return <ColumnCardComponent card={card} isEditing={isEditing} isSelected={isSelected} />;
     
     case 'board':
-      return <BoardCardComponent card={card} isEditing={isEditing} />;
+      return <BoardCardComponent card={card} isEditing={isEditing} isPublicView={isPublicView} />;
 
     case 'line':
       return <LineCardComponent card={card} isEditing={isEditing} isSelected={isSelected ?? false} />;

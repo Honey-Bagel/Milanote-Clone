@@ -1679,12 +1679,14 @@ function ColumnDragPreview({ card }: { card: Card }) {
 // BOARD CARD - For nested boards
 // ============================================================================
 
-export function BoardCardComponent({ 
-	card, 
-	isEditing 
-}: { 
+export function BoardCardComponent({
+	card,
+	isEditing,
+	isPublicView = false
+}: {
 	card: any; // Will be BoardCard type
 	isEditing: boolean;
+	isPublicView?: boolean;
 }) {
 	const { updateCard } = useCanvasStore();
 	const [availableBoards, setAvailableBoards] = useState<Array<{id: string, title: string, color: string}>>([]);
@@ -1812,11 +1814,36 @@ export function BoardCardComponent({
 		debouncedSave(card.board_cards.linked_board_id, newTitle, card.board_cards.board_color, card.board_id);
 	};
 
-	const handleNavigateToBoard = (e: React.MouseEvent) => {
+	const handleNavigateToBoard = async (e: React.MouseEvent) => {
 		if (!isEditing && card.board_cards.linked_board_id) {
 			e.stopPropagation();
-			// Navigate to the linked board
-			window.location.href = `/board/${card.board_cards.linked_board_id}`;
+
+			// If in public view, fetch the child board's share token and use public link
+			if (isPublicView) {
+				try {
+					const { createClient } = await import('@/lib/supabase/client');
+					const supabase = createClient();
+
+					const { data: childBoard, error } = await supabase
+						.from('boards')
+						.select('share_token, is_public')
+						.eq('id', card.board_cards.linked_board_id)
+						.single();
+
+					if (!error && childBoard && childBoard.is_public && childBoard.share_token) {
+						// Navigate to public share link
+						window.location.href = `/board/public/${childBoard.share_token}`;
+					} else {
+						// Child board is not public, show error or just don't navigate
+						console.warn('Child board is not publicly accessible');
+					}
+				} catch (error) {
+					console.error('Failed to fetch child board info:', error);
+				}
+			} else {
+				// Regular navigation for authenticated users
+				window.location.href = `/board/${card.board_cards.linked_board_id}`;
+			}
 		}
 	};
 

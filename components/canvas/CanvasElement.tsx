@@ -18,6 +18,7 @@ interface CanvasElementProps {
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 	onEditorReady?: (cardId: string, editor: Editor) => void;
 	isInsideColumn?: boolean; // NEW: indicates if rendered inside a column
+	isReadOnly?: boolean; // NEW: indicates if this is read-only (public view)
 }
 
 function orderKeyToZIndex(orderKey: string): number {
@@ -40,14 +41,15 @@ export function useCardZIndex(card: Card, allCards: Map<string, Card>): number {
 	return index >= 0 ? index : 0;
 }
 
-export function CanvasElement({ 
-	card, 
+export function CanvasElement({
+	card,
 	boardId,
-	onCardClick, 
+	onCardClick,
 	onCardDoubleClick,
 	onContextMenu,
 	onEditorReady,
-	isInsideColumn = false // Default to false for backwards compatibility
+	isInsideColumn = false, // Default to false for backwards compatibility
+	isReadOnly = false // Default to false for backwards compatibility
 }: CanvasElementProps) {
 	const {
 		selectedCardIds,
@@ -84,6 +86,9 @@ export function CanvasElement({
 	const handleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
 
+		// Disable interactions in read-only mode
+		if (isReadOnly) return;
+
 		const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
 
 		if (isMultiSelect) return;
@@ -93,17 +98,27 @@ export function CanvasElement({
 
 	const handleDoubleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
+
+		// Disable editing in read-only mode
+		if (isReadOnly) return;
+
 		setEditingCardId(card.id);
 		onCardDoubleClick?.(card.id);
 	};
 
 	const handleCardMouseDown = (e: React.MouseEvent) => {
+		// Disable dragging in read-only mode
+		if (isReadOnly) {
+			e.stopPropagation();
+			return;
+		}
+
 		// If editing, don't interfere with text selection
 		if (isEditing) {
 			e.stopPropagation();
 			return;
 		}
-		
+
 		// Allow dragging even from inside column
 		// The useDraggable hook will handle extracting it from the column
 		handleMouseDown(e);
@@ -111,7 +126,10 @@ export function CanvasElement({
 
 	const handleContextMenu = (e: React.MouseEvent) => {
 		e.preventDefault();
-		
+
+		// Disable context menu in read-only mode
+		if (isReadOnly) return;
+
 		onContextMenu?.(e, card);
 	}
 
@@ -174,9 +192,10 @@ export function CanvasElement({
 					}}
 				>
 					{/* Render the actual card content */}
-					<CardRenderer 
-						card={card} 
+					<CardRenderer
+						card={card}
 						isEditing={isEditing}
+						isPublicView={isReadOnly}
 						onEditorReady={handleEditorReady}
 					/>
 					
@@ -243,6 +262,7 @@ export function CanvasElement({
 						card={card}
 						isEditing={isEditing}
 						isSelected={isSelected}
+						isPublicView={isReadOnly}
 						onEditorReady={handleEditorReady}
 					/>
 

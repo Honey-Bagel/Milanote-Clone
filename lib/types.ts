@@ -17,6 +17,27 @@ export interface Board {
 	ownerId: string;
 	shared: boolean;
 	favorite: boolean;
+	isPublic?: boolean;
+	shareToken?: string | null;
+}
+
+// Board collaboration types
+export type BoardRole = 'owner' | 'editor' | 'viewer';
+
+export interface BoardCollaborator {
+	id: string;
+	boardId: string;
+	userId: string;
+	role: BoardRole;
+	createdAt: Date;
+	updatedAt: Date;
+	// User details (joined from auth.users)
+	user?: {
+		id: string;
+		email: string;
+		display_name: string | null;
+		avatar_url: string | null;
+	};
 }
 
 export interface NoteCardProps {

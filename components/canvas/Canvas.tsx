@@ -31,6 +31,7 @@ interface CanvasProps {
 	enableZoom?: boolean;
 	enableKeyboardShortcuts?: boolean;
 	enableSelectionBox?: boolean;
+	isPublicView?: boolean;
 	onCardClick?: (cardId: string) => void;
 	onCardDoubleClick?: (cardId: string) => void;
 }
@@ -48,6 +49,7 @@ export function Canvas({
 	enablePan = true,
 	enableZoom = true,
 	enableKeyboardShortcuts = true,
+	isPublicView = false,
 	enableSelectionBox = true,
 	onCardClick,
 	onCardDoubleClick,
@@ -388,6 +390,7 @@ export function Canvas({
 					<ElementToolbar
 						onCreateCard={() => {}}
 						canvasRef={canvasViewportRef}
+						isPublicView={isPublicView}
 					/>
 				)}
 			</div>
@@ -442,10 +445,11 @@ export function Canvas({
 									onCardDoubleClick={onCardDoubleClick}
 									onContextMenu={handleCardContextMenu}
 									onEditorReady={handleEditorReady}
+									isReadOnly={isPublicView}
 								/>
 							))}
 						</div>
-						
+
 						{/* Free Cards Layer (only cards NOT in columns) */}
 						<div className="cards-layer">
 							{freeCards.map((card) => (
@@ -457,6 +461,7 @@ export function Canvas({
 									onCardDoubleClick={onCardDoubleClick}
 									onContextMenu={handleCardContextMenu}
 									onEditorReady={handleEditorReady}
+									isReadOnly={isPublicView}
 								/>
 							))}
 						</div>
