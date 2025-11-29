@@ -1,7 +1,7 @@
 'use client';
 
 import { ShareModalProps, BoardCollaborator, BoardRole } from '@/lib/types';
-import { X, Link as LinkIcon, Check, Globe, Lock } from 'lucide-react';
+import { X, Link as LinkIcon, Check, Globe, Lock, UserPlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -224,74 +224,74 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div ref={modalRef} className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
-				<div className="p-6 border-b border-gray-200 flex-shrink-0">
-					<div className="flex items-center justify-between">
-						<h2 className="text-xl font-bold text-gray-800">Share Board</h2>
-						<button className="text-gray-400 hover:text-gray-600" onClick={onClose}>
+		<div className="fixed inset-0 bg-black/60 backdop-blur-sm flex items-center justify-center z-50 p-4">
+			<div ref={modalRef} className="bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col text-slate-300">
+				{/* Header */}
+				<div className="p-6 border-b border-white/10 flex-shrink-0 flex items-center justify-between">
+						<h2 className="text-xl font-bold text-white flex items-center gap-2">
+							<UserPlus size={20} className="text-indigo-400"/>
+							Board Access
+						</h2>
+						<button className="text-slate-400 hover:text-white transitio-colors" onClick={onClose}>
 							<X className="w-5 h-5" />
 						</button>
-					</div>
 				</div>
 
-				<div className="p-6 overflow-y-auto flex-1">
+				<div className="p-6 overflow-y-auto flex-1 space-y-8">
 					{error && (
-						<div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+						<div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
 							{error}
 						</div>
 					)}
 
 					{/* Share with people - Only for owner */}
 					{isOwner && (
-						<div className="mb-6">
-							<label className="block text-sm font-medium text-gray-700 mb-2">Add people</label>
-							<div className="flex flex-col sm:flex-row gap-2">
+						<div>
+							<label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Add people</label>
+							<div className="flex gap-2">
 								<input
 									type="email"
 									placeholder="Enter email address"
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
 									onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
-									className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+									className="flex-1 bg-[#020617] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
 								/>
-								<div className="flex gap-2">
-									<select
-										value={selectedRole}
-										onChange={(e) => setSelectedRole(e.target.value as BoardRole)}
-										className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[110px]"
-									>
-										<option value="viewer">Can view</option>
-										<option value="editor">Can edit</option>
-									</select>
-									<button
-										onClick={handleInvite}
-										disabled={inviteLoading}
-										className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 whitespace-nowrap text-sm"
-									>
-										{inviteLoading ? 'Adding...' : 'Invite'}
-									</button>
-								</div>
+								<select
+									value={selectedRole}
+									onChange={(e) => setSelectedRole(e.target.value as BoardRole)}
+									className="bg-[#020617] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:ring-1 focus:ring-indigo-500 outline-none"
+								>
+									<option value="viewer">Can view</option>
+									<option value="editor">Can edit</option>
+								</select>
+								<button
+									onClick={handleInvite}
+									disabled={inviteLoading}
+									className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+								>
+									{inviteLoading ? 'Sending...' : 'Invite'}
+								</button>
 							</div>
 						</div>
 					)}
 
 					{/* Current collaborators */}
 					{collaborators.length > 0 && (
-						<div className="mb-6">
-							<h3 className="text-sm font-medium text-gray-700 mb-3">People with access</h3>
+						<div>
+							<h3 className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Members</h3>
 							<div className="space-y-3">
 								{collaborators.map((collab) => (
-									<div key={collab.id} className="flex items-center justify-between gap-3">
-										<div className="flex items-center space-x-3 min-w-0">
-											<div className={`w-10 h-10 flex-shrink-0 bg-gradient-to-br ${getAvatarColor(collab.user?.email || '')} rounded-full flex items-center justify-center text-white text-sm font-semibold`}>
+									<div key={collab.id} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-lg transition-colors">
+										<div className="flex items-center gap-3">
+											<div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold border border-white/10">
 												{getInitials(collab.user?.display_name || null, collab.user?.email || '')}
 											</div>
-											<div className="min-w-0">
-												<p className="text-sm font-medium text-gray-800 truncate">
-													{collab.user?.display_name || collab.user?.email}
+											<div>
+												<p className="text-sm font-medium text-white truncate">
+													{collab.user?.display_name || 'Unknown User'}
 												</p>
-												<p className="text-xs text-gray-500 truncate">{collab.user?.email}</p>
+												<p className="text-xs text-slate-500 truncate">{collab.user?.email}</p>
 											</div>
 										</div>
 										{isOwner ? (
@@ -305,14 +305,14 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 														handleRoleChange(collab.userId, value as BoardRole);
 													}
 												}}
-												className="text-xs border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
+												className="text-xs text-slate-400 bg-[#020617] border border-white/5 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
 											>
 												<option value="editor">Can edit</option>
 												<option value="viewer">Can view</option>
 												<option value="remove">Remove</option>
 											</select>
 										) : (
-											<span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full capitalize flex-shrink-0">
+											<span className="text-xs text-slate-400 bg-white/5 px-2 py-1 rounded border border-white/5 capitalize">
 												{collab.role}
 											</span>
 										)}
@@ -324,35 +324,28 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 
 					{/* Public/Private toggle - Only for owner */}
 					{isOwner && (
-						<div className="mb-4">
-							<div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-								<div className="flex items-center space-x-3">
-									{isPublic ? (
-										<Globe className="w-5 h-5 text-blue-500" />
-									) : (
-										<Lock className="w-5 h-5 text-gray-400" />
-									)}
+						<div className="border-t border-white/10 pt-6">
+							<div className="flex items-center justify-between mb-4">
+								<div className="flex items-center gap-3">
+									<div className={`p-2 rounded-lg ${isPublic ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
+										{isPublic ? <Globe size={18} /> : <Lock size={18} /> }
+									</div>
 									<div>
-										<p className="text-sm font-medium text-gray-800">
-											{isPublic ? 'Public board' : 'Private board'}
+										<p className="text-sm font-medium text-white">
+											{isPublic ? 'Public Board' : 'Private Board'}
 										</p>
-										<p className="text-xs text-gray-500">
-											{isPublic ? 'Anyone with the link can view' : 'Only invited people can access'}
+										<p className="text-xs text-slate-500">
+											{isPublic ? 'Anyone with the link can view' : 'Only invited members can access'}
 										</p>
 									</div>
 								</div>
+								{/* Toggle switch */}
 								<button
 									onClick={handleTogglePublic}
 									disabled={loading}
-									className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-										isPublic ? 'bg-blue-500' : 'bg-gray-300'
-									}`}
+									className={`w-11 h-6 rounded-full transition-colors relative ${isPublic ? 'bg-indigo-600' : 'bg-slate-700'}`}
 								>
-									<span
-										className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-											isPublic ? 'translate-x-6' : 'translate-x-1'
-										}`}
-									/>
+									<div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${isPublic ? 'left-6' : 'left-1'}`}></div>
 								</button>
 							</div>
 

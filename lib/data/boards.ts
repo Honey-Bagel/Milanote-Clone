@@ -532,7 +532,7 @@ export async function getBoardByShareToken(token: string) {
 		.select("*")
 		.eq("share_token", token)
 		.eq("is_public", true)
-		.single();
+		.maybeSingle();
 
 	if (error) {
 		console.error("Error fetching board by share token:", error);
