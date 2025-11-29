@@ -55,6 +55,10 @@ export function Grid({
 	// );
 
 	{/* Dot Grid */}
+	// Shift background by half gridSize so dots align with snap points
+	// If cards are snapping to the center of squares, we need to shift dots by -gridSize/2
+	const backgroundOffset = -gridSize / 2;
+
 	return (
 		<div
 			className="grid opacity-20 pointer-events-none"
@@ -66,6 +70,7 @@ export function Grid({
 			height: `${gridExtent}px`,
 			backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
 			backgroundSize: `${gridSize}px ${gridSize}px`,
+			backgroundPosition: `${backgroundOffset}px ${backgroundOffset}px`,
 			}}
 		/>
 	);

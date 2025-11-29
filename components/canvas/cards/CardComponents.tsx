@@ -608,8 +608,14 @@ export function TaskListCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10" style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
-			<div className="task-list-card p-4 h-full flex flex-col" style={{ overflow: isEditing ? 'visible' : 'auto' }}>
+		<CardBase
+			isEditing={isEditing}
+			className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10"
+			style={{
+				height: isEditing ? `${(card.height || 100) + 60}px` : '100%'
+			}}
+		>
+			<div className="task-list-card p-4">
 				{isEditing ? (
 					<input
 						type="text"
@@ -623,23 +629,39 @@ export function TaskListCardComponent({
 						{card.task_list_cards.title}
 					</h3>
 				)}
-				
-				<div className="space-y-2 flex-1" style={{ overflow: isEditing ? 'visible' : 'auto' }}>
+
+				<div className="space-y-2 mb-3">
 					{[...card.task_list_cards.tasks || []]
 						.sort((a, b) => a.position - b.position)
 						.map(task => (
 						<div
 							key={task.id}
-							className="flex items-start gap-2 group"
+							className="flex items-start gap-2.5 group"
 						>
-							<input
-								type="checkbox"
-								checked={task.completed}
-								onChange={() => handleToggleTask(task.id)}
-								className="mt-1"
-								style={{ cursor: 'pointer' }}
-								onClick={(e) => e.stopPropagation()}
-							/>
+							<div className="relative flex items-center justify-center flex-shrink-0 mt-0.5">
+								<input
+									type="checkbox"
+									checked={task.completed}
+									onChange={() => handleToggleTask(task.id)}
+									className="w-4 h-4 rounded border border-slate-600 appearance-none cursor-pointer transition-all checked:bg-indigo-500/30 checked:border-indigo-400 hover:border-indigo-400"
+									onClick={(e) => e.stopPropagation()}
+								/>
+								{task.completed && (
+									<svg
+										className="absolute w-2.5 h-2.5 text-indigo-300 pointer-events-none"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
+										<path
+											strokeLinecap="round"
+											strokeLinejoin="round"
+											strokeWidth={3}
+											d="M5 13l4 4L19 7"
+										/>
+									</svg>
+								)}
+							</div>
 							{isEditing && editingTaskId === task.id ? (
 								<input
 									type="text"
@@ -675,7 +697,7 @@ export function TaskListCardComponent({
 										e.stopPropagation();
 										handleDeleteTask(task.id);
 									}}
-									className="opacity-0 group-hover:opacity-100 text-red-500 text-xs hover:text-red-700"
+									className="opacity-0 group-hover:opacity-100 text-red-500 text-xs hover:text-red-700 flex-shrink-0"
 									style={{ cursor: 'pointer' }}
 								>
 									×
@@ -691,7 +713,7 @@ export function TaskListCardComponent({
 							e.stopPropagation();
 							handleAddTask();
 						}}
-						className="mt-3 px-3 py-1.5 text-sm text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-dashed border-slate-700 rounded-md transition-colors flex-shrink-0"
+						className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-dashed border-slate-700 rounded-md transition-colors"
 						style={{ cursor: 'pointer' }}
 					>
 						+ Add task
@@ -930,15 +952,16 @@ export function FileCardComponent({
 // COLOR PALETTE CARD
 // ============================================================================
 
-export function ColorPaletteCardComponent({ 
-	card, 
-	isEditing 
-}: { 
-	card: ColorPaletteCard; 
+export function ColorPaletteCardComponent({
+	card,
+	isEditing
+}: {
+	card: ColorPaletteCard;
 	isEditing: boolean;
 }) {
 	const { updateCard } = useCanvasStore();
 	const [newColor, setNewColor] = useState('#000000');
+	const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
 	const debouncedSave = useDebouncedCallback(
 		async (title: string, description: string | null, colors: string[]) => {
@@ -957,8 +980,7 @@ export function ColorPaletteCardComponent({
 
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
-		
-		// Update local state
+
 		updateCard(card.id, {
 			...card,
 			color_palette_cards: {
@@ -967,14 +989,12 @@ export function ColorPaletteCardComponent({
 			},
 		});
 
-		// Debounced save
 		debouncedSave(newTitle, card.color_palette_cards.description, card.color_palette_cards.colors);
 	};
 
 	const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		const newDescription = e.target.value;
-		
-		// Update local state
+
 		updateCard(card.id, {
 			...card,
 			color_palette_cards: {
@@ -983,14 +1003,12 @@ export function ColorPaletteCardComponent({
 			},
 		});
 
-		// Debounced save
 		debouncedSave(card.color_palette_cards.title, newDescription, card.color_palette_cards.colors);
 	};
 
 	const handleAddColor = () => {
 		const updatedColors = [...card.color_palette_cards.colors, newColor];
-		
-		// Update local state
+
 		updateCard(card.id, {
 			...card,
 			color_palette_cards: {
@@ -999,15 +1017,13 @@ export function ColorPaletteCardComponent({
 			},
 		});
 
-		// Save immediately
 		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
 		setNewColor('#000000');
 	};
 
 	const handleRemoveColor = (index: number) => {
 		const updatedColors = card.color_palette_cards.colors.filter((_, i) => i !== index);
-		
-		// Update local state
+
 		updateCard(card.id, {
 			...card,
 			color_palette_cards: {
@@ -1016,15 +1032,13 @@ export function ColorPaletteCardComponent({
 			},
 		});
 
-		// Save immediately
 		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
 	};
 
 	const handleColorChange = (index: number, newColor: string) => {
 		const updatedColors = [...card.color_palette_cards.colors];
 		updatedColors[index] = newColor;
-		
-		// Update local state
+
 		updateCard(card.id, {
 			...card,
 			color_palette_cards: {
@@ -1033,15 +1047,46 @@ export function ColorPaletteCardComponent({
 			},
 		});
 
-		// Debounced save
 		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
 	};
 
+	const handleCopyColor = async (color: string, index: number) => {
+		try {
+			await navigator.clipboard.writeText(color);
+			setCopiedIndex(index);
+			// Reset after 2 seconds
+			setTimeout(() => setCopiedIndex(null), 500);
+		} catch (err) {
+			console.error('Failed to copy color:', err);
+		}
+	};
+
+	// Calculate height based on number of colors and editing state
+	const colorCount = card.color_palette_cards.colors.length;
+	const rows = Math.ceil(colorCount / 3); // 3 colors per row
+
+	// Base heights
+	const headerHeight = 35; // Title + icon
+	const descriptionHeight = isEditing ? 50 : (card.color_palette_cards.description ? 25 : 0);
+	const colorRowHeight = isEditing ? 70 : 60; // Taller in edit mode for Remove buttons
+	const addColorHeight = isEditing ? 50 : 0;
+	const padding = 24; // Reduced padding
+
+	const calculatedHeight = headerHeight + descriptionHeight + (rows * colorRowHeight) + addColorHeight + padding;
+
 	return (
-		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10" style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
-			<div className="color-palette-card p-4" style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
-				<div className="flex items-center gap-2 mb-1">
-					<svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<CardBase
+			isEditing={isEditing}
+			className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10"
+			style={{
+				height: isEditing ? `${calculatedHeight}px` : 'auto',
+				minHeight: isEditing ? `${calculatedHeight}px` : 'auto'
+			}}
+		>
+			<div className="color-palette-card px-4 pt-4 pb-0 h-full">
+				{/* Header Section */}
+				<div className="flex items-center gap-2 mb-2">
+					<svg className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
 					</svg>
 					{isEditing ? (
@@ -1060,31 +1105,33 @@ export function ColorPaletteCardComponent({
 					)}
 				</div>
 
+				{/* Description Section */}
 				{isEditing ? (
 					<textarea
 						value={card.color_palette_cards.description || ''}
 						onChange={handleDescriptionChange}
-						className="text-xs text-slate-500 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 resize-none"
+						className="text-xs text-slate-400 mb-4 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 resize-none"
 						placeholder="Description (optional)"
 						rows={2}
 						onClick={(e) => e.stopPropagation()}
 					/>
 				) : card.color_palette_cards.description ? (
-					<p className="text-xs text-slate-500 mb-3">
+					<p className="text-xs text-slate-400 mb-4">
 						{card.color_palette_cards.description}
 					</p>
 				) : null}
-				
-				<div className="flex gap-2 flex-wrap">
+
+				{/* Colors Grid - Fixed 3 columns with space for tooltips */}
+				<div className="grid grid-cols-3 gap-2 mb-1">
 					{card.color_palette_cards.colors.map((color, index) => (
-						<div key={index} className="relative group">
+						<div key={index} className="relative group flex flex-col items-center">
 							{isEditing ? (
-								<div className="flex flex-col items-center gap-1">
+								<>
 									<input
 										type="color"
 										value={color}
 										onChange={(e) => handleColorChange(index, e.target.value)}
-										className="w-12 h-12 rounded-lg border border-white/10 shadow-lg cursor-pointer hover:scale-110 transition-transform"
+										className="w-12 h-12 rounded-lg border border-white/10 shadow-lg cursor-pointer hover:scale-105 transition-transform mb-1"
 										onClick={(e) => e.stopPropagation()}
 									/>
 									<button
@@ -1092,20 +1139,33 @@ export function ColorPaletteCardComponent({
 											e.stopPropagation();
 											handleRemoveColor(index);
 										}}
-										className="text-xs text-red-400 hover:text-red-300"
+										className="text-[10px] text-red-400 hover:text-red-300 px-1 py-0.5 hover:bg-red-500/10 rounded transition-colors whitespace-nowrap"
 										style={{ cursor: 'pointer' }}
 									>
 										Remove
 									</button>
-								</div>
+								</>
 							) : (
 								<>
 									<div
-										className="w-12 h-12 rounded-lg border border-white/10 shadow-lg cursor-pointer hover:scale-110 transition-transform"
+										className="w-12 h-12 rounded-lg border border-white/10 shadow-lg cursor-pointer hover:scale-105 transition-transform mb-1 relative"
 										style={{ backgroundColor: color }}
-										title={color}
-									/>
-									<div className="absolute -bottom-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-slate-400 font-mono whitespace-nowrap">
+										title={`Click to copy ${color}`}
+										onClick={(e) => {
+											e.stopPropagation();
+											handleCopyColor(color, index);
+										}}
+									>
+										{/* Copy indicator */}
+										{copiedIndex === index && (
+											<div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg">
+												<svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+												</svg>
+											</div>
+										)}
+									</div>
+									<div className="text-[9px] text-slate-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 px-1.5 py-0.5 rounded whitespace-nowrap">
 										{color}
 									</div>
 								</>
@@ -1114,13 +1174,14 @@ export function ColorPaletteCardComponent({
 					))}
 				</div>
 
+				{/* Add Color Section */}
 				{isEditing && (
-					<div className="mt-3 flex gap-2 items-center">
+					<div className="flex gap-2 items-center mt-2">
 						<input
 							type="color"
 							value={newColor}
 							onChange={(e) => setNewColor(e.target.value)}
-							className="w-10 h-10 rounded border border-white/10 cursor-pointer"
+							className="w-10 h-10 rounded border border-white/10 cursor-pointer flex-shrink-0"
 							onClick={(e) => e.stopPropagation()}
 						/>
 						<button
@@ -1128,7 +1189,7 @@ export function ColorPaletteCardComponent({
 								e.stopPropagation();
 								handleAddColor();
 							}}
-							className="text-sm text-slate-400 hover:text-slate-300"
+							className="text-sm text-slate-400 hover:text-slate-300 px-2 py-1 hover:bg-white/5 rounded transition-colors"
 							style={{ cursor: 'pointer' }}
 						>
 							+ Add color
@@ -1429,17 +1490,14 @@ export function ColumnCardComponent({
 				overflow-hidden
 				transition-all duration-200
 				w-full h-full
-				backdrop-blur-xl shadow-xl
+				bg-[#1e293b]/90 backdrop-blur-xl shadow-xl
 				${isDropTarget
-					? 'border-cyan-400 bg-cyan-50/20 ring-4 ring-cyan-200 ring-opacity-50'
+					? 'border-cyan-400 ring-4 ring-cyan-200 ring-opacity-50'
 					: isEditing
-						? 'border-cyan-400 bg-[#1e293b]/90 hover:border-cyan-500/50'
-						: 'border-white/10 bg-[#1e293b]/90 hover:border-cyan-500/50'
+						? 'border-cyan-400 hover:border-cyan-500/50'
+						: 'border-white/10 hover:border-cyan-500/50'
 				}
 			`}
-			style={{
-				backgroundColor: isDropTarget ? undefined : card.column_cards.background_color,
-			}}
 		>
 			{/* Header */}
 			<div className={`
@@ -1474,6 +1532,12 @@ export function ColumnCardComponent({
 						<path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
 					</svg>
 				</button>
+
+				{/* Color indicator dot */}
+				<div
+					className="w-2 h-2 rounded-full flex-shrink-0"
+					style={{ backgroundColor: card.column_cards.background_color }}
+				/>
 
 				{/* Title */}
 				<div className="flex-1 min-w-0">

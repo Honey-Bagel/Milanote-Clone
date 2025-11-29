@@ -63,7 +63,7 @@ export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 		case 'file':
 			return { canResize: false, minWidth: 300, minHeight: 70, defaultWidth: 300, defaultHeight: 70 };
 		case 'color_palette':
-			return { canResize: true, minWidth: 100, minHeight: 100, defaultWidth: 250, defaultHeight: 100 };
+			return { canResize: false, minWidth: 200, minHeight: null, defaultWidth: 200, defaultHeight: null };
 		case 'column':
 			return { canResize: false, minWidth: 250, minHeight: 60, defaultWidth: 250, defaultHeight: null };
 		case 'board':
