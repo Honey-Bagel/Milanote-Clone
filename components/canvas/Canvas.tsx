@@ -246,7 +246,7 @@ export function Canvas({
 					...baseCard,
 					card_type: 'note',
 					note_cards: {
-						content: '<p>New note...</p>',
+						content: '<p>Type something...</>',
 						color: 'yellow' as const,
 					},
 				} as Card;
@@ -379,9 +379,9 @@ export function Canvas({
 		: null;
 
 	return (
-		<div className="flex flex-col h-screen">
+		<div className="flex flex-col h-screen bg-[#020617] text-slate-300">
 			{/* Toolbar */}
-			<div className="h-[56px] flex-shrink-0">
+			<div className="h-[56px] flex-shrink-0 z-40">
 				{selectedEditor ? (
 					<TextEditorToolbar editor={selectedEditor} />
 				) : selectedLineCard ? (
@@ -397,7 +397,7 @@ export function Canvas({
 			
 			{/* Canvas */}
 			<div
-				className={`canvas-viewport relative w-full h-full overflow-hidden bg-gray-50 select-none ${className}`}
+				className={`canvas-viewport relative w-full h-full overflow-hidden bg-[#020617] select-none ${className}`}
 				ref={canvasViewportRef}
 				data-scrollable="true"
 				data-canvas-root="true"
@@ -477,16 +477,16 @@ export function Canvas({
 									top: uploadingCard.y,
 									width: uploadingCard.type === 'image' ? 300 : 250,
 									minHeight: 100,
-									backgroundColor: 'white',
-									borderRadius: '8px',
-									boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+									backgroundColor: '#1e293b',
+									borderRadius: '12px',
+									boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
 									display: 'flex',
 									flexDirection: 'column',
 									alignItems: 'center',
 									justifyContent: 'center',
 									padding: '16px',
 									gap: '12px',
-									border: '2px dashed #3b82f6',
+									border: '1px dashed #6366f1',
 									zIndex: 9999,
 								}}
 							>
@@ -495,13 +495,13 @@ export function Canvas({
 									style={{
 										width: 32,
 										height: 32,
-										border: '3px solid #e5e7eb',
-										borderTopColor: '#3b82f6',
+										border: '3px solid rgba(255,255,255,0.1)',
+										borderTopColor: '#6366f1',
 										borderRadius: '50%',
 										animation: 'spin 1s linear infinite',
 									}}
 								/>
-								<span style={{ fontSize: 14, color: '#6b7280', textAlign: 'center', wordBreak: 'break-word' }}>
+								<span style={{ fontSize: 14, color: '#94a3b8', textAlign: 'center', wordBreak: 'break-word' }}>
 									Uploading {uploadingCard.filename}...
 								</span>
 							</div>
@@ -529,7 +529,7 @@ export function Canvas({
 								>
 									{(() => {
 										const previewCard = createPreviewCard(
-											dragPreview.cardType,
+											dragPreview.cardType || 'note',
 											dragPreview.canvasX,
 											dragPreview.canvasY
 										);

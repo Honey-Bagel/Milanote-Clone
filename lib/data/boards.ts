@@ -4,19 +4,17 @@ import { BoardCollaborator, BoardRole } from "@/lib/types";
 export async function getRecentBoards(limit = 4) {
 	const supabase = await createClient();
 
-	const { data, error } = await supabase
-		.from("boards")
-		.select("*")
-		.is("parent_board_id", null)
-		.order("updated_at", { ascending: false })
-		.limit(limit)
-	
+	// Use RPC function to fetch boards with collaborators and user details in one query
+	const { data, error } = await supabase.rpc('get_recent_boards_with_collaborators', {
+		p_limit: limit
+	});
+
 	if (error) {
 		console.error("Error fetching recent boards:", error);
 		return [];
 	}
 
-	return data;
+	return data || [];
 }
 
 export async function getFavoriteBoards(limit = 4) {

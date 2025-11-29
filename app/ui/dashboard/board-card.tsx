@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { getTimeAgo } from '@/lib/utils';
 import { BoardSettingsModal } from './board-settings-modal';
-import { Settings, Star, Users, Palette, Book, Briefcase } from 'lucide-react';
+import { Settings, Star, Users, Palette, Book, Briefcase, Layers, Clock, MoreVertical } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface BoardCardProps {
 	board: {
@@ -16,30 +17,23 @@ interface BoardCardProps {
 		updated_at: string;
 		description?: string;
 		is_favorite?: boolean;
+		collaborators: [];
 	};
-	isFavorite?: boolean;
-	isShared?: boolean;
-	sharedBy?: string;
-	iconType?: 'palette' | 'book' | 'briefcase';
 }
 
 export function BoardCard({
-	board,
-	isFavorite = false,
-	isShared = false,
-	sharedBy,
-	iconType = 'palette'
+	board
 }: BoardCardProps) {
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
-	const [isFavorited, setIsFavorited] = useState(board.is_favorite || isFavorite);
+	const [isFavorited, setIsFavorited] = useState(board.is_favorite || false);
 	const [isUpdating, setIsUpdating] = useState(false);
 	const router = useRouter();
 
 	// Sync local state with server state when board.is_favorite changes
 	useEffect(() => {
-		setIsFavorited(board.is_favorite || isFavorite);
-	}, [board.is_favorite, isFavorite]);
+		setIsFavorited(board.is_favorite || false);
+	}, [board.is_favorite]);
 
 	const handleSettingsClick = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -83,10 +77,6 @@ export function BoardCard({
 		? { background: `linear-gradient(135deg, color-mix(in srgb, ${board.color} 15%, transparent), color-mix(in srgb, ${board.color} 35%, transparent))` }
 		: { background: 'linear-gradient(135deg, color-mix(in srgb, var(--primary) 15%, transparent), color-mix(in srgb, var(--primary) 35%, transparent))' };
 
-	const iconColor = board.color || 'var(--primary)';
-
-	const IconComponent = iconType === 'book' ? Book : iconType === 'briefcase' ? Briefcase : Palette;
-
 	return (
 		<>
 			<Link
@@ -95,50 +85,44 @@ export function BoardCard({
 				onMouseEnter={() => setIsHovered(true)}
 				onMouseLeave={() => setIsHovered(false)}
 			>
-				<div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden hover:border-[var(--primary)] transition-all relative">
-					{/* Action Buttons */}
-					<div className={`absolute top-2 right-2 z-10 flex gap-1 transition-all ${
-						isHovered ? 'opacity-100' : 'opacity-0'
-					}`}>
-						{/* Favorite Button */}
-						<button
-							onClick={handleFavoriteClick}
-							disabled={isUpdating}
-							className={`w-8 h-8 bg-[var(--background)]/80 hover:bg-[var(--background)] rounded-lg flex items-center justify-center transition-all ${
-								isFavorited ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
-							} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
-							aria-label={isFavorited ? "Remove from favorites" : "Add to favorites"}
-						>
-							<Star
-								className={`w-4 h-4 ${isUpdating ? 'animate-pulse' : ''}`}
-								fill={isFavorited ? "currentColor" : "none"}
-							/>
-						</button>
-
-						{/* Settings Button */}
-						<button
-							onClick={handleSettingsClick}
-							className="w-8 h-8 bg-[var(--background)]/80 hover:bg-[var(--background)] rounded-lg flex items-center justify-center transition-all"
-							aria-label="Board settings"
-						>
-							<Settings className="text-[var(--foreground)] w-4 h-4" />
-						</button>
-					</div>
-
-					<div className="aspect-video flex items-center justify-center" style={gradientStyle}>
-						<IconComponent className="w-10 h-10" style={{ color: iconColor }} />
-					</div>
-					<div className="p-4">
-						<div className="flex items-start justify-between mb-1">
-							<h3 className="font-semibold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors flex-1">
-								{board.title}
-							</h3>
-							{isFavorite && <Star className="text-[var(--accent)] w-4 h-4 fill-[var(--accent)]" />}
-							{isShared && <Users className="text-[var(--muted)] w-4 h-4" />}
+				<div className="bg-[#0f172a]/40 border border-white/10 rounded-2xl overflow-hidden hover:border-indigo-500/50 transition-all duration-300 group cursor-pointer hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+					<div className={`h-48 relative`} style={gradientStyle}>
+						<div className="absolute inset-0 flex items-center justify-center text-slate-600/50 group-hover:text-white/20 transition-colors">
+							<Layers size={48} />
 						</div>
-						<p className="text-xs text-[var(--muted)]">
-							{isShared && sharedBy ? `Shared by ${sharedBy}` : getTimeAgo(board.updated_at)}
-						</p>
+						<div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/80 to-transparent"></div>
+
+						<div className="absolute top-3 right-3 flex -space-x-2">
+							{board.collaborators?.map((collaborator, i) => (
+								<Avatar className="w-7 h-7" key={i}>
+									<AvatarImage src={collaborator?.user.avatar_url} />
+									<AvatarFallback>
+										{collaborator.user?.display_name
+											?.split(' ')
+											?.map((word: string) => word[0])
+											?.join('')
+											?.toUpperCase()}
+									</AvatarFallback>
+								</Avatar>
+							))}
+						</div>
+					</div>
+					<div className="p-5">
+						<h4 className="font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors text-lg">{board.title}</h4>
+						<div className="flex items-center justify-between">
+							<div className="text-xs text-slate-500 font-medium flex items-center gap-1">
+								<Clock size={12}/>
+								{getTimeAgo(board.updated_at)}
+							</div>
+							<div>
+								<button onClick={handleFavoriteClick} className={`p-1.5 rounded-lg text-slate-500 hover:text-white transition-colors`}>
+									<Star className={`${isFavorited ? 'fill-slate-500' : ''}`} size={20}/>
+								</button>
+								<button onClick={handleSettingsClick} className="p-1.5 hover:bg-white/5 rounded-lg text-slate-500 hover:text-white transition-colors">
+									<MoreVertical size={20}/>
+								</button>
+							</div>
+						</div>
 					</div>
 				</div>
 			</Link>

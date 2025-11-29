@@ -62,7 +62,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
 	]);
 
 	return (
-		<div className="flex h-screen flex-col">
+		<div className="min-h-screen bg-[#020617] text-slate-300 font-sans overflow-hidden flex flex-col h-screen selection:bg-indigo-500/30 selection:text-white">
 			<TopToolbar
 				boardId={board.id}
 				boardTitle={board.title}
@@ -70,8 +70,7 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
 				initialBreadcrumbs={breadcrumbs}
 				isViewerOnly={isViewerOnly}
 			/>
-			<main className="flex-1 overflow-hidden">
-
+			<main className="flex-1 overflow-hidden relative">
 				<Canvas
 					initialCards={cards}
 					boardId={id}

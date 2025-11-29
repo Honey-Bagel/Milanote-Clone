@@ -12,7 +12,7 @@ import { useCallback } from 'react';
 
 interface CanvasElementProps {
 	card: Card;
-	boardId?: string;
+	boardId?: string | null;
 	onCardClick?: (cardId: string) => void;
 	onCardDoubleClick?: (cardId: string) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;

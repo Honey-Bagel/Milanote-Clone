@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { User } from "@supabase/supabase-js";
+import { ArrowRight, Calendar, Check, CheckSquare, Code, Figma, Github, Globe, ImageIcon, Layers, Menu, MessageSquare, Sparkles, Type } from "lucide-react";
 
 export default function LandingPage() {
 	const supabase = createClient();
 	const [user, setUser] = useState<User | null>(null);
+	const [mousePos, setMousePos] = useState<{ x: number, y: number, parallaxX?: number, parallaxY?: number}>({ x: 0, y: 0 });
+	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const [scrolled, setScrolled] = useState(false);
+	const containerRef = useRef(null);
+	const [email, setEmail] = useState("");
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -16,381 +22,220 @@ export default function LandingPage() {
 			setUser(data.user);
 		}
 		fetchUser();
-	});
+
+		const handleMouseMove = (e) => {
+			if (containerRef.current) {
+				setMousePos({
+					x: e.clientX,
+					y: e.clientY,
+					parallaxX: (e.clientX - window.innerWidth / 2) * 0.01,
+					parallaxY: (e.clientY - window.innerHeight / 2) * 0.01
+				});
+			}
+		};
+
+		const handleScroll = () => {
+			setScrolled(window.scrollY > 50);
+		};
+
+		window.addEventListener('mousemove', handleMouseMove);
+		window.addEventListener('scroll', handleScroll);
+
+		return () => {
+			window.removeEventListener('mousemove', handleMouseMove);
+			window.removeEventListener('scroll', handleScroll);
+		}
+	}, [supabase.auth]);
 
 	return (
-		<div className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+		<div ref={containerRef} className="min-h-screen bg-[#020617] text-slate-300 font-sans overflow-x-hidden relative selection:bg-cyan-500/30 selection:text-cyan-50">
+			{/* Background */}
+			<div className="fixed inset-0 pointer-events-none z-0">
+				<div className="absolute w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[100px] mix-blend-screen transition-transform duration-75 ease-out" style={{ left: -400, top: -400, transform: `translate(${mousePos.x}px, ${mousePos.y}px)` }} />
+				<div className="absolute inset-0 opacity-[0.03]" style={{filter: 'contrast(120%)', backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
+				<div className="absolute inset-0 opacity-[0.25]" style={{ backgroundImage: `linear-gradient(to right, #475569 1px, transparent 1px), linear-gradient(to bottom, #475569 1px, transparent 1px)`, backgroundSize: '60px 60px', transform: `perspective(1000px) rotateX(20deg) translate(${mousePos.parallaxX}px, ${mousePos.parallaxY}px)`, maskImage: 'radial-gradient(circle at center, black 0%, transparent 85%)' }} />
+			</div>
+
 			{/* Navigation */}
-			<nav className="fixed top-0 left-0 right-0 z-50 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)]">
-				<div className="max-w-7xl mx-auto px-6 py-4">
-					<div className="flex items-center justify-between">
-						{/* Logo */}
-						<div className="flex items-center space-x-3">
-							<div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(to bottom right, var(--primary), var(--accent))` }}>
-								<i className="fas fa-layer-group text-[var(--foreground)] text-lg"></i>
-							</div>
-							<span className="text-xl font-bold">Note App</span>
+			<nav className={`fixed top-0 w-full z-50 h-20 transition-all duration-700 ease-in-out ${scrolled ? 'bg-[#020617]/90 backdrop-blur-md border-b border-white/10 shadow-2xl' : 'bg-transparent border-transparent'}`}>
+				<div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
+					<div className="flex items-center gap-3">
+						<div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+							<Layers size={16} className="text-white" />
 						</div>
-
-						{/* Navigation Links */}
-						<div className="hidden md:flex items-center space-x-8">
-							<a href="#features" className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm font-medium">
-								Features
-							</a>
-							<a href="#how-it-works" className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm font-medium">
-								How it Works
-							</a>
-							<a href="#testimonials" className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm font-medium">
-								Testimonials
-							</a>
-							<a href="#pricing" className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm font-medium">
-								Pricing
-							</a>
-						</div>
-
-						{/* Auth Buttons */}
+						<span className="font-bold text-lg tracking-tight text-white">Note App</span>
+					</div>
+					<div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+						<a href="#use-cases" className="hover:text-white transition-colors">Use Cases</a>
+						<a href="#visual-engine" className="hover:text-white transition-colors">Visual Engine</a>
+						<Link href="/pricing" className="hover:text-white tarnsition-colors">Pricing</Link>
+						<div className={`h-4 w-px bg-slate-800 transition-opacity duration-700 ${scrolled ? 'opacity-100' : 'opacity-0'}`}></div>
+						{/* Auth buttons */}
 						{!user ? (
-								<div className="flex items-center space-x-4">
-									<Link
-										href="/auth"
-										className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors text-sm font-medium"
-									>
-										Log In
-									</Link>
-									<Link
-										href="/auth?mode=signup"
-										className="px-5 py-2 rounded-lg font-medium text-sm transition-all shadow-lg hover:shadow-xl hover:opacity-90"
-										style={{
-											background: `linear-gradient(to right, var(--primary), var(--accent))`,
-											color: 'var(--foreground)'
-										}}
-									>
-										Sign Up Free
-									</Link>
-								</div>
-							) : (
-								<div className="flex items-center">
-									<Link
-										href="/dashboard"
-										className="px-5 py-2 rounded-lg font-medium text-sm transition-all shadow-lg hover:shadow-xl hover:opacity-90"
-										style={{
-											background: `linear-gradient(to right, var(--primary), var(--accent))`,
-											color: 'var(--foreground)'
-										}}
-									>
-										Dashboard
-									</Link>
-								</div>
-							)}
+							<>
+								<Link
+									href="/auth"
+									className="text-white hover:text-cyan-400 transition-colors"
+								>
+									Log In
+								</Link>
+								<Link
+									href="/auth?mode=signup"
+									className="px-5 py-2 bg-white text-slate-950 hover:bg-slate-200 rounded-full text-xs font-bold transition-all shadow-[0_0_15px_rgba(255, 255, 255, 0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+								>
+									Sign up
+								</Link>
+							</>
+						) :
+							(
+								<Link
+									href="/dashboard"
+									className="px-5 py-2 bg-white text-slate-950 hover:bg-slate-200 rounded-full text-xs font-bold transition-all shadow-[0_0_15px_rgba(255, 255, 255, 0.1)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+								>
+									Dashboard
+								</Link>
+							)
+						}
+					</div>
+					<div className="md:hidden text-slate-400">
+						<Menu size={24} onClick={() => setIsMenuOpen(!isMenuOpen)} />
 					</div>
 				</div>
 			</nav>
 
-			{/* Hero Section */}
-			<section className="relative pt-32 pb-20 px-6 overflow-hidden">
-				{/* Background decorations */}
-				<div className="absolute top-0 right-0 w-96 h-96 opacity-10 rounded-full blur-3xl" style={{ backgroundColor: 'var(--primary)' }}></div>
-				<div className="absolute bottom-0 left-0 w-96 h-96 opacity-10 rounded-full blur-3xl" style={{ backgroundColor: 'var(--accent)' }}></div>
+			<main className="relative z-10 w-full min-h-screen pt-32 pb-20 px-4">
 
-				{/* Grid pattern */}
-				<div className="absolute inset-0 opacity-5" style={{
-					backgroundImage: `
-						linear-gradient(var(--primary) 1px, transparent 1px),
-						linear-gradient(90deg, var(--primary) 1px, transparent 1px)
-					`,
-					backgroundSize: '50px 50px'
-				}}></div>
-
-				<div className="max-w-7xl mx-auto relative z-10">
-					<div className="text-center max-w-4xl mx-auto">
-						<h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-							Organize Your{' '}
-							<span className="text-transparent bg-clip-text" style={{
-								backgroundImage: `linear-gradient(to right, var(--primary), var(--accent))`
-							}}>
-								Creative Projects
-							</span>{' '}
-							Visually
+				{/* Hero section */}
+				<div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center mb-32">
+					<div className="text-left relative z-20">
+						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-950/30 text-[10px] font-bold text-indigo-300 mb-8 tracking-widest uppercase">
+							<Sparkles size={10} />
+							<span>Spatial Workspace v1.0</span>
+						</div>
+						<h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
+							The infinite <br /> paper for your <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300">digital mind.</span>
 						</h1>
-						<p className="text-xl text-[var(--muted)] mb-10 leading-relaxed">
-							The tool for organizing creative projects into beautiful visual boards.
-							Collect inspiration, organize ideas, and build stunning mood boards.
+						<p className="text-lg text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
+							Linear docs are for finishing ideas. Milanote Clone is for finding them. Drag, drop, and connect your thoughts on an infinite spatial plane.
 						</p>
-						<div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-							<a
-								href="/auth"
-								className="px-8 py-4 rounded-lg font-semibold text-lg transition-all shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5"
-								style={{
-									background: `linear-gradient(to right, var(--primary), var(--accent))`,
-									color: 'var(--foreground)'
-								}}
-							>
-								Start for Free
-							</a>
-							<button className="px-8 py-4 bg-[var(--card)] border border-[var(--border)] rounded-lg font-semibold text-lg hover:bg-[var(--card-hover)] transition-all">
-								Watch Demo
-								<i className="fas fa-play ml-2 text-sm"></i>
-							</button>
-						</div>
-						<p className="text-sm text-[var(--muted)] mt-6">
-							No credit card required • Free forever plan available
-						</p>
+						{!user ? (
+							<form onSubmit={(e) => {e.preventDefault();}} className="flex flex-col sm:flex-row gap-3 max-w-md">
+								<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="test@email.com" className="flex-1 bg-[#0f172a] border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500" />
+								<button className="bg-white hover:bg-slate-200 text-black px-6 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">Join Beta <ArrowRight size={16}/></button>
+							</form>
+						): (
+							<div className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-medium"><Check size={16} />Access granted.</div>
+						)}
 					</div>
 
-					{/* Hero Image/Dashboard Preview */}
-					<div className="mt-20 relative">
-						<div className="absolute inset-0 z-10" style={{
-							background: `linear-gradient(to top, var(--background), transparent)`
-						}}></div>
-						<div className="bg-[var(--card)] rounded-2xl border border-[var(--border)] overflow-hidden shadow-2xl transform perspective-1000 rotate-x-2">
-							<div className="aspect-video bg-[var(--secondary)] p-8 flex items-center justify-center">
-								<div className="text-center">
-									<i className="fas fa-image text-[var(--muted)] text-6xl mb-4"></i>
-									<p className="text-[var(--muted)]">Dashboard Preview</p>
-								</div>
+					{/* Interactive Canvas */}
+					<div className="relative h-[500px] perspective-[1000px] group">
+						<div className="absolute inset-0 rounded-3xl border border-white/10 bg-[#0f172a]/40 backdrop-blur-sm overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all duration-500 hover:border-indigo-500/30">
+							<div className="absolute top-4 left-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest pointer-events-none z-20">Interactive Preview</div>
+							<div id="canvas-container" className="absolute inset-0 cursor-crosshair">
 							</div>
 						</div>
 					</div>
 				</div>
-			</section>
 
-			{/* Features Section */}
-			<section id="features" className="py-20 px-6 bg-[var(--background)]">
-				<div className="max-w-7xl mx-auto">
-					<div className="text-center mb-16">
-						<h2 className="text-4xl md:text-5xl font-bold mb-4">
-							Everything You Need
-						</h2>
-						<p className="text-xl text-[var(--muted)]">
-							Powerful features to bring your creative vision to life
-						</p>
-					</div>
-
-					<div className="grid md:grid-cols-3 gap-8">
-						{/* Feature 1 */}
-						<div className="bg-[var(--card)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8 hover:bg-[var(--card)] transition-all hover:border-[var(--primary)] group">
-							<div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--primary)', opacity: 0.2 }}>
-								<i className="fas fa-palette text-[var(--primary)] text-2xl"></i>
-							</div>
-							<h3 className="text-2xl font-bold mb-4">Visual Workspace</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Create beautiful boards with notes, images, tasks, links, and files. Drag, drop, and arrange everything visually.
+					{/* --- NATIVE MEDIA ENGINE --- */}
+					<section id="visual-engine" className="w-full max-w-7xl mx-auto mb-32">
+						<div className="text-center mb-16">
+							<h2 className="text-3xl font-bold text-white mb-4">Native Media Engine.</h2>
+							<p className="text-slate-400 max-w-2xl mx-auto">
+								Unlike standard whiteboards, CanvasOne understands code, video, and design assets natively.
 							</p>
 						</div>
-
-						{/* Feature 2 */}
-						<div className="bg-[var(--card)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8 hover:bg-[var(--card)] transition-all hover:border-[var(--primary)] group">
-							<div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--accent)', opacity: 0.2 }}>
-								<i className="fas fa-users text-[var(--accent)] text-2xl"></i>
+						<div className="grid grid-cols-2 md:grid-cols-4 gap-4 h-[400px] md:h-[500px] overflow-hidden rounded-3xl border border-white/5 bg-[#0f172a]/20 p-4 relative group">
+							<div className="absolute inset-0 bg-indigo-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+							{/* Column 1 */}
+							<div className="space-y-4 animate-scroll-slow">
+								<div className="h-32 bg-indigo-900/20 rounded-xl border border-indigo-500/20 flex items-center justify-center"><ImageIcon size={32} className="text-indigo-400"/></div>
+								<div className="h-48 bg-slate-800 rounded-xl border border-white/5"></div>
 							</div>
-							<h3 className="text-2xl font-bold mb-4">Real-time Collaboration</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Work together with your team in real-time. Share boards, leave comments, and see changes instantly.
-							</p>
-						</div>
-
-						{/* Feature 3 */}
-						<div className="bg-[var(--card)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8 hover:bg-[var(--card)] transition-all hover:border-[var(--primary)] group">
-							<div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--primary)', opacity: 0.2 }}>
-								<i className="fas fa-mobile-alt text-[var(--primary)] text-2xl"></i>
+							{/* Column 2 */}
+							<div className="space-y-4 pt-12 animate-scroll-slow" style={{animationDelay: '-2s'}}>
+								<div className="h-32 bg-cyan-900/20 rounded-xl border border-cyan-500/20 flex items-center justify-center"><Type size={32} className="text-cyan-400"/></div>
+								<div className="h-40 bg-slate-800 rounded-xl border border-white/5"></div>
 							</div>
-							<h3 className="text-2xl font-bold mb-4">Access Anywhere</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Cloud-synced across all devices. Work on desktop, tablet, or mobile. Your boards are always up to date.
-							</p>
-						</div>
-
-						{/* Feature 4 */}
-						<div className="bg-[var(--card)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8 hover:bg-[var(--card)] transition-all hover:border-[var(--primary)] group">
-							<div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--accent)', opacity: 0.2 }}>
-								<i className="fas fa-search text-[var(--accent)] text-2xl"></i>
+							{/* Column 3 */}
+							<div className="space-y-4 animate-scroll-slow" style={{animationDelay: '-5s'}}>
+								<div className="h-48 bg-slate-800 rounded-xl border border-white/5 p-4 font-mono text-xs text-slate-500">const init = ...</div>
+								<div className="h-32 bg-purple-900/20 rounded-xl border border-purple-500/20 flex items-center justify-center"><Code size={32} className="text-purple-400"/></div>
+								<div className="h-40 bg-slate-800 rounded-xl border border-white/5"></div>
 							</div>
-							<h3 className="text-2xl font-bold mb-4">Powerful Search</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Find anything instantly. Search across all your boards, notes, and files with lightning-fast results.
-							</p>
-						</div>
-
-						{/* Feature 5 */}
-						<div className="bg-[var(--card)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8 hover:bg-[var(--card)] transition-all hover:border-[var(--primary)] group">
-							<div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--primary)', opacity: 0.2 }}>
-								<i className="fas fa-layer-group text-[var(--primary)] text-2xl"></i>
+							{/* Column 4 */}
+							<div className="space-y-4 pt-8 animate-scroll-slow" style={{animationDelay: '-7s'}}>
+								<div className="h-32 bg-emerald-900/20 rounded-xl border border-emerald-500/20 flex items-center justify-center"><CheckSquare size={32} className="text-emerald-400"/></div>
+								<div className="h-48 bg-slate-800 rounded-xl border border-white/5"></div>
 							</div>
-							<h3 className="text-2xl font-bold mb-4">Flexible Organization</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Organize with columns, sections, and nested boards. Structure your work exactly how you want it.
-							</p>
+							<div className="absolute inset-0 bg-gradient-to-b from-[#020617] via-transparent to-[#020617] pointer-events-none"></div>
 						</div>
+					</section>
 
-						{/* Feature 6 */}
-						<div className="bg-[var(--card)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8 hover:bg-[var(--card)] transition-all hover:border-[var(--primary)] group">
-							<div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--accent)', opacity: 0.2 }}>
-								<i className="fas fa-lock text-[var(--accent)] text-2xl"></i>
-							</div>
-							<h3 className="text-2xl font-bold mb-4">Secure & Private</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Your data is encrypted and secure. Control who sees your boards with granular privacy settings.
-							</p>
+					{/* --- USE CASES  --- */}
+					<section id="use-cases" className="w-full max-w-7xl mx-auto mb-32">
+						<div className="text-left mb-12 pl-4 border-l-4 border-indigo-500">
+							<h2 className="text-3xl font-bold text-white mb-2">Start with a blueprint.</h2>
+							<p className="text-slate-400">See how teams use CanvasOne. Real card arrangements.</p>
 						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* How It Works Section */}
-			<section id="how-it-works" className="py-20 px-6 bg-[var(--secondary)]">
-				<div className="max-w-7xl mx-auto">
-					<div className="text-center mb-16">
-						<h2 className="text-4xl md:text-5xl font-bold mb-4">
-							How It Works
-						</h2>
-						<p className="text-xl text-[var(--muted)]">
-							Get started in minutes
-						</p>
-					</div>
-
-					<div className="grid md:grid-cols-3 gap-12">
-						{/* Step 1 */}
-						<div className="text-center">
-							<div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl font-bold" style={{
-								background: `linear-gradient(to bottom right, var(--primary), var(--accent))`
-							}}>
-								1
-							</div>
-							<h3 className="text-2xl font-bold mb-4">Create a Board</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Start with a blank canvas or choose from beautiful templates designed for various projects.
-							</p>
-						</div>
-
-						{/* Step 2 */}
-						<div className="text-center">
-							<div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl font-bold" style={{
-								background: `linear-gradient(to bottom right, var(--accent), var(--primary))`
-							}}>
-								2
-							</div>
-							<h3 className="text-2xl font-bold mb-4">Add Your Content</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Drag and drop notes, images, links, tasks, and files. Arrange them visually however you like.
-							</p>
-						</div>
-
-						{/* Step 3 */}
-						<div className="text-center">
-							<div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 text-3xl font-bold" style={{
-								background: `linear-gradient(to bottom right, var(--primary), var(--accent))`
-							}}>
-								3
-							</div>
-							<h3 className="text-2xl font-bold mb-4">Share & Collaborate</h3>
-							<p className="text-[var(--muted)] leading-relaxed">
-								Invite your team, share with clients, or keep it private. Collaborate in real-time effortlessly.
-							</p>
-						</div>
-					</div>
-				</div>
-			</section>
-
-			{/* Testimonials Section */}
-			<section id="testimonials" className="py-20 px-6 bg-[var(--card)]">
-				<div className="max-w-7xl mx-auto">
-					<div className="text-center mb-16">
-						<h2 className="text-4xl md:text-5xl font-bold mb-4">
-							Loved by Creative Teams
-						</h2>
-						<p className="text-xl text-[var(--muted)]">
-							See what our users have to say
-						</p>
-					</div>
-
-					<div className="grid md:grid-cols-3 gap-8">
-						{/* Testimonial 1 */}
-						<div className="bg-[var(--secondary)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8">
-							<div className="flex items-center mb-6">
-								<div className="w-12 h-12 rounded-full flex items-center justify-center font-semibold mr-4" style={{
-									background: `linear-gradient(to bottom right, var(--primary), var(--accent))`
-								}}>
-									SM
+						
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+							
+							{/* 1. PRODUCT ROADMAP (Using Columns & Cards) */}
+							<div className="bg-[#0f172a]/30 border border-slate-800 rounded-3xl overflow-hidden hover:border-indigo-500/30 transition-all group">
+								<div className="p-6 border-b border-white/5 flex justify-between items-center">
+									<div className="flex items-center gap-2">
+										<Calendar size={18} className="text-indigo-400"/>
+										<h3 className="font-bold text-white">Product Roadmap</h3>
+									</div>
+									<ArrowRight size={16} className="text-slate-600 group-hover:text-white transition-colors"/>
 								</div>
-								<div>
-									<p className="font-semibold">Sarah Mitchell</p>
-									<p className="text-sm text-[var(--muted)]">Product Designer</p>
+								<div className="h-64 bg-[#020617]/50 relative overflow-hidden p-6 flex gap-4 overflow-x-auto">
+									<div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
+									{/* Using actual Column Components */}
+									{/*<ColumnCard title="Q1: Foundation" count="3" color="bg-blue-500" items={["Auth Flow", "Database Schema", "API Setup"]} className="shrink-0" />
+									<ColumnCard title="Q2: Growth" count="2" color="bg-emerald-500" items={["Invite System", "Billing Integration"]} className="shrink-0" />
+									*/}
+									<div className="w-12 h-full border-l border-dashed border-slate-800"></div>
 								</div>
 							</div>
-							<p className="text-[var(--foreground)] opacity-90 italic leading-relaxed">
-								&quot;Milanote has completely transformed how I organize my design projects. It&apos;s intuitive and beautiful.&quot;
-							</p>
-						</div>
 
-						{/* Testimonial 2 */}
-						<div className="bg-[var(--secondary)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8">
-							<div className="flex items-center mb-6">
-								<div className="w-12 h-12 rounded-full flex items-center justify-center font-semibold mr-4" style={{
-									background: `linear-gradient(to bottom right, var(--accent), var(--primary))`
-								}}>
-									JC
+							{/* 2. MOODBOARD (Using Images & Notes) */}
+							<div className="bg-[#0f172a]/30 border border-slate-800 rounded-3xl overflow-hidden hover:border-purple-500/30 transition-all group">
+								<div className="p-6 border-b border-white/5 flex justify-between items-center">
+									<div className="flex items-center gap-2">
+										<ImageIcon size={18} className="text-purple-400"/>
+										<h3 className="font-bold text-white">Brand Moodboard</h3>
+									</div>
+									<ArrowRight size={16} className="text-slate-600 group-hover:text-white transition-colors"/>
 								</div>
-								<div>
-									<p className="font-semibold">James Chen</p>
-									<p className="text-sm text-[var(--muted)]">Creative Director</p>
-								</div>
-							</div>
-							<p className="text-[var(--foreground)] opacity-90 italic leading-relaxed">
-								&quot;The best tool for visual thinking. My team loves how easy it is to collaborate and share ideas.&quot;
-							</p>
-						</div>
-
-						{/* Testimonial 3 */}
-						<div className="bg-[var(--secondary)]/50 backdrop-blur-sm border border-[var(--border)] rounded-2xl p-8">
-							<div className="flex items-center mb-6">
-								<div className="w-12 h-12 rounded-full flex items-center justify-center font-semibold mr-4" style={{
-									background: `linear-gradient(to bottom right, var(--primary), var(--accent))`
-								}}>
-									ER
-								</div>
-								<div>
-									<p className="font-semibold">Emma Rodriguez</p>
-									<p className="text-sm text-[var(--muted)]">Marketing Manager</p>
+								<div className="h-64 bg-[#020617]/50 relative overflow-hidden p-6">
+									{/* Scattered Cards */}
+									{/*
+									<ImageCard caption="Reference_01.jpg" className="absolute top-4 left-6 w-48 rotate-[-6deg] z-10" />
+									<NoteCard title="Color Palette" content="#6366f1 Indigo \n#06b6d4 Cyan" className="absolute top-12 right-12 w-48 rotate-[4deg] z-20" />
+									<ImageCard caption="Texture.png" className="absolute bottom-[-20px] left-32 w-48 rotate-[2deg] z-0 opacity-60" />
+									*/}
 								</div>
 							</div>
-							<p className="text-[var(--foreground)] opacity-90 italic leading-relaxed">
-								&quot;Finally, a tool that lets me organize campaigns visually. Game changer for our marketing team!&quot;
-							</p>
+
 						</div>
-					</div>
-				</div>
-			</section>
+					</section>
 
-			{/* CTA Section */}
-			<section className="py-20 px-6 relative overflow-hidden" style={{
-				background: `linear-gradient(to bottom right, var(--primary), var(--accent))`
-			}}>
-				<div className="absolute inset-0 opacity-10" style={{
-					backgroundImage: `
-						linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px),
-						linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px)
-					`,
-					backgroundSize: '50px 50px'
-				}}></div>
+					{/* --- INTEGRATIONS --- */}
+					<section id="integrations" className="w-full max-w-4xl mx-auto mb-32 text-center">
+						<h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-10">Works with your stack</h2>
+						<div className="flex flex-wrap justify-center gap-12 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
+							<div className="flex items-center gap-2 text-white"><Github size={24}/> <span className="font-bold">GitHub</span></div>
+							<div className="flex items-center gap-2 text-white"><Figma size={24}/> <span className="font-bold">Figma</span></div>
+							<div className="flex items-center gap-2 text-white"><Globe size={24}/> <span className="font-bold">Linear</span></div>
+							<div className="flex items-center gap-2 text-white"><MessageSquare size={24}/> <span className="font-bold">Slack</span></div>
+						</div>
+					</section>
+			</main>
 
-				<div className="max-w-4xl mx-auto text-center relative z-10">
-					<h2 className="text-4xl md:text-6xl font-bold mb-6">
-						Ready to Get Started?
-					</h2>
-					<p className="text-xl mb-10 opacity-90">
-						Join thousands of creative teams using Milanote to bring their ideas to life.
-					</p>
-					<a
-						href="/auth"
-						className="inline-block px-10 py-5 bg-[var(--background)] text-[var(--foreground)] rounded-lg font-bold text-lg hover:bg-[var(--card)] transition-all shadow-2xl hover:shadow-3xl transform hover:-translate-y-1"
-					>
-						Start Free Today
-					</a>
-				</div>
-			</section>
-
-			{/* Footer */}
-			<footer className="bg-[var(--background)] border-t border-[var(--border)] py-12 px-6">
+			<footer className="w-full border-t border-white/5 bg-[#020617] py-12 px-6 relative z-10">
 				<div className="max-w-7xl mx-auto">
 					<div className="grid md:grid-cols-4 gap-8 mb-8">
 						{/* Company */}
@@ -464,6 +309,11 @@ export default function LandingPage() {
 					</div>
 				</div>
 			</footer>
+
+			<style>{`
+				@keyframes scroll-slow { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+				.animate-scroll-slow { animation: scroll-slow 20s linear infinite; }
+			`}</style>
 		</div>
 	);
 }

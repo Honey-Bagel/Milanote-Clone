@@ -75,12 +75,14 @@ export function NoteCardComponent({
 			}),
 			Placeholder.configure({
 				placeholder: 'Type something...',
+				showOnlyWhenEditable: false,
+				showOnlyCurrent: false,
 			}),
 		],
 		content: card.note_cards.content || '',
 		editorProps: {
 			attributes: {
-				class: 'prose prose-sm max-w-none focus:outline-none p-4 min-h-[60px] text-gray-800 text-sm leading-relaxed',
+				class: 'prose prose-sm max-w-none focus:outline-none p-4 min-h-[60px] text-slate-300 text-sm leading-relaxed',
 			},
 		},
 		onUpdate: ({ editor }) => {
@@ -155,17 +157,17 @@ export function NoteCardComponent({
 	};
 
 	const colorClasses = {
-		yellow: 'bg-yellow-100 border-yellow-200',
-		blue: 'bg-blue-100 border-blue-200',
-		green: 'bg-green-100 border-green-200',
-		pink: 'bg-pink-100 border-pink-200',
-		purple: 'bg-purple-100 border-purple-200',
+		yellow: 'bg-yellow-100/70 border-yellow-200/30',
+		blue: 'bg-blue-100 border-blue-200/30',
+		green: 'bg-green-100 border-green-200/30',
+		pink: 'bg-pink-100 border-pink-200/30',
+		purple: 'bg-purple-100 border-purple-200/30',
 	};
 
 	return (
-		<CardBase 
+		<CardBase
 			isEditing={isEditing}
-			className={`${colorClasses[card.note_cards.color]}`}
+			className={`bg-[#1e293b]/90 shadow-xl hover:border-cyan-500/50`}
 			style={{
 				userSelect: isEditing ? 'text' : 'none',
 				WebkitUserSelect: isEditing ? 'text' : 'none',
@@ -305,7 +307,7 @@ export function ImageCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing}>
+		<CardBase isEditing={isEditing} className="backdrop-blur-xl shadow-xl hover:border-cyan-500/50 bg-[#1e293b]/90 border-white/10">
 			<div className="image-card flex flex-col" style={{ height: '100%' }}>
 				{card.image_cards.image_url ? (
 					<>
@@ -327,12 +329,12 @@ export function ImageCardComponent({
 							/>
 						</div>
 						{isEditing ? (
-							<div className="p-3 space-y-2 bg-gray-50 border-t border-gray-200">
+							<div className="p-3 space-y-2 bg-slate-800/50 border-t border-white/10">
 								<input
 									type="text"
 									value={card.image_cards.caption || ''}
 									onChange={handleCaptionChange}
-									className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									className="w-full px-2 py-1 text-xs bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 									placeholder="Caption (optional)"
 									onClick={(e) => e.stopPropagation()}
 								/>
@@ -340,7 +342,7 @@ export function ImageCardComponent({
 									type="text"
 									value={card.image_cards.alt_text || ''}
 									onChange={handleAltTextChange}
-									className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									className="w-full px-2 py-1 text-xs bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 									placeholder="Alt text (optional)"
 									onClick={(e) => e.stopPropagation()}
 								/>
@@ -351,18 +353,18 @@ export function ImageCardComponent({
 					<div className="p-4">
 						{isEditing ? (
 							<div className="space-y-2">
-								<label className="text-xs text-gray-500 block">Image URL</label>
+								<label className="text-xs text-slate-400 block">Image URL</label>
 								<input
 									type="url"
 									value={card.image_cards.image_url}
 									onChange={handleImageUrlChange}
-									className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 									placeholder="https://example.com/image.jpg"
 									onClick={(e) => e.stopPropagation()}
 								/>
 							</div>
 						) : (
-							<div className="flex items-center justify-center h-full bg-gray-100 text-gray-400">
+							<div className="flex items-center justify-center h-full bg-slate-800/50 text-slate-400">
 								No image
 							</div>
 						)}
@@ -433,20 +435,20 @@ export function TextCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} className="bg-transparent border-none shadow-none">
-			<div className="text-card p-2 h-full flex flex-col overflow-auto">
+		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10">
+			<div className="text-card p-4 h-full flex flex-col overflow-auto">
 				{card.text_cards.title && (
 					isEditing ? (
 						<input
 							type="text"
 							value={card.text_cards.title}
 							onChange={handleTitleChange}
-							className="text-xl font-bold text-gray-900 mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+							className="text-xl font-bold text-white mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
 							placeholder="Title"
 							onClick={(e) => e.stopPropagation()}
 						/>
 					) : (
-						<h3 className="text-xl font-bold text-gray-900 mb-1 flex-shrink-0">
+						<h3 className="text-xl font-bold text-white mb-1 flex-shrink-0">
 							{card.text_cards.title}
 						</h3>
 					)
@@ -455,12 +457,12 @@ export function TextCardComponent({
 					<textarea
 						value={card.text_cards.content}
 						onChange={handleContentChange}
-						className="text-base text-gray-800 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 flex-1 resize-none"
+						className="text-base text-slate-300 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 flex-1 resize-none"
 						placeholder="Type your text..."
 						onClick={(e) => e.stopPropagation()}
 					/>
 				) : (
-					<p className="text-base text-gray-800 whitespace-pre-wrap flex-1 overflow-auto">
+					<p className="text-base text-slate-300 whitespace-pre-wrap flex-1 overflow-auto">
 						{card.text_cards.content}
 					</p>
 				)}
@@ -606,18 +608,18 @@ export function TaskListCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
+		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10" style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
 			<div className="task-list-card p-4 h-full flex flex-col" style={{ overflow: isEditing ? 'visible' : 'auto' }}>
 				{isEditing ? (
 					<input
 						type="text"
 						value={card.task_list_cards.title}
 						onChange={handleTitleChange}
-						className="font-semibold text-gray-900 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
+						className="font-semibold text-white mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
 						onClick={(e) => e.stopPropagation()}
 					/>
 				) : (
-					<h3 className="font-semibold text-gray-900 mb-3">
+					<h3 className="font-semibold text-white mb-3 border-b border-white/5 pb-2">
 						{card.task_list_cards.title}
 					</h3>
 				)}
@@ -650,13 +652,13 @@ export function TaskListCardComponent({
 											setEditingTaskId(null);
 										}
 									}}
-									className="flex-1 text-sm bg-transparent border-b border-blue-500 outline-none"
+									className="flex-1 text-sm text-slate-300 bg-transparent border-b border-cyan-500 outline-none"
 									autoFocus
 									onClick={(e) => e.stopPropagation()}
 								/>
 							) : (
-								<span 
-									className={`flex-1 text-sm ${task.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}
+								<span
+									className={`flex-1 text-sm transition-all ${task.completed ? 'line-through text-slate-500' : 'text-slate-300 group-hover:text-white'}`}
 									onDoubleClick={(e) => {
 										if (isEditing) {
 											e.stopPropagation();
@@ -689,7 +691,7 @@ export function TaskListCardComponent({
 							e.stopPropagation();
 							handleAddTask();
 						}}
-						className="mt-3 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 rounded-md transition-colors flex-shrink-0"
+						className="mt-3 px-3 py-1.5 text-sm text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-dashed border-slate-700 rounded-md transition-colors flex-shrink-0"
 						style={{ cursor: 'pointer' }}
 					>
 						+ Add task
@@ -805,27 +807,27 @@ export function LinkCardComponent({
 
 	if (isEditing) {
 		return (
-			<CardBase isEditing={isEditing}>
-				<div className="link-card block p-2 hover:bg-gray-50 transition-colors items-center">
-					<div className="flex-1 gap-2">
-						<div className="flex items-center">
-							<label className="text-xs text-gray-500 block pr-1">Title</label>
+			<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10">
+				<div className="link-card block p-4 transition-colors">
+					<div className="space-y-2">
+						<div>
+							<label className="text-xs text-slate-400 block mb-1">Title</label>
 							<input
 								type="text"
 								value={card.link_cards.title}
 								onChange={handleTitleChange}
-								className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none"
+								className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 								placeholder="Link title"
 								onClick={(e) => e.stopPropagation()}
 							/>
 						</div>
-						<div className="flex items-center">
-							<label className="text-xs text-gray-500 block pr-1">URL</label>
+						<div>
+							<label className="text-xs text-slate-400 block mb-1">URL</label>
 							<input
 								type="url"
 								value={card.link_cards.url}
 								onChange={handleUrlChange}
-								className="w-full px-2 py-1 text-sm border border-gray-300 rounded outline-none"
+								className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 								placeholder="https://example.com"
 								onClick={(e) => e.stopPropagation()}
 							/>
@@ -837,35 +839,40 @@ export function LinkCardComponent({
 	}
 
 	return (
-		<CardBase isEditing={isEditing}>
+		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10 cursor-pointer group">
 			<a
 				href={fullURL || ''}
 				target="_blank"
 				rel="noopener noreferrer"
-				className="link-card block p-4 hover:bg-gray-50 transition-colors"
+				className="link-card block p-4 transition-colors"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-start gap-3">
 					{!faviconError && faviconUrl && (
-						<Image 
-							src={faviconUrl} 
-							alt=""
-							className="w-5 h-5 mt-1 flex-shrink-0"
-							width={5}
-							height={5}
-							onError={() => {
-								setFaviconError(true);
-							}}
-						/>
+						<div className="w-10 h-10 bg-slate-800/50 rounded-lg flex items-center justify-center shrink-0 border border-white/5 group-hover:border-cyan-500/30 transition-colors">
+							<Image
+								src={faviconUrl}
+								alt=""
+								className="w-5 h-5"
+								width={18}
+								height={18}
+								onError={() => {
+									setFaviconError(true);
+								}}
+							/>
+						</div>
 					)}
 					<div className="flex-1 min-w-0">
-						<h3 className="font-medium text-sm text-gray-900 truncate">
+						<h3 className="font-semibold text-sm text-white mb-1 group-hover:text-cyan-400 transition-colors truncate">
 							{card.link_cards.title || card.link_cards.url}
 						</h3>
 						{fullURL && (
-							<p className="text-xs text-gray-400 truncate mt-1">
-								{new URL(fullURL).hostname}
-							</p>
+							<div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+								<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+									<path fillRule="evenodd" d="M4.083 9h1.946c.089-1.546.383-2.97.837-4.118A6.004 6.004 0 004.083 9zM10 2a8 8 0 100 16 8 8 0 000-16zm0 2c-.076 0-.232.032-.465.262-.238.234-.497.623-.737 1.182-.389.907-.673 2.142-.766 3.556h3.936c-.093-1.414-.377-2.649-.766-3.556-.24-.56-.5-.948-.737-1.182C10.232 4.032 10.076 4 10 4zm3.971 5c-.089-1.546-.383-2.97-.837-4.118A6.004 6.004 0 0115.917 9h-1.946zm-2.003 2H8.032c.093 1.414.377 2.649.766 3.556.24.56.5.948.737 1.182.233.23.389.262.465.262.076 0 .232-.032.465-.262.238-.234.498-.623.737-1.182.389-.907.673-2.142.766-3.556zm1.166 4.118c.454-1.147.748-2.572.837-4.118h1.946a6.004 6.004 0 01-2.783 4.118zm-6.268 0C6.412 13.97 6.118 12.546 6.03 11H4.083a6.004 6.004 0 002.783 4.118z" clipRule="evenodd" />
+								</svg>
+								<span className="truncate">{new URL(fullURL).hostname}</span>
+							</div>
 						)}
 					</div>
 				</div>
@@ -1031,34 +1038,39 @@ export function ColorPaletteCardComponent({
 	};
 
 	return (
-		<CardBase isEditing={isEditing} style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
+		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10" style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
 			<div className="color-palette-card p-4" style={{ overflow: isEditing ? 'visible' : 'hidden' }}>
-				{isEditing ? (
-					<input
-						type="text"
-						value={card.color_palette_cards.title}
-						onChange={handleTitleChange}
-						className="font-semibold text-gray-900 mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1"
-						placeholder="Palette name"
-						onClick={(e) => e.stopPropagation()}
-					/>
-				) : (
-					<h3 className="font-semibold text-gray-900 mb-1">
-						{card.color_palette_cards.title}
-					</h3>
-				)}
-				
+				<div className="flex items-center gap-2 mb-1">
+					<svg className="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+					</svg>
+					{isEditing ? (
+						<input
+							type="text"
+							value={card.color_palette_cards.title}
+							onChange={handleTitleChange}
+							className="font-semibold text-white flex-1 bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
+							placeholder="Palette name"
+							onClick={(e) => e.stopPropagation()}
+						/>
+					) : (
+						<h3 className="font-semibold text-white">
+							{card.color_palette_cards.title}
+						</h3>
+					)}
+				</div>
+
 				{isEditing ? (
 					<textarea
 						value={card.color_palette_cards.description || ''}
 						onChange={handleDescriptionChange}
-						className="text-xs text-gray-500 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-blue-500 rounded px-1 resize-none"
+						className="text-xs text-slate-500 mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 resize-none"
 						placeholder="Description (optional)"
 						rows={2}
 						onClick={(e) => e.stopPropagation()}
 					/>
 				) : card.color_palette_cards.description ? (
-					<p className="text-xs text-gray-500 mb-3">
+					<p className="text-xs text-slate-500 mb-3">
 						{card.color_palette_cards.description}
 					</p>
 				) : null}
@@ -1072,7 +1084,7 @@ export function ColorPaletteCardComponent({
 										type="color"
 										value={color}
 										onChange={(e) => handleColorChange(index, e.target.value)}
-										className="w-12 h-12 rounded-lg border border-gray-200 shadow-sm cursor-pointer"
+										className="w-12 h-12 rounded-lg border border-white/10 shadow-lg cursor-pointer hover:scale-110 transition-transform"
 										onClick={(e) => e.stopPropagation()}
 									/>
 									<button
@@ -1080,18 +1092,23 @@ export function ColorPaletteCardComponent({
 											e.stopPropagation();
 											handleRemoveColor(index);
 										}}
-										className="text-xs text-red-500 hover:text-red-700"
+										className="text-xs text-red-400 hover:text-red-300"
 										style={{ cursor: 'pointer' }}
 									>
 										Remove
 									</button>
 								</div>
 							) : (
-								<div
-									className="w-12 h-12 rounded-lg border border-gray-200 shadow-sm"
-									style={{ backgroundColor: color }}
-									title={color}
-								/>
+								<>
+									<div
+										className="w-12 h-12 rounded-lg border border-white/10 shadow-lg cursor-pointer hover:scale-110 transition-transform"
+										style={{ backgroundColor: color }}
+										title={color}
+									/>
+									<div className="absolute -bottom-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] text-slate-400 font-mono whitespace-nowrap">
+										{color}
+									</div>
+								</>
 							)}
 						</div>
 					))}
@@ -1103,7 +1120,7 @@ export function ColorPaletteCardComponent({
 							type="color"
 							value={newColor}
 							onChange={(e) => setNewColor(e.target.value)}
-							className="w-10 h-10 rounded border border-gray-200 cursor-pointer"
+							className="w-10 h-10 rounded border border-white/10 cursor-pointer"
 							onClick={(e) => e.stopPropagation()}
 						/>
 						<button
@@ -1111,7 +1128,7 @@ export function ColorPaletteCardComponent({
 								e.stopPropagation();
 								handleAddColor();
 							}}
-							className="text-sm text-blue-600 hover:text-blue-700"
+							className="text-sm text-slate-400 hover:text-slate-300"
 							style={{ cursor: 'pointer' }}
 						>
 							+ Add color
@@ -1404,34 +1421,34 @@ export function ColumnCardComponent({
 	const itemCount = columnItems.length;
 
 	return (
-		<div 
+		<div
 			className={`
 				column-card-container
 				flex flex-col
-				border-2
-				rounded-lg
+				border
 				overflow-hidden
 				transition-all duration-200
 				w-full h-full
-				${isDropTarget 
-					? 'border-blue-400 bg-blue-50 shadow-xl ring-4 ring-blue-200 ring-opacity-50' 
+				backdrop-blur-xl shadow-xl
+				${isDropTarget
+					? 'border-cyan-400 bg-cyan-50/20 ring-4 ring-cyan-200 ring-opacity-50'
 					: isEditing
-						? 'border-blue-400 bg-white shadow-md'
-						: 'border-gray-300 bg-white shadow-sm hover:shadow-md'
+						? 'border-cyan-400 bg-[#1e293b]/90 hover:border-cyan-500/50'
+						: 'border-white/10 bg-[#1e293b]/90 hover:border-cyan-500/50'
 				}
 			`}
-			style={{ 
+			style={{
 				backgroundColor: isDropTarget ? undefined : card.column_cards.background_color,
 			}}
 		>
-			{/* Header - keep existing header code */}
+			{/* Header */}
 			<div className={`
-				column-header 
-				flex items-center gap-2 
+				column-header
+				flex items-center gap-2
 				px-3 py-2.5
-				border-b-2
+				border-b
 				flex-shrink-0
-				${isDropTarget ? 'border-blue-300 bg-blue-100' : 'border-gray-200 bg-white bg-opacity-60'}
+				${isDropTarget ? 'border-cyan-300/50 bg-cyan-100/10' : 'border-white/5 bg-white/5'}
 			`}>
 				{/* Collapse Button */}
 				<button
@@ -1440,18 +1457,18 @@ export function ColumnCardComponent({
 						handleToggleCollapse();
 					}}
 					className={`
-						w-6 h-6 flex items-center justify-center 
+						w-6 h-6 flex items-center justify-center
 						rounded transition-all flex-shrink-0
-						${isDropTarget 
-							? 'text-blue-600 hover:bg-blue-200' 
-							: 'text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+						${isDropTarget
+							? 'text-cyan-400 hover:bg-cyan-200/20'
+							: 'text-slate-400 hover:bg-white/10 hover:text-white'
 						}
 					`}
 					title={isCollapsed ? "Expand column" : "Collapse column"}
 				>
-					<svg 
+					<svg
 						className={`w-3.5 h-3.5 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
-						fill="currentColor" 
+						fill="currentColor"
 						viewBox="0 0 20 20"
 					>
 						<path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -1465,12 +1482,12 @@ export function ColumnCardComponent({
 							type="text"
 							value={card.column_cards.title}
 							onChange={handleTitleChange}
-							className="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+							className="w-full px-2 py-1 text-sm font-medium bg-slate-700/50 text-white border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 							placeholder="Column title"
 							onClick={(e) => e.stopPropagation()}
 						/>
 					) : (
-						<h3 className="text-sm font-medium text-gray-800 truncate">
+						<h3 className="text-sm font-bold text-white truncate">
 							{card.column_cards.title}
 						</h3>
 					)}
@@ -1478,10 +1495,10 @@ export function ColumnCardComponent({
 
 				{/* Card count badge */}
 				<div className={`
-					px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0
-					${isDropTarget 
-						? 'bg-blue-200 text-blue-700' 
-						: 'bg-gray-200 text-gray-600'
+					px-2 py-0.5 rounded-full text-[10px] font-mono flex-shrink-0
+					${isDropTarget
+						? 'bg-cyan-500/20 text-cyan-300'
+						: 'bg-slate-700/50 text-slate-400'
 					}
 				`}>
 					{itemCount}
@@ -1509,21 +1526,21 @@ export function ColumnCardComponent({
 					{columnItems.length === 0 ? (
 						/* Empty state */
 						<div className={`
-							flex flex-col items-center justify-center 
-							min-h-[200px] 
+							flex flex-col items-center justify-center
+							min-h-[200px]
 							border-2 border-dashed rounded-lg
 							transition-all duration-200
-							${isDropTarget 
-								? 'border-blue-400 bg-blue-50' 
-								: 'border-gray-300 bg-gray-50'
+							${isDropTarget
+								? 'border-cyan-400 bg-cyan-500/10'
+								: 'border-slate-700 bg-slate-800/30'
 							}
 						`}>
 							<div className={`
 								w-12 h-12 rounded-full flex items-center justify-center mb-3
 								transition-all duration-200
-								${isDropTarget 
-									? 'bg-blue-200 text-blue-600 scale-110' 
-									: 'bg-gray-200 text-gray-400'
+								${isDropTarget
+									? 'bg-cyan-500/20 text-cyan-400 scale-110'
+									: 'bg-slate-700/50 text-slate-500'
 								}
 							`}>
 								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1532,9 +1549,9 @@ export function ColumnCardComponent({
 							</div>
 							<p className={`
 								text-sm font-medium transition-all duration-200
-								${isDropTarget 
-									? 'text-blue-600' 
-									: 'text-gray-400'
+								${isDropTarget
+									? 'text-cyan-400'
+									: 'text-slate-500'
 								}
 							`}>
 								{isDropTarget ? 'Drop cards here' : 'Drag cards here'}
@@ -1547,7 +1564,7 @@ export function ColumnCardComponent({
 								<div key={itemCard.id}>
 									{/* Insertion line indicator */}
 									{dragOverIndex === index && draggedCardId !== itemCard.id && (
-										<div className="h-0.5 bg-blue-500 rounded mb-2 shadow-lg animate-pulse" />
+										<div className="h-0.5 bg-cyan-500 rounded mb-2 shadow-lg animate-pulse" />
 									)}
 									
 									<div 
@@ -1575,7 +1592,7 @@ export function ColumnCardComponent({
 										{/* Drag handle indicator */}
 										{!isEditing && (
 											<div className={`absolute left-1 top-1/2 -translate-y-1/2 ${cardHoverId === itemCard.id ? "hover:opacity-60" : "opacity-0"} transition-opacity cursor-move z-10`}>
-												<svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+												<svg className="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
 													<path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 9a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm6 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z" />
 												</svg>
 											</div>
@@ -1611,7 +1628,7 @@ export function ColumnCardComponent({
 							
 							{/* Drop at end indicator */}
 							{dragOverIndex === columnItems.length && (
-								<div className="h-0.5 bg-blue-500 rounded shadow-lg animate-pulse" />
+								<div className="h-0.5 bg-cyan-500 rounded shadow-lg animate-pulse" />
 							)}
 						</div>
 					)}
@@ -1620,8 +1637,8 @@ export function ColumnCardComponent({
 
 			{/* Collapsed State */}
 			{isCollapsed && (
-				<div className="px-3 py-2 text-center border-t border-gray-200 bg-gray-50">
-					<p className="text-xs text-gray-500">
+				<div className="px-3 py-2 text-center border-t border-white/5 bg-white/5">
+					<p className="text-xs text-slate-400">
 						{itemCount} {itemCount === 1 ? 'card' : 'cards'}
 					</p>
 				</div>
@@ -1849,39 +1866,39 @@ export function BoardCardComponent({
 
 	if (isEditing) {
 		return (
-			<CardBase isEditing={isEditing}>
-				<div className="board-card p-4 space-y-3 text-black">
+			<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10">
+				<div className="board-card p-4 space-y-3">
 					<div>
-						<label className="text-xs text-gray-500 block mb-1">Board Title</label>
+						<label className="text-xs text-slate-400 block mb-1">Board Title</label>
 						<input
 							type="text"
 							value={card.board_cards.board_title}
 							onChange={handleTitleChange}
-							className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+							className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 							placeholder="Board name"
 							onClick={(e) => e.stopPropagation()}
 						/>
 					</div>
 
 					{isCreatingNew ? (
-						<div className="space-y-3 p-3 bg-gray-50 rounded border border-gray-200">
+						<div className="space-y-3 p-3 bg-slate-800/50 rounded border border-white/10">
 							<div>
-								<label className="text-xs text-gray-500 block mb-1">New Board Name</label>
+								<label className="text-xs text-slate-400 block mb-1">New Board Name</label>
 								<input
 									type="text"
 									value={newBoardTitle}
 									onChange={(e) => setNewBoardTitle(e.target.value)}
-									className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+									className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 									onClick={(e) => e.stopPropagation()}
 								/>
 							</div>
 							<div>
-								<label className="text-xs text-gray-500 block mb-1">Color</label>
+								<label className="text-xs text-slate-400 block mb-1">Color</label>
 								<input
 									type="color"
 									value={newBoardColor}
 									onChange={(e) => setNewBoardColor(e.target.value)}
-									className="w-12 h-8 rounded border border-gray-300 cursor-pointer"
+									className="w-12 h-8 rounded border border-white/10 cursor-pointer"
 									onClick={(e) => e.stopPropagation()}
 								/>
 							</div>
@@ -1891,7 +1908,7 @@ export function BoardCardComponent({
 										e.stopPropagation();
 										handleCreateNewBoard();
 									}}
-									className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+									className="px-3 py-1 text-sm bg-cyan-600 text-white rounded hover:bg-cyan-700"
 									style={{ cursor: 'pointer' }}
 								>
 									Create
@@ -1901,7 +1918,7 @@ export function BoardCardComponent({
 										e.stopPropagation();
 										setIsCreatingNew(false);
 									}}
-									className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50"
+									className="px-3 py-1 text-sm border border-white/10 text-slate-300 rounded hover:bg-white/5"
 									style={{ cursor: 'pointer' }}
 								>
 									Cancel
@@ -1915,15 +1932,15 @@ export function BoardCardComponent({
 									e.stopPropagation();
 									setIsCreatingNew(true);
 								}}
-								className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+								className="w-full px-3 py-2 text-sm text-cyan-400 border border-cyan-500/30 rounded hover:bg-cyan-500/10"
 								style={{ cursor: 'pointer' }}
 							>
 								+ Create New Board
 							</button>
-							
+
 							{availableBoards.length > 0 && (
 								<div>
-									<label className="text-xs text-gray-500 block mb-1">Or Link to Existing</label>
+									<label className="text-xs text-slate-400 block mb-1">Or Link to Existing</label>
 									<select
 										value={card.board_cards.linked_board_id || ''}
 										onChange={(e) => {
@@ -1932,7 +1949,7 @@ export function BoardCardComponent({
 												handleSelectBoard(selectedBoard.id, selectedBoard.title, selectedBoard.color);
 											}
 										}}
-										className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+										className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 										onClick={(e) => e.stopPropagation()}
 									>
 										<option value="">Select a board...</option>
@@ -1953,36 +1970,39 @@ export function BoardCardComponent({
 
 	// View mode - clickable board preview
 	return (
-		<CardBase isEditing={isEditing} className="cursor-pointer hover:shadow-lg transition-shadow">
-			<div 
+		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10 cursor-pointer group">
+			<div
 				className="board-card overflow-hidden"
 				onDoubleClick={handleNavigateToBoard}
 			>
-				<div 
-					className="h-32 flex items-center justify-center relative"
-					style={{ backgroundColor: card.board_cards.board_color }}
+				<div
+					className="h-32 flex items-center justify-center relative bg-gradient-to-br from-indigo-600 to-indigo-800"
+					style={{ background: `linear-gradient(to bottom right, ${card.board_cards.board_color}, ${card.board_cards.board_color}dd)` }}
 				>
-					<div className="absolute inset-0 bg-opacity-10"></div>
-					<svg 
-						className="w-16 h-16 text-white opacity-80 relative z-10" 
-						fill="none" 
-						stroke="currentColor" 
+					<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+					<svg
+						className="w-12 h-12 text-white/80 relative z-10 group-hover:scale-110 transition-transform"
+						fill="none"
+						stroke="currentColor"
 						viewBox="0 0 24 24"
 					>
-						<path 
-							strokeLinecap="round" 
-							strokeLinejoin="round" 
-							strokeWidth={1.5} 
-							d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" 
+						<path
+							strokeLinecap="round"
+							strokeLinejoin="round"
+							strokeWidth={1.5}
+							d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
 						/>
 					</svg>
 				</div>
-				<div className="p-4 bg-white">
-					<h3 className="font-semibold text-gray-900 truncate mb-1">
+				<div className="p-4 border-t border-white/5">
+					<h3 className="font-semibold text-white truncate mb-1 group-hover:text-cyan-400 transition-colors">
 						{card.board_cards.board_title}
 					</h3>
-					<p className="text-xs text-gray-500">
-						{card.board_cards.card_count || 0} cards
+					<p className="text-xs text-slate-500 flex items-center gap-1">
+						<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+							<path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+						</svg>
+						{card.board_cards.card_count || 0} {(!!card.board_cards.card_count !== null && (card.board_cards.card_count > 1 || card.board_cards.card_count === 0)) ? 'cards' : 'card'}
 					</p>
 				</div>
 			</div>

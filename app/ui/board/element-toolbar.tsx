@@ -108,12 +108,10 @@ export default function ElementToolbar({
 	// Show read-only message if in public view or viewer-only mode
 	if (isPublicView || isViewerOnly) {
 		const message = isViewerOnly ? 'Viewer mode (read-only)' : 'Viewing public board (read-only)';
-		const bgColor = isViewerOnly ? 'bg-purple-600' : 'bg-blue-600';
-		const borderColor = isViewerOnly ? 'border-purple-700' : 'border-blue-700';
 
 		return (
-			<div className={`${bgColor} border-b ${borderColor} px-6 py-3 h-full flex items-center justify-center`}>
-				<div className="flex items-center space-x-2 text-white">
+			<div className="bg-[#0f172a]/95 backdrop-blur-sm border-b border-white/10 px-6 py-3 h-full flex items-center justify-center">
+				<div className="flex items-center space-x-2 text-slate-400">
 					<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -125,150 +123,149 @@ export default function ElementToolbar({
 	}
 
 	return (
-		<TooltipProvider>
-			<div
-				className="bg-gray-800 border-b border-gray-700 px-6 py-3 h-full flex items-center"
-				onDrag={handleDrag}
-			>
-				<div className="flex items-center space-x-2">
-					{/* Add Elements */}
-					<button
-						onClick={() => {setIsElementModalOpen(true)}}
-						className="px-4 py-2 bg-gray-900 hover:bg-gray-700 rounded-lg text-gray-300 font-medium text-sm flex items-center space-x-2 transition-colors"
-					>
-						<Plus className="w-4 h-4" />
-						<span>Add</span>
-						<ChevronDown className="w-3 h-3" />
-					</button>
+		<>
+			<TooltipProvider>
+				<div
+					className="bg-[#0f172a]/95 backdrop-blur-sm border-b border-white/10 px-6 py-2 flex items-center shrink-0 z-40"
+					onDrag={handleDrag}
+				>
+					<div className="flex items-center space-x-2">
+						{/* Add Elements */}
+						<button
+							onClick={() => {setIsElementModalOpen(true)}}
+							className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-lg text-indigo-300 font-medium text-xs flex items-center space-x-2 transition-colors"
+						>
+							<Plus size={14} />
+							<span>Add</span>
+							<ChevronDown size={12} />
+						</button>
 
-					<div className="w-px h-6 bg-gray-700"></div>
+						<div className="w-px h-6 bg-white/10 mx-2"></div>
 
-					{/* Element Types */}
-					<DraggableToolbarButton 
-						icon={StickyNote}
-						title="Add Note"
-						cardType="note"
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-						onClick={() => {}}
-					/>
+						{/* Element Types */}
+						<DraggableToolbarButton 
+							icon={StickyNote}
+							title="Add Note"
+							cardType="note"
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
+							onClick={() => {}}
+						/>
 
-					<DraggableToolbarButton 
-						icon={Book}
-						title="Add Board"
-						cardType="board"
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-						onClick={() => {}}
-					/>
-					
-					<DraggableToolbarButton 
-						icon={Link}
-						title="Add Link"
-						cardType="link"
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-						onClick={() => {}}
-					/>
-					
-					<DraggableToolbarButton 
-						icon={CheckSquare}
-						title="Add Task List"
-						cardType="task_list"
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-						onClick={() => {}}
-					/>
-					
-					<DraggableToolbarButton 
-						icon={Columns}
-						title="Add Column"
-						cardType="column"
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-						onClick={() => {}}
-					/>
+						<DraggableToolbarButton 
+							icon={Book}
+							title="Add Board"
+							cardType="board"
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
+							onClick={() => {}}
+						/>
+						
+						<DraggableToolbarButton 
+							icon={Link}
+							title="Add Link"
+							cardType="link"
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
+							onClick={() => {}}
+						/>
+						
+						<DraggableToolbarButton 
+							icon={CheckSquare}
+							title="Add Task List"
+							cardType="task_list"
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
+							onClick={() => {}}
+						/>
+						
+						<DraggableToolbarButton 
+							icon={Columns}
+							title="Add Column"
+							cardType="column"
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
+							onClick={() => {}}
+						/>
 
-					<DraggableToolbarButton
-						icon={Palette}
-						title="Add Color Palette"
-						cardType="color_palette"
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-						onClick={() => {}}
-					/>
+						<DraggableToolbarButton
+							icon={Palette}
+							title="Add Color Palette"
+							cardType="color_palette"
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
+							onClick={() => {}}
+						/>
 
-					{/* Line Tool */}
-					<DraggableToolbarButton
-						icon={Spline}
-						title="Add Line"
-						cardType="line"
-						onDragStart={handleDragStart}
-						onDragEnd={handleDragEnd}
-						onClick={() => {}}
-					/>
+						{/* Line Tool */}
+						<DraggableToolbarButton
+							icon={Spline}
+							title="Add Line"
+							cardType="line"
+							onDragStart={handleDragStart}
+							onDragEnd={handleDragEnd}
+							onClick={() => {}}
+						/>
 
-					<div className="w-px h-6 bg-gray-700"></div>
+						<div className="w-px h-6 bg-white/10 mx-2"></div>
 
-					{/* Connection Tools */}
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								onClick={() => setConnectionMode(!isConnectionMode)}
-								className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${isConnectionMode ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
-								title="Connection Mode"
-								variant={"ghost"}
-								size={"sm"}
-							>
-								<ArrowRight className="w-4 h-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>{isConnectionMode ? "Exit Connection Mode" : "Enter Connection Mode"}</p>
-							<p className="text-xs text-gray-400">Click card anchors to connect</p>
-						</TooltipContent>
-					</Tooltip>
+						{/* Connection Tools */}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									onClick={() => setConnectionMode(!isConnectionMode)}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${isConnectionMode ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+									title="Connection Mode"
+									variant={"ghost"}
+									size={"sm"}
+								>
+									<ArrowRight className="w-4 h-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>{isConnectionMode ? "Exit Connection Mode" : "Enter Connection Mode"}</p>
+								<p className="text-xs text-slate-400">Click card anchors to connect</p>
+							</TooltipContent>
+						</Tooltip>
 
-					<div className="flex-1"></div>
+						{/* View Options */}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									onClick={() => setShowGrid(!showGrid)}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${showGrid ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+									title="Toggle Grid"
+									variant={"ghost"}
+									size={"sm"}
+								>
+									<Grid3x3 className="w-4 h-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>{showGrid ? "Hide Grid" : "Show Grid"}</p>
+							</TooltipContent>
+						</Tooltip>
 
-					{/* View Options */}
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button 
-								onClick={() => setShowGrid(!showGrid)} 
-								className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${showGrid ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
-								title="Toggle Grid"
-								variant={"ghost"}
-								size={"sm"}
-							>
-								<Grid3x3 className="w-4 h-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>{showGrid ? "Hide Grid" : "Show Grid"}</p>
-						</TooltipContent>
-					</Tooltip>
-
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								onClick={() => setSnapToGrid(!snapToGrid)}
-								className={`p-2 hover:bg-gray-700 rounded-lg text-gray-400 transition-colors ${snapToGrid ? 'bg-blue-600 text-white' : 'text-gray-400'}`}
-								title="Snap to Grid"
-								variant={"ghost"}
-								size={"sm"}
-							>
-								<Magnet className="w-4 h-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>{snapToGrid ? "Free Place" : "Snap to Grid"}</p>
-						</TooltipContent>
-					</Tooltip>
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									onClick={() => setSnapToGrid(!snapToGrid)}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${snapToGrid ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+									title="Snap to Grid"
+									variant={"ghost"}
+									size={"sm"}
+								>
+									<Magnet className="w-4 h-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>{snapToGrid ? "Free Place" : "Snap to Grid"}</p>
+							</TooltipContent>
+						</Tooltip>
+					</div>
 				</div>
-
-				<AddElementModal isOpen={isElementModalOpen} onClose={() => setIsElementModalOpen(false)} />
-			</div>
-		</TooltipProvider>
+			</TooltipProvider>
+			<AddElementModal isOpen={isElementModalOpen} onClose={() => setIsElementModalOpen(false)} />
+		</>
 	);
 }

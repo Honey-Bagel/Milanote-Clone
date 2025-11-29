@@ -46,14 +46,7 @@ export function CardBase({
       className={`
         card-base
         relative
-        border
-        border-gray-200
-        bg-white
-        shadow-sm
-        transition-shadow
-        hover:shadow-md
-		text-black
-        ${isEditing ? 'ring-2 ring-blue-500 editing-active' : ''}
+        ${isEditing ? 'ring-2 ring-cyan-500 editing-active' : ''}
         ${className}
       `}
       style={{
