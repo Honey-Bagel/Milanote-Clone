@@ -1,7 +1,7 @@
 'use client';
 
 import { ShareModalProps, BoardCollaborator, BoardRole } from '@/lib/types';
-import { X, Link as LinkIcon, Check, Globe, Lock, UserPlus } from 'lucide-react';
+import { X, Link as LinkIcon, Check, Globe, Lock, UserPlus, RefreshCw, Users } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -14,6 +14,7 @@ import {
 	generateShareToken,
 	getBoardInfo,
 } from '@/lib/data/boards-client';
+import { Avatar, AvatarFallback, AvatarImage } from '@radix-ui/react-avatar';
 
 export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps) {
 	const modalRef = useRef<HTMLDivElement | null>(null);
@@ -224,30 +225,38 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed inset-0 bg-black/60 backdop-blur-sm flex items-center justify-center z-50 p-4">
+		<div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
 			<div ref={modalRef} className="bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col text-slate-300">
 				{/* Header */}
 				<div className="p-6 border-b border-white/10 flex-shrink-0 flex items-center justify-between">
-						<h2 className="text-xl font-bold text-white flex items-center gap-2">
-							<UserPlus size={20} className="text-indigo-400"/>
-							Board Access
-						</h2>
-						<button className="text-slate-400 hover:text-white transitio-colors" onClick={onClose}>
-							<X className="w-5 h-5" />
-						</button>
+					<div className="flex items-center gap-3">
+						<div className="p-2 bg-indigo-600 rounded-lg">
+							<UserPlus size={20} className="text-white"/>
+						</div>
+						<h2 className="text-xl font-bold text-white">Share Board</h2>
+					</div>
+					<button 
+						className="text-slate-400 hover:text-white hover:bg-white/5 p-2 rounded-lg transition-colors" 
+						onClick={onClose}
+					>
+						<X className="w-5 h-5" />
+					</button>
 				</div>
 
-				<div className="p-6 overflow-y-auto flex-1 space-y-8">
+				<div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
 					{error && (
-						<div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
-							{error}
+						<div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-start gap-3">
+							<div className="w-1 h-full bg-red-500 rounded-full flex-shrink-0"></div>
+							<span>{error}</span>
 						</div>
 					)}
 
 					{/* Share with people - Only for owner */}
 					{isOwner && (
 						<div>
-							<label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Add people</label>
+							<label className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+								Invite People
+							</label>
 							<div className="flex gap-2">
 								<input
 									type="email"
@@ -255,12 +264,12 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
 									onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
-									className="flex-1 bg-[#020617] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-indigo-500 outline-none"
+									className="flex-1 bg-[#020617] border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
 								/>
 								<select
 									value={selectedRole}
 									onChange={(e) => setSelectedRole(e.target.value as BoardRole)}
-									className="bg-[#020617] border border-white/10 rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:ring-1 focus:ring-indigo-500 outline-none"
+									className="bg-[#020617] border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer"
 								>
 									<option value="viewer">Can view</option>
 									<option value="editor">Can edit</option>
@@ -268,7 +277,7 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 								<button
 									onClick={handleInvite}
 									disabled={inviteLoading}
-									className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+									className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
 								>
 									{inviteLoading ? 'Sending...' : 'Invite'}
 								</button>
@@ -279,15 +288,30 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 					{/* Current collaborators */}
 					{collaborators.length > 0 && (
 						<div>
-							<h3 className="block text-sm font-bold text-slate-400 uppercase tracking-wider mb-3">Members</h3>
-							<div className="space-y-3">
+							<div className="flex items-center gap-2 mb-4">
+								<Users size={16} className="text-slate-400" />
+								<h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+									Members ({collaborators.length})
+								</h3>
+							</div>
+							<div className="space-y-2">
 								{collaborators.map((collab) => (
-									<div key={collab.id} className="flex items-center justify-between p-2 hover:bg-white/5 rounded-lg transition-colors">
-										<div className="flex items-center gap-3">
-											<div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold border border-white/10">
-												{getInitials(collab.user?.display_name || null, collab.user?.email || '')}
-											</div>
-											<div>
+									<div 
+										key={collab.id} 
+										className="flex items-center justify-between p-3 bg-[#020617] border border-white/10 hover:border-white/20 rounded-xl transition-all group"
+									>
+										<div className="flex items-center gap-3 flex-1">
+											<Avatar className="w-10 h-10">
+												<AvatarImage src={collab.user?.avatar_url || undefined} />
+												<AvatarFallback className="bg-indigo-600 text-white font-medium">
+													{collab?.user?.display_name
+														?.split(' ')
+														?.map((word: string) => word[0])
+														?.join('')
+														?.toUpperCase()}
+												</AvatarFallback>
+											</Avatar>
+											<div className="min-w-0 flex-1">
 												<p className="text-sm font-medium text-white truncate">
 													{collab.user?.display_name || 'Unknown User'}
 												</p>
@@ -305,14 +329,14 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 														handleRoleChange(collab.userId, value as BoardRole);
 													}
 												}}
-												className="text-xs text-slate-400 bg-[#020617] border border-white/5 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 flex-shrink-0"
+												className="text-xs text-slate-300 bg-[#0f172a] border border-white/10 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 flex-shrink-0 cursor-pointer hover:border-white/20 transition-all"
 											>
 												<option value="editor">Can edit</option>
 												<option value="viewer">Can view</option>
-												<option value="remove">Remove</option>
+												<option value="remove" className="text-red-400">Remove</option>
 											</select>
 										) : (
-											<span className="text-xs text-slate-400 bg-white/5 px-2 py-1 rounded border border-white/5 capitalize">
+											<span className="text-xs text-slate-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 capitalize flex-shrink-0">
 												{collab.role}
 											</span>
 										)}
@@ -325,14 +349,18 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 					{/* Public/Private toggle - Only for owner */}
 					{isOwner && (
 						<div className="border-t border-white/10 pt-6">
-							<div className="flex items-center justify-between mb-4">
+							<div className="flex items-center justify-between p-4 bg-[#020617] border border-white/10 rounded-xl hover:border-white/20 transition-all">
 								<div className="flex items-center gap-3">
-									<div className={`p-2 rounded-lg ${isPublic ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-400'}`}>
-										{isPublic ? <Globe size={18} /> : <Lock size={18} /> }
+									<div className={`p-2.5 rounded-lg transition-all ${
+										isPublic 
+											? 'bg-emerald-500/20 text-emerald-400' 
+											: 'bg-slate-700/50 text-slate-400'
+									}`}>
+										{isPublic ? <Globe size={20} /> : <Lock size={20} />}
 									</div>
 									<div>
-										<p className="text-sm font-medium text-white">
-											{isPublic ? 'Public Board' : 'Private Board'}
+										<p className="text-sm font-semibold text-white">
+											{isPublic ? 'Public Access' : 'Private Access'}
 										</p>
 										<p className="text-xs text-slate-500">
 											{isPublic ? 'Anyone with the link can view' : 'Only invited members can access'}
@@ -343,22 +371,31 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 								<button
 									onClick={handleTogglePublic}
 									disabled={loading}
-									className={`w-11 h-6 rounded-full transition-colors relative ${isPublic ? 'bg-indigo-600' : 'bg-slate-700'}`}
+									className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${
+										isPublic ? 'bg-indigo-600' : 'bg-slate-700'
+									} ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
 								>
-									<div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${isPublic ? 'left-6' : 'left-1'}`}></div>
+									<div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow-lg ${
+										isPublic ? 'translate-x-6' : 'translate-x-0.5'
+									}`}></div>
 								</button>
 							</div>
 
 							{/* Include child boards checkbox */}
 							<div className="mt-3 ml-1">
-								<label className="flex items-center space-x-2 cursor-pointer">
-									<input
-										type="checkbox"
-										checked={includeChildBoards}
-										onChange={(e) => setIncludeChildBoards(e.target.checked)}
-										className="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500"
-									/>
-									<span className="text-sm text-gray-600">
+								<label className="flex items-center gap-2 cursor-pointer group">
+									<div className="relative">
+										<input
+											type="checkbox"
+											checked={includeChildBoards}
+											onChange={(e) => setIncludeChildBoards(e.target.checked)}
+											className="sr-only peer"
+										/>
+										<div className="w-5 h-5 border-2 border-white/20 rounded bg-[#020617] peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-all flex items-center justify-center">
+											{includeChildBoards && <Check size={14} className="text-white" />}
+										</div>
+									</div>
+									<span className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors">
 										Apply to all child boards (boards linked within this board)
 									</span>
 								</label>
@@ -369,23 +406,25 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 					{/* Link sharing */}
 					{isPublic && shareToken && (
 						<div>
-							<h3 className="text-sm font-medium text-gray-700 mb-3">Public share link</h3>
-							<div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-								<LinkIcon className="text-gray-400 w-4 h-4 flex-shrink-0" />
+							<h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
+								Public Share Link
+							</h3>
+							<div className="flex items-center gap-2 p-4 bg-[#020617] border border-white/10 rounded-xl">
+								<LinkIcon className="text-slate-500 w-4 h-4 flex-shrink-0" />
 								<input
 									type="text"
 									value={`${window.location.origin}/board/public/${shareToken}`}
 									readOnly
-									className="flex-1 bg-transparent text-sm text-gray-600 focus:outline-none"
+									className="flex-1 bg-transparent text-sm text-slate-300 focus:outline-none"
 								/>
 								<button
 									onClick={handleCopyLink}
-									className="text-blue-500 hover:text-blue-600 font-medium text-sm flex items-center space-x-1 flex-shrink-0"
+									className="text-indigo-400 hover:text-indigo-300 font-medium text-sm flex items-center gap-2 flex-shrink-0 px-3 py-1.5 hover:bg-indigo-500/10 rounded-lg transition-all"
 								>
 									{copied ? (
 										<>
 											<Check className="w-4 h-4" />
-											<span>Copied</span>
+											<span>Copied!</span>
 										</>
 									) : (
 										<span>Copy</span>
@@ -397,8 +436,9 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 									<button
 										onClick={handleRegenerateLink}
 										disabled={loading}
-										className="text-blue-500 hover:text-blue-600 text-sm font-medium disabled:opacity-50"
+										className="text-slate-400 hover:text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2 hover:bg-white/5 px-3 py-1.5 rounded-lg transition-all"
 									>
+										<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
 										Regenerate link
 									</button>
 								</div>
@@ -409,26 +449,30 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 
 				{/* Confirmation Dialog */}
 				{showConfirmDialog && (
-					<div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-2xl">
-						<div className="bg-white rounded-xl shadow-xl p-6 max-w-md mx-4">
-							<h3 className="text-lg font-bold text-gray-800 mb-2">
+					<div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center rounded-2xl p-4">
+						<div className="bg-[#0f172a] border border-white/10 rounded-2xl shadow-2xl p-6 max-w-md w-full">
+							<h3 className="text-lg font-bold text-white mb-2">
 								{pendingPublicState ? 'Make all boards public?' : 'Make all boards private?'}
 							</h3>
-							<p className="text-sm text-gray-600 mb-4">
+							<p className="text-sm text-slate-400 mb-6">
 								{pendingPublicState
 									? 'This will make this board and all child boards (boards linked within) publicly accessible. Anyone with the links will be able to view them.'
 									: 'This will make this board and all child boards private. Only people you invite will be able to access them.'}
 							</p>
-							<div className="flex justify-end space-x-3">
+							<div className="flex justify-end gap-3">
 								<button
 									onClick={handleCancelRecursiveToggle}
-									className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+									className="px-4 py-2.5 text-slate-300 hover:bg-white/5 rounded-lg font-medium transition-all border border-white/10"
 								>
 									Cancel
 								</button>
 								<button
 									onClick={handleConfirmRecursiveToggle}
-									className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+									className={`px-4 py-2.5 rounded-lg font-medium transition-all shadow-lg ${
+										pendingPublicState
+											? 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/20'
+											: 'bg-slate-700 hover:bg-slate-600 text-white'
+									}`}
 								>
 									{pendingPublicState ? 'Make Public' : 'Make Private'}
 								</button>

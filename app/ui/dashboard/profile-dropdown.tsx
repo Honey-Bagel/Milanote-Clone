@@ -1,0 +1,137 @@
+'use client';
+
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { ChevronRightIcon, Settings, HelpCircle, Keyboard, LogOut, User } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from "@/lib/contexts/auth-context";
+
+export default function UserMenu() {
+	const { user, loading, signOut } = useAuth();
+	
+	if (loading || !user) {
+		return <div></div>
+	}
+
+	const avatarUrl = user.user_metadata?.avatar_url || null;
+
+	return (
+		<DropdownMenu.Root>
+			{/* Trigger Button (Avatar) */}
+			<DropdownMenu.Trigger asChild>
+				<button className="hover:ring-2 hover:ring-indigo-500/50 rounded-full transition-all">
+					<Avatar>
+						<AvatarImage src={avatarUrl} />
+						<AvatarFallback className="bg-indigo-600 text-white font-medium">
+							{user?.user_metadata?.display_name
+								?.split(' ')
+								?.map((word: string) => word[0])
+								?.join('')
+								?.toUpperCase()}
+						</AvatarFallback>
+					</Avatar>
+				</button>
+			</DropdownMenu.Trigger>
+
+			{/* Dropdown Content */}
+			<DropdownMenu.Portal>
+				<DropdownMenu.Content
+					className="min-w-[280px] bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl py-2 text-slate-300 animate-in fade-in-0 zoom-in-95 z-50 backdrop-blur-xl"
+					sideOffset={8}
+					align="end"
+				>
+					{/* Account Section */}
+					<div className="px-4 py-3 border-b border-white/10">
+						<DropdownMenu.Label className="text-xs text-slate-500 uppercase tracking-wider mb-3 font-bold">
+							Account
+						</DropdownMenu.Label>
+						<div className="flex items-center gap-3">
+							<Avatar className="w-10 h-10">
+								<AvatarImage src={avatarUrl} />
+								<AvatarFallback className="bg-indigo-600 text-white font-medium">
+									{user?.user_metadata?.display_name
+										?.split(' ')
+										?.map((word: string) => word[0])
+										?.join('')
+										?.toUpperCase()}
+								</AvatarFallback>
+							</Avatar>
+							<div>
+								<p className="font-semibold text-sm text-white">{user.user_metadata.display_name}</p>
+								<p className="text-xs text-slate-400">{user.email}</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Manage Account */}
+					<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center justify-between px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
+						<div className="flex items-center gap-3">
+							<User size={16} className="text-slate-400" />
+							<span className="text-slate-300">Manage account</span>
+						</div>
+						<ChevronRightIcon className="w-4 h-4 text-slate-500" />
+					</DropdownMenu.Item>
+
+					<DropdownMenu.Separator className="h-px bg-white/10 my-2" />
+
+					{/* Settings */}
+					<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
+						<Settings size={16} className="text-slate-400" />
+						<span className="text-slate-300">Settings</span>
+					</DropdownMenu.Item>
+
+					{/* Theme Submenu */}
+					<DropdownMenu.Sub>
+						<DropdownMenu.SubTrigger className="relative flex cursor-pointer select-none items-center justify-between px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 data-[state=open]:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
+							<div className="flex items-center gap-3">
+								<div className="w-4 h-4 rounded-full bg-gradient-to-br from-amber-400 to-indigo-600" />
+								<span className="text-slate-300">Theme</span>
+							</div>
+							<ChevronRightIcon className="w-4 h-4 text-slate-500" />
+						</DropdownMenu.SubTrigger>
+						<DropdownMenu.Portal>
+							<DropdownMenu.SubContent
+								className="min-w-[200px] bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl py-2 text-slate-300 animate-in fade-in-0 zoom-in-95"
+								sideOffset={12}
+							>
+								<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors text-slate-300">
+									Light
+								</DropdownMenu.Item>
+								<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors text-slate-300">
+									Dark
+								</DropdownMenu.Item>
+								<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors text-slate-300">
+									System
+								</DropdownMenu.Item>
+							</DropdownMenu.SubContent>
+						</DropdownMenu.Portal>
+					</DropdownMenu.Sub>
+
+					<DropdownMenu.Separator className="h-px bg-white/10 my-2" />
+
+					{/* Help */}
+					<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
+						<HelpCircle size={16} className="text-slate-400" />
+						<span className="text-slate-300">Help</span>
+					</DropdownMenu.Item>
+
+					{/* Shortcuts */}
+					<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
+						<Keyboard size={16} className="text-slate-400" />
+						<span className="text-slate-300">Shortcuts</span>
+					</DropdownMenu.Item>
+
+					<DropdownMenu.Separator className="h-px bg-white/10 my-2" />
+
+					{/* Log out */}
+					<DropdownMenu.Item 
+						onClick={signOut} 
+						className="relative flex cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-sm outline-none hover:bg-red-500/10 focus:bg-red-500/10 rounded-lg mx-2 my-1 transition-colors text-red-400 hover:text-red-300"
+					>
+						<LogOut size={16} />
+						<span>Log out</span>
+					</DropdownMenu.Item>
+				</DropdownMenu.Content>
+			</DropdownMenu.Portal>
+		</DropdownMenu.Root>
+	)
+}

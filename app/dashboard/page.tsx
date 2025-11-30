@@ -6,6 +6,7 @@ import { Bell, Grid, Layers, Search, Settings, Users, LucideIcon, Star, Clock, F
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { QuickActionCardWrapper } from '../ui/dashboard/quick-action-card-wrapper';
 import { CreateBoardQuickAction } from '../ui/dashboard/create-board-quick-action';
+import UserMenu from '../ui/dashboard/profile-dropdown';
 
 export default async function Dashboard() {
 	const supabase = await createClient();
@@ -161,19 +162,7 @@ export default async function Dashboard() {
 							<Bell size={18} className="text-slate-400"/>
 							<div className="absolute top-1 right-1 w-2 h-2 bg-cyan-500 rounded-full"></div>
 						</button>
-						<button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-							<Settings size={18} className="text-slate-400"/>
-						</button>
-						<Avatar>
-							<AvatarImage src={avatarUrl} />
-							<AvatarFallback>
-								{user?.user_metadata?.display_name
-									?.split(' ')
-									?.map((word: string) => word[0])
-									?.join('')
-									?.toUpperCase()}
-							</AvatarFallback>
-						</Avatar>
+						<UserMenu />
 					</div>
 				</div>
 
