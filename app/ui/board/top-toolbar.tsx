@@ -191,7 +191,7 @@ export default function TopToolbar({
 									<BreadcrumbLink	asChild>
 										<Link
 											href="/dashboard"
-											className="flex items-center hover:bg-white/5 text-slate-400 transition-colors"
+											className="flex items-center rounded-lg hover:bg-white/5 text-slate-400 transition-colors"
 										>
 											<Home className="w-5 h-5" />
 										</Link>

@@ -8,10 +8,12 @@ import { Settings, Star, Users, Palette, Book, Briefcase, Layers, Clock, MoreVer
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/lib/contexts/auth-context';
 
 interface BoardCardProps {
 	board: {
 		id: string;
+		owner_id: string;
 		title: string;
 		color?: string;
 		updated_at: string;
@@ -29,11 +31,27 @@ export function BoardCard({
 	const [isFavorited, setIsFavorited] = useState(board.is_favorite || false);
 	const [isUpdating, setIsUpdating] = useState(false);
 	const router = useRouter();
+	const { user } = useAuth();
 
 	// Sync local state with server state when board.is_favorite changes
 	useEffect(() => {
-		setIsFavorited(board.is_favorite || false);
-	}, [board.is_favorite]);
+		const fetchFavoriteBoards = async () => {
+			const supabase = createClient();
+			const { data, error } = await supabase
+				.from('profiles')
+				.select('favorite_boards')
+				.eq('id', user?.id)
+				.contains('favorite_boards', [board.id])
+				.maybeSingle();
+
+			if (error) {
+				setIsFavorited(false);
+				return;
+			}
+			setIsFavorited(!!data);
+		};
+		fetchFavoriteBoards();
+	}, [board, user]);
 
 	const handleSettingsClick = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -55,10 +73,11 @@ export function BoardCard({
 
 		try {
 			const supabase = createClient();
-			const { error } = await supabase
-				.from('boards')
-				.update({ is_favorite: newFavoriteState })
-				.eq('id', board.id);
+
+			const { data, error } = await supabase.rpc(newFavoriteState ? 'add_favorite_board' : 'remove_favorite_board', {
+				user_id: user?.id,
+				board_id: board.id,
+			});
 
 			if (error) throw error;
 

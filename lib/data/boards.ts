@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { BoardCollaborator, BoardRole } from "@/lib/types";
 
-export async function getRecentBoards(limit = 4) {
+export async function getBoards(limit = 4) {
 	const supabase = await createClient();
 
 	// Use RPC function to fetch boards with collaborators and user details in one query

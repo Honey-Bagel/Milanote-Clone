@@ -1,7 +1,7 @@
 'use client';
 
 import { ShareModalProps, BoardCollaborator, BoardRole } from '@/lib/types';
-import { X, Link as LinkIcon, Check, Globe, Lock, UserPlus, RefreshCw, Users } from 'lucide-react';
+import { X, Link as LinkIcon, Check, Globe, Lock, UserPlus, RefreshCw, Users, UserIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -304,11 +304,7 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 											<Avatar className="w-10 h-10">
 												<AvatarImage src={collab.user?.avatar_url || undefined} />
 												<AvatarFallback className="bg-indigo-600 text-white font-medium">
-													{collab?.user?.display_name
-														?.split(' ')
-														?.map((word: string) => word[0])
-														?.join('')
-														?.toUpperCase()}
+													<UserIcon />
 												</AvatarFallback>
 											</Avatar>
 											<div className="min-w-0 flex-1">

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from "@/lib/supabase/server";
-import { getRecentBoards, getFavoriteBoards, getCollaboratorBoards } from '@/lib/data/boards';
+import { getBoards, getFavoriteBoards, getCollaboratorBoards } from '@/lib/data/boards';
 import { BoardCard } from '../ui/dashboard/board-card';
 import { Bell, Grid, Layers, Search, Settings, Users, LucideIcon, Star, Clock, Filter, List } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,10 +21,8 @@ export default async function Dashboard() {
 	const avatarUrl = user.user_metadata?.avatar_url || null;
 
 	// Fetch all boards in parallel
-	const [recentBoards, favoriteBoards, collaboratorBoards] = await Promise.all([
-		getRecentBoards(),
-		getFavoriteBoards(),
-		getCollaboratorBoards(user.id)
+	const [recentBoards] = await Promise.all([
+		getBoards()
 	]);
 
 	// return (
