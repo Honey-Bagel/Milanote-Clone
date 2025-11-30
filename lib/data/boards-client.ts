@@ -62,6 +62,11 @@ export async function addBoardCollaborator(
 		return { success: false, error: "Not authenticated" };
 	}
 
+	// Check if the email being added is the owner's email
+	if (email === user.email) {
+		return { success: false, error: "You can't add yourself as a collaborator" };
+	}
+
 	const { data: board, error: boardError } = await supabase
 		.from("boards")
 		.select("owner_id")

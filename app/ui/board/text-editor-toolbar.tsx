@@ -43,10 +43,10 @@ const ToolbarButton = ({
 		}}
 		onClick={onClick}
 		title={title}
-		className={`p-2 rounded-lg transition-colors ${
+		className={`p-2 rounded-lg transition-all ${
 			isActive 
-				? 'bg-blue-600 text-white' 
-				: 'text-gray-300 hover:bg-gray-700 hover:text-white'
+				? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
+				: 'text-slate-400 hover:bg-white/5 hover:text-white'
 		}`}
 		type="button"
 	>
@@ -55,7 +55,7 @@ const ToolbarButton = ({
 );
 
 const ToolbarDivider = () => (
-	<div className="w-px h-6 bg-gray-700" />
+	<div className="w-px h-6 bg-white/10" />
 );
 
 export default function TextEditorToolbar({ editor }: TextEditorToolbarProps) {
@@ -93,8 +93,8 @@ export default function TextEditorToolbar({ editor }: TextEditorToolbarProps) {
 	}
 
 	return (
-		<div className="flex items-center gap-1 px-4 bg-gray-800 border-b border-gray-700 h-full">
-			<span className="text-sm text-gray-400 mr-3 font-medium">Text Formatting</span>
+		<div className="flex items-center gap-2 px-6 bg-[#0f172a] border-b border-white/10 h-full">
+			<span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Text Formatting</span>
 			
 			{/* Text Styles */}
 			<div className="flex items-center gap-1">

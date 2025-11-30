@@ -72,7 +72,7 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 	return (
 		<div
 			ref={contextMenuRef}
-			className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[200px]"
+			className="fixed bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl py-2 z-50 min-w-[220px] backdrop-blur-xl"
 			style={{
 				top: `${data.position.y}px`,
 				left: `${data.position.x}px`
@@ -81,29 +81,29 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 			{data.card && (
 				GetCardTypeContextMenu(data.card, onClose)
 			)}
-			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-				<Copy className="w-4 h-4" />
+			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Copy className="w-4 h-4 text-slate-400" />
 				<span>Duplicate</span>
 			</button>
-			<button onClick={handleEditButton} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-				<Edit className="w-4 h-4" />
+			<button onClick={handleEditButton} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Edit className="w-4 h-4 text-slate-400" />
 				<span>Edit</span>
 			</button>
-			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-				<Palette className="w-4 h-4" />
+			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Palette className="w-4 h-4 text-slate-400" />
 				<span>Change Color</span>
 			</button>
-			<div className="border-t border-gray-200 my-2"></div>
-			<button onClick={handleBringToFront} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-				<ArrowUp className="w-4 h-4" />
+			<div className="h-px bg-white/10 my-1.5"></div>
+			<button onClick={handleBringToFront} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<ArrowUp className="w-4 h-4 text-slate-400" />
 				<span>Bring Forward</span>
 			</button>
-			<button onClick={handleSendToBack} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
-				<ArrowDown className="w-4 h-4" />
+			<button onClick={handleSendToBack} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<ArrowDown className="w-4 h-4 text-slate-400" />
 				<span>Send Backward</span>
 			</button>
-			<div className="border-t border-gray-200 my-2"></div>
-			<button onClick={handleDeleteButton} className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center space-x-3">
+			<div className="h-px bg-white/10 my-1.5"></div>
+			<button onClick={handleDeleteButton} className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors">
 				<Trash2 className="w-4 h-4" />
 				<span>Delete</span>
 			</button>

@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation';
 import { createClient } from "@/lib/supabase/server";
-import { getBoards, getFavoriteBoards, getCollaboratorBoards } from '@/lib/data/boards';
+import { getBoards } from '@/lib/data/boards';
 import { BoardCard } from '../ui/dashboard/board-card';
-import { Bell, Grid, Layers, Search, Settings, Users, LucideIcon, Star, Clock, Filter, List } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Bell, Grid, Layers, Search, Users, LucideIcon, Star, Clock, Filter, List, Plus } from 'lucide-react';
 import { QuickActionCardWrapper } from '../ui/dashboard/quick-action-card-wrapper';
 import { CreateBoardQuickAction } from '../ui/dashboard/create-board-quick-action';
 import UserMenu from '../ui/dashboard/profile-dropdown';
+import { DashboardCreateBoardButton } from '../ui/dashboard/dashboard-create-board-button';
 
 export default async function Dashboard() {
 	const supabase = await createClient();
@@ -20,10 +20,7 @@ export default async function Dashboard() {
 	const displayName = user.user_metadata?.display_name || user.email;
 	const avatarUrl = user.user_metadata?.avatar_url || null;
 
-	// Fetch all boards in parallel
-	const [recentBoards] = await Promise.all([
-		getBoards()
-	]);
+	const boards = await getBoards();
 
 	// return (
 	// 	<div className="flex h-screen">
@@ -205,15 +202,25 @@ export default async function Dashboard() {
 					</div>
 				</div>
 
-				{/* Board rendering */}
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-						{recentBoards && recentBoards.map((board) => (
+				{/* Board rendering with empty state */}
+				{boards && boards.length > 0 ? (
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+						{boards.map((board) => (
 							<BoardCard
 								key={board.id}
 								board={board}
 							/>
 						))}
-				</div>
+					</div>
+				) : (
+					<div className="flex flex-col items-center justify-center py-24 px-4">
+						<h3 className="text-xl font-semibold text-white mb-2">No boards yet</h3>
+						<p className="text-slate-400 text-center mb-8 max-w-md">
+							Get started by creating your first board.
+						</p>
+						<DashboardCreateBoardButton />
+					</div>
+				)}
 			</div>
 		</div>
 	)
@@ -237,4 +244,3 @@ function TabButton({ children, icon: Icon, active }: TabButtonProps) {
 		</button>
 	)
 }
-

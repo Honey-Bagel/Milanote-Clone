@@ -31,10 +31,10 @@ const ToolbarButton = ({
   <button
     onClick={onClick}
     title={title}
-    className={`p-2 rounded-lg transition-colors ${
+    className={`p-2 rounded-lg transition-all ${
       isActive
-        ? 'bg-blue-600 text-white'
-        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+        : 'text-slate-400 hover:bg-white/5 hover:text-white'
     }`}
     type="button"
   >
@@ -43,7 +43,7 @@ const ToolbarButton = ({
 );
 
 const ToolbarDivider = () => (
-  <div className="w-px h-6 bg-gray-700" />
+  <div className="w-px h-6 bg-white/10" />
 );
 
 const ColorButton = ({
@@ -57,7 +57,9 @@ const ColorButton = ({
 }) => (
   <button
     onClick={onClick}
-    className={`w-6 h-6 rounded-full border-2 ${isActive ? 'border-white' : 'border-transparent'}`}
+    className={`w-7 h-7 rounded-lg border-2 transition-all hover:scale-110 ${
+      isActive ? 'border-white shadow-lg' : 'border-white/20 hover:border-white/40'
+    }`}
     style={{ backgroundColor: color }}
     title={color}
   />
@@ -101,15 +103,15 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
   ];
 
   return (
-    <div className="bg-gray-800 border-b border-gray-700 px-6 py-3 h-full flex items-center">
-      <div className="flex items-center space-x-2">
+    <div className="bg-[#0f172a] border-b border-white/10 px-6 py-3 h-full flex items-center">
+      <div className="flex items-center gap-2">
         {/* Line Style Label */}
-        <span className="text-gray-400 text-sm mr-2">Line</span>
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Line</span>
 
         <ToolbarDivider />
 
         {/* Colors */}
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center gap-1.5 px-2">
           {colors.map((color) => (
             <ColorButton
               key={color}
@@ -128,14 +130,14 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
           isActive={lineData.line_style === 'solid'}
           title="Solid line"
         >
-          <div className="w-6 h-0.5 bg-current" />
+          <div className="w-6 h-0.5 bg-current rounded-full" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => updateLineProperty({ line_style: 'dashed' })}
           isActive={lineData.line_style === 'dashed'}
           title="Dashed line"
         >
-          <div className="w-6 h-0.5 bg-current" style={{ backgroundImage: 'repeating-linear-gradient(90deg, currentColor 0, currentColor 4px, transparent 4px, transparent 8px)' }} />
+          <div className="w-6 h-0.5 bg-current rounded-full" style={{ backgroundImage: 'repeating-linear-gradient(90deg, currentColor 0, currentColor 4px, transparent 4px, transparent 8px)' }} />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => updateLineProperty({ line_style: 'dotted' })}
@@ -148,11 +150,11 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
         <ToolbarDivider />
 
         {/* Stroke Width */}
-        <span className="text-gray-400 text-xs">Width</span>
+        <span className="text-xs font-medium text-slate-400">Width</span>
         <select
           value={lineData.stroke_width}
           onChange={(e) => updateLineProperty({ stroke_width: parseInt(e.target.value) })}
-          className="bg-gray-700 text-gray-200 text-sm rounded px-2 py-1 border border-gray-600"
+          className="bg-[#020617] text-slate-300 text-sm rounded-lg px-3 py-1.5 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer hover:border-white/20 transition-all"
         >
           <option value={1}>1px</option>
           <option value={2}>2px</option>
@@ -188,40 +190,47 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
             step="0.1"
             value={lineData.curvature}
             onChange={(e) => updateLineProperty({ curvature: parseFloat(e.target.value) })}
-            className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+            className="w-24 h-1.5 bg-[#020617] rounded-lg appearance-none cursor-pointer slider-thumb"
             title="Curvature amount"
+            style={{
+              background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${lineData.curvature * 100}%, #020617 ${lineData.curvature * 100}%, #020617 100%)`
+            }}
           />
         )}
 
         <ToolbarDivider />
 
         {/* Start Cap */}
-        <span className="text-gray-400 text-xs">Start</span>
-        {endCapOptions.map((option) => (
-          <ToolbarButton
-            key={`start-${option.value}`}
-            onClick={() => updateLineProperty({ start_cap: option.value })}
-            isActive={lineData.start_cap === option.value}
-            title={`Start: ${option.label}`}
-          >
-            {option.icon}
-          </ToolbarButton>
-        ))}
+        <span className="text-xs font-medium text-slate-400">Start</span>
+        <div className="flex items-center gap-1">
+          {endCapOptions.map((option) => (
+            <ToolbarButton
+              key={`start-${option.value}`}
+              onClick={() => updateLineProperty({ start_cap: option.value })}
+              isActive={lineData.start_cap === option.value}
+              title={`Start: ${option.label}`}
+            >
+              {option.icon}
+            </ToolbarButton>
+          ))}
+        </div>
 
         <ToolbarDivider />
 
         {/* End Cap */}
-        <span className="text-gray-400 text-xs">End</span>
-        {endCapOptions.map((option) => (
-          <ToolbarButton
-            key={`end-${option.value}`}
-            onClick={() => updateLineProperty({ end_cap: option.value })}
-            isActive={lineData.end_cap === option.value}
-            title={`End: ${option.label}`}
-          >
-            {option.icon}
-          </ToolbarButton>
-        ))}
+        <span className="text-xs font-medium text-slate-400">End</span>
+        <div className="flex items-center gap-1">
+          {endCapOptions.map((option) => (
+            <ToolbarButton
+              key={`end-${option.value}`}
+              onClick={() => updateLineProperty({ end_cap: option.value })}
+              isActive={lineData.end_cap === option.value}
+              title={`End: ${option.label}`}
+            >
+              {option.icon}
+            </ToolbarButton>
+          ))}
+        </div>
       </div>
     </div>
   );

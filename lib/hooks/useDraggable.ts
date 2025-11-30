@@ -192,8 +192,10 @@ export function useDraggable({
 
 				lastCanvasPosRef.current = currentCanvasPos;
 
-				const snapPosition = (value: number) =>
-					snapToGrid ? Math.round(value / gridSize) * gridSize : value;
+				const snapPosition = (value: number) => {
+					const shouldSnap = snapToGrid !== e.shiftKey;
+					return shouldSnap ? Math.round(value / gridSize) * gridSize : value;
+				};
 
 				// Update card positions (these updates won't be recorded in history while paused)
 				const updates = cardsToMoveRef.current.map((id) => {

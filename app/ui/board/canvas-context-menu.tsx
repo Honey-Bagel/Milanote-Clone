@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { Separator } from '@radix-ui/react-dropdown-menu';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
+import { StickyNote, CheckSquare } from 'lucide-react';
 
 interface CanvasContextMenuProps {
 	isOpen: boolean;
@@ -54,6 +54,7 @@ export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasC
 	const onSelectAll = (e: React.MouseEvent) => {
 		e.preventDefault();
 		selectAll();
+		onClose();
 	}
 
 	if (!isOpen) return null;
@@ -61,17 +62,19 @@ export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasC
 	return (
 		<div
 			ref={contextMenuRef}
-			className="fixed bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50 min-w-[200px]"
+			className="fixed bg-[#0f172a] border border-white/10 rounded-xl shadow-2xl py-2 z-50 min-w-[220px] backdrop-blur-xl"
 			style={{
 				top: `${position.y}px`,
 				left: `${position.x}px`
 			}}
 		>
-			<button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
+			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<StickyNote className="w-4 h-4 text-slate-400" />
 				<span>Add Note</span>
 			</button>
-			<Separator />
-			<button onClick={onSelectAll} className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-3">
+			<div className="h-px bg-white/10 my-1.5"></div>
+			<button onClick={onSelectAll} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<CheckSquare className="w-4 h-4 text-slate-400" />
 				<span>Select All</span>
 			</button>
 		</div>
