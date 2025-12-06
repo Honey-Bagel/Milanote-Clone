@@ -1,13 +1,13 @@
 'use client';
 
-import { ChevronDown, Minus, Plus, Maximize2, Share2, MoreHorizontal, Settings, Home } from 'lucide-react';
+import { Minus, Plus, Maximize2, Share2, Settings, Home } from 'lucide-react';
 import ShareModal from './share-modal';
 import { Fragment, useState, useMemo } from 'react';
 import SettingsModal from '../home/settings-modal';
 import Link from 'next/link';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { RealtimeAvatarStack } from '@/components/realtime-avatar-stack';
-import { useBreadcrumbs } from '@/lib/hooks/useBreadcrumbs';
+import { useBreadcrumbs, type BreadcrumbItem as BreadcrumbItemType } from '@/lib/hooks/boards/use-breadcrumbs';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -18,18 +18,10 @@ import {
 	BreadcrumbEllipsis
 } from "@/components/ui/breadcrumb";
 
-type BreadcrumbItemType = {
-	id: string,
-	title: string,
-	color?: string,
-	shareToken?: string | null
-};
-
 type TopToolbarProps = {
 	boardId: string;
 	boardTitle: string;
 	boardColor?: string;
-	initialBreadcrumbs?: BreadcrumbItemType[];
 	isPublicView?: boolean;
 	isViewerOnly?: boolean;
 };
@@ -38,7 +30,6 @@ export default function TopToolbar({
 	boardId,
 	boardTitle,
 	boardColor,
-	initialBreadcrumbs = [],
 	isPublicView = false,
 	isViewerOnly = false
 }: TopToolbarProps) {
@@ -46,7 +37,7 @@ export default function TopToolbar({
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 	const { viewport, zoomIn, zoomOut, zoomToFit } = useCanvasStore();
 
-	const { breadcrumbs } = useBreadcrumbs(boardId, initialBreadcrumbs, isPublicView);
+	const { breadcrumbs } = useBreadcrumbs(boardId, isPublicView);
 
 	const { displayBreadcrumbs, isBreadcrumbsCondensed } = useMemo(() => {
 		if (breadcrumbs.length > 4) {

@@ -1,29 +1,20 @@
 'use client';
 
 import Link from "next/link";
-import { createClient } from '@/lib/supabase/client';
 import React, { useEffect, useState, useRef } from "react";
-import { User } from "@supabase/supabase-js";
 import { ArrowRight, Calendar, Check, CheckSquare, Code, Figma, Github, Globe, ImageIcon, Layers, Menu, MessageSquare, Sparkles, Type } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
 export default function LandingPage() {
-	const supabase = createClient();
-	const [user, setUser] = useState<User | null>(null);
 	const [mousePos, setMousePos] = useState<{ x: number, y: number, parallaxX?: number, parallaxY?: number}>({ x: 0, y: 0 });
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
 	const containerRef = useRef(null);
 	const [email, setEmail] = useState("");
+	const { isSignedIn } = useUser();
 
 	useEffect(() => {
-		const fetchUser = async () => {
-			const { data, error } = await supabase.auth.getUser();
-			if (error) return;
-			setUser(data.user);
-		}
-		fetchUser();
-
-		const handleMouseMove = (e) => {
+		const handleMouseMove = (e: MouseEvent) => {
 			if (containerRef.current) {
 				setMousePos({
 					x: e.clientX,
@@ -45,7 +36,7 @@ export default function LandingPage() {
 			window.removeEventListener('mousemove', handleMouseMove);
 			window.removeEventListener('scroll', handleScroll);
 		}
-	}, [supabase.auth]);
+	});
 
 	return (
 		<div ref={containerRef} className="min-h-screen bg-[#020617] text-slate-300 font-sans overflow-x-hidden relative selection:bg-cyan-500/30 selection:text-cyan-50">
@@ -71,7 +62,7 @@ export default function LandingPage() {
 						<Link href="/pricing" className="hover:text-white tarnsition-colors">Pricing</Link>
 						<div className={`h-4 w-px bg-slate-800 transition-opacity duration-700 ${scrolled ? 'opacity-100' : 'opacity-0'}`}></div>
 						{/* Auth buttons */}
-						{!user ? (
+						{!isSignedIn ? (
 							<>
 								<Link
 									href="/auth"
@@ -118,7 +109,7 @@ export default function LandingPage() {
 						<p className="text-lg text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
 							Linear docs are for finishing ideas. Milanote Clone is for finding them. Drag, drop, and connect your thoughts on an infinite spatial plane.
 						</p>
-						{!user ? (
+						{!isSignedIn ? (
 							<form onSubmit={(e) => {e.preventDefault();}} className="flex flex-col sm:flex-row gap-3 max-w-md">
 								<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="test@email.com" className="flex-1 bg-[#0f172a] border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500" />
 								<button className="bg-white hover:bg-slate-200 text-black px-6 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">Join Beta <ArrowRight size={16}/></button>

@@ -10,7 +10,7 @@ import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
 import { ConnectionLayer } from './ConnectionLayer';
-import type { Card, LineCard } from '@/lib/types';
+import type { Card, CardData, LineCard } from '@/lib/types';
 import { type Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/element-toolbar';
 import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
@@ -22,9 +22,9 @@ import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
 import { CardRenderer } from './cards/CardRenderer';
 import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
+import { useBoardCards } from '@/lib/hooks/cards';
 
 interface CanvasProps {
-	initialCards?: Card[];
 	boardId: string | null;
 	className?: string;
 	enablePan?: boolean;
@@ -43,7 +43,6 @@ export interface DragPreviewState {
 }
 
 export function Canvas({
-	initialCards = [],
 	boardId,
 	className = '',
 	enablePan = true,
@@ -61,11 +60,11 @@ export function Canvas({
 	const [cardContextMenuData, setCardContextMenuData] = useState<{ card: null | Card, position: { x: number, y: number }}>({card: null, position: { x: 0, y: 0}});
 	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
 
+	const { cards, isLoading } = useBoardCards(boardId);
+
 	const {
 		viewport,
-		cards,
 		connections,
-		loadCards,
 		clearSelection,
 		setEditingCardId,
 		editingCardId,
@@ -77,13 +76,12 @@ export function Canvas({
 		cancelConnection,
 		deleteConnection,
 		uploadingCards,
-		optimisticCards,
 	} = useCanvasStore();
 
 	// Merge real cards with optimistic cards for rendering
-	const allCardsMap = new Map(cards);
-	optimisticCards.forEach((optimistic) => {
-		allCardsMap.set(optimistic.tempId, optimistic.card);
+	const allCardsMap = new Map<string, CardData>();
+	cards.forEach((card) => {
+		allCardsMap.set(card.id, card);
 	});
 
 	// Mouse position tracking for connection preview
@@ -143,14 +141,6 @@ export function Canvas({
 		window.addEventListener('keydown', handleKeyDown);
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	}, [selectedConnectionId, deleteConnection, pendingConnection, cancelConnection]);
-
-	useEffect(() => {
-		if (initialCards.length > 0) {
-			loadCards(initialCards);
-		} else {
-			loadCards([]);
-		}
-	}, [initialCards, loadCards]);
 
 	useEffect(() => {
 		if (!editingCardId) {

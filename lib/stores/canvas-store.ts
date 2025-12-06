@@ -74,7 +74,6 @@ export interface OptimisticCard {
 
 interface CanvasState {
 	// Data - using your Card type from types.ts
-	cards: Map<string, Card>;
 	connections: Map<string, Connection>;
 
 	// Viewport
@@ -111,25 +110,11 @@ interface CanvasState {
 	// Uploading cards (loading state)
 	uploadingCards: Map<string, UploadingCard>;
 
-	// Optimistic cards (cards pending database confirmation)
-	optimisticCards: Map<string, OptimisticCard>;
-
 	// History tracking for edits
 	_preEditCards: Map<string, Card> | null;
 
-	// ============================================================================
-	// CARD ACTIONS
-	// ============================================================================
-
-	loadCards: (cards: Card[]) => void;
-	addCard: (card: Card) => void;
-	updateCard: (id: string, updates: Partial<Card>) => void;
-	updateCardPosition: (id: string, position: { x: number; y: number }) => void;
-	deleteCard: (id: string) => Promise<void>;
-	deleteCards: (ids: string[]) => Promise<void>;
-
-	// Batch operations
-	updateCards: (updates: Array<{ id: string; updates: Partial<Card> }>) => void;
+	deleteCard: (cardId: string, boardId: string) => Promise<void>;
+	deleteCards: (cardIds: string[], boardId: string) => Promise<void>;
 
 	// ============================================================================
 	// CONNECTION ACTIONS
@@ -192,21 +177,14 @@ interface CanvasState {
 	addUploadingCard: (card: UploadingCard) => void;
 	removeUploadingCard: (id: string) => void;
 
-	// Optimistic card actions
-	addOptimisticCard: (tempId: string, card: Card) => void;
-	confirmOptimisticCard: (tempId: string, realCard: Card) => void;
-	removeOptimisticCard: (tempId: string) => void;
-
 	// ============================================================================
 	// UTILITY ACTIONS
 	// ============================================================================
 
-	getCard: (id: string) => Card | undefined;
-	getSelectedCards: () => Card[];
-	bringToFront: (id: string) => void;
-	sendToBack: (id: string) => void;
-	bringSelectedToFront: () => void;
-	sendSelectedToBack: () => void;
+	bringToFront: (cardId: string, boardId: string, allCards: Card[]) => void;
+	sendToBack: (cardId: string, boardId: string, allCards: Card[]) => void;
+	bringForward: (cardId: string, boardId: string, allCards: Card[]) => void;
+	sendBackward: (cardId: string, boardId: string, allCards: Card[]) => void;
 
 	/**
 	 * Utility to bring cards to front when interacted with
@@ -252,7 +230,6 @@ export const useCanvasStore = create<CanvasState>()(
 		temporal(
 			immer((set, get) => ({
 				// Initial state
-				cards: new Map(),
 				connections: new Map(),
 				viewport: { x: 0, y: 0, zoom: 1 },
 				selectedCardIds: new Set(),
@@ -270,119 +247,27 @@ export const useCanvasStore = create<CanvasState>()(
 				snapToGrid: false,
 				dragPreview: null,
 				uploadingCards: new Map(),
-				optimisticCards: new Map(),
 				_preEditCards: null,
 
-				// ============================================================================
-				// CARD ACTIONS
-				// ============================================================================
-
-				loadCards: (cards) => {
-					const temporal = useCanvasStore.temporal.getState();
-					const wasTracking = temporal.isTracking;
-
-					if (wasTracking) {
-						temporal.pause();
-					}
-
-					set({ cards: new Map(cards.map(c => [c.id, c])) })
-
-					if (wasTracking) {
-						temporal.resume();
-
-						setTimeout(() => {
-							const currentPastStates = temporal.pastStates;
-							if(currentPastStates.length > 0 && currentPastStates[currentPastStates.length - 1]) {
-								const lastState = currentPastStates[currentPastStates.length - 1];
-								if (lastState.cards?.size === cards.length) {
-									temporal.clear();
-								}
-							}
-						}, 0);
-					}
-				},
-
-				addCard: (card) =>
+				deleteCard: async (cardId: string, boardId: string) => {
 					set((state) => {
-						state.cards.set(card.id, card);
-					}),
-
-				updateCard: (id, updates) =>
-					set((state) => {
-						const card = state.cards.get(id);
-						if (card) {
-							state.cards.set(id, { ...card, ...updates });
-						}
-					}),
-
-				updateCardPosition: (id, position) =>
-					set((state) => {
-						const card = state.cards.get(id);
-						if (card) {
-							state.cards.set(id, {
-								...card,
-								position_x: position.x,
-								position_y: position.y,
-							});
-						}
-					}),
-
-				deleteCard: async (id) => {
-					// Delete from local state first for immediate UI feedback
-					set((state) => {
-						state.cards.delete(id);
-						state.selectedCardIds.delete(id);
-						if (state.editingCardId === id) {
+						state.selectedCardIds.delete(cardId);
+						if (state.editingCardId === cardId) {
 							state.editingCardId = null;
 						}
 					});
-
-					// Then delete from database
-					try {
-						await deleteCardFromDB(id);
-					} catch (error) {
-						console.error('Failed to delete card from database:', error);
-						// Optionally: re-fetch cards to sync state if deletion failed
-					}
 				},
 
-				deleteCards: async (ids) => {
-					// Delete from local state first for immediate UI feedback
+				deleteCards: async (cardIds: string[], boardId: string) => {
 					set((state) => {
-						ids.forEach((id) => {
-							const card = state.cards.get(id);
-							if (card?.card_type === 'column') {
-								card.column_cards.column_items?.forEach((card) => {
-									state.cards.delete(card.card_id);
-									ids.push(card.card_id);
-								})
-							}
-							state.cards.delete(id);
+						cardIds.forEach((id) => {
 							state.selectedCardIds.delete(id);
 							if (state.editingCardId === id) {
 								state.editingCardId = null;
 							}
 						});
 					});
-
-					// Then delete from database
-					try {
-						await Promise.all(ids.map(id => deleteCardFromDB(id)));
-					} catch (error) {
-						console.error('Failed to delete cards from database:', error);
-						// Optionally: re-fetch cards to sync state if deletion failed
-					}
 				},
-
-				updateCards: (updates) =>
-					set((state) => {
-						updates.forEach(({ id, updates }) => {
-							const card = state.cards.get(id);
-							if (card) {
-								state.cards.set(id, { ...card, ...updates });
-							}
-						});
-					}),
 
 				// ============================================================================
 				// CONNECTION ACTIONS
@@ -769,118 +654,25 @@ export const useCanvasStore = create<CanvasState>()(
 						state.uploadingCards.delete(id);
 					}),
 
-				// Optimistic card actions
-				addOptimisticCard: (tempId, card) =>
-					set((state) => {
-						state.optimisticCards.set(tempId, { tempId, card, status: 'pending' });
-					}),
-
-				confirmOptimisticCard: (tempId, realCard) =>
-					set((state) => {
-						state.optimisticCards.delete(tempId);
-						state.cards.set(realCard.id, realCard);
-						// If the optimistic card was selected, update selection to real ID
-						if (state.selectedCardIds.has(tempId)) {
-							state.selectedCardIds.delete(tempId);
-							state.selectedCardIds.add(realCard.id);
-						}
-					}),
-
-				removeOptimisticCard: (tempId) =>
-					set((state) => {
-						state.optimisticCards.delete(tempId);
-						state.selectedCardIds.delete(tempId);
-					}),
-
 				// ============================================================================
 				// UTILITY ACTIONS
 				// ============================================================================
 
-				getCard: (id) => {
-					const state = get();
-					// Check regular cards first, then optimistic cards
-					const card = state.cards.get(id);
-					if (card) return card;
-					const optimistic = state.optimisticCards.get(id);
-					return optimistic?.card;
+				bringToFront: (cardId: string, boardId: string, allCards: Card[]) => {
+					console.log('bringToFront will be implemented with InstantDB mutations in Phase 5');
 				},
 
-				getSelectedCards: () => {
-					const state = get();
-					return Array.from(state.selectedCardIds)
-						.map((id) => state.cards.get(id))
-						.filter((card): card is Card => card !== undefined);
+				sendToBack: (cardId: string, boardId: string, allCards: Card[]) => {
+					console.log('sendToBack will be implemented with InstantDB mutations in Phase 5');
 				},
 
-				bringToFront: (id) =>
-					set((state) => {
-						const allCards = Array.from(state.cards.values());
-						const updates = orderKeyBringToFront([id], cardsToOrderKeyList(allCards));
+				bringForward: (cardId: string, boardId: string, allCards: Card[]) => {
+					console.log('bringForward will be implemented with InstantDB mutations in Phase 5');
+				},
 
-						updates.forEach((orderKey, cardId) => {
-							const card = state.cards.get(cardId);
-							if (card) {
-								state.cards.set(cardId, {
-									...card,
-									order_key: orderKey,
-									z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-								});
-							}
-						});
-					}),
-
-				sendToBack: (id) => set((state) => {
-					const allCards = Array.from(state.cards.values());
-					const updates = orderKeySendToBack([id], cardsToOrderKeyList(allCards));
-
-					updates.forEach((orderKey, cardId) => {
-						const card = state.cards.get(cardId);
-						if (card) {
-							state.cards.set(cardId, {
-								...card,
-								order_key: orderKey,
-								// ⚠️ DUAL-WRITE: Also update z_index during migration
-								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-							});
-						}
-					});
-				}),
-
-				bringSelectedToFront: () => set((state) => {
-					const allCards = Array.from(state.cards.values());
-					const selectedIds = Array.from(state.selectedCardIds);
-					const updates = orderKeyBringToFront(selectedIds, cardsToOrderKeyList(allCards));
-
-					updates.forEach((orderKey, cardId) => {
-						const card = state.cards.get(cardId);
-						if (card) {
-							state.cards.set(cardId, {
-								...card,
-								order_key: orderKey,
-								// ⚠️ DUAL-WRITE
-								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-							});
-						}
-					});
-				}),
-
-				sendSelectedToBack: () => set((state) => {
-					const allCards = Array.from(state.cards.values());
-					const selectedIds = Array.from(state.selectedCardIds);
-					const updates = orderKeySendToBack(selectedIds, cardsToOrderKeyList(allCards));
-
-					updates.forEach((orderKey, cardId) => {
-						const card = state.cards.get(cardId);
-						if (card) {
-							state.cards.set(cardId, {
-								...card,
-								order_key: orderKey,
-								// ⚠️ DUAL-WRITE
-								z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-							});
-						}
-					});
-				}),
+				sendBackward: (cardId: string, boardId: string, allCards: Card[]) => {
+					console.log('sendBackward will be implemented with InstantDB mutations in Phase 5');
+				},
 
 				// ============================================================================
 				// UTILITY ACTIONS

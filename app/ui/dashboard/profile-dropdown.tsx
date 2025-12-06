@@ -3,16 +3,17 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronRightIcon, Settings, HelpCircle, Keyboard, LogOut, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAuth } from "@/lib/contexts/auth-context";
+import { useAuth, useUser } from "@clerk/nextjs";
 
 export default function UserMenu() {
-	const { user, loading, signOut } = useAuth();
+	const { user, isLoaded } = useUser();
+	const { signOut } = useAuth();
 	
-	if (loading || !user) {
+	if (!isLoaded || !user) {
 		return <div></div>
 	}
 
-	const avatarUrl = user.user_metadata?.avatar_url || null;
+	const avatarUrl = user.imageUrl;
 
 	return (
 		<DropdownMenu.Root>
@@ -22,7 +23,7 @@ export default function UserMenu() {
 					<Avatar>
 						<AvatarImage src={avatarUrl} />
 						<AvatarFallback className="bg-indigo-600 text-white font-medium">
-							{user?.user_metadata?.display_name
+							{user.username
 								?.split(' ')
 								?.map((word: string) => word[0])
 								?.join('')
@@ -48,7 +49,7 @@ export default function UserMenu() {
 							<Avatar className="w-10 h-10">
 								<AvatarImage src={avatarUrl} />
 								<AvatarFallback className="bg-indigo-600 text-white font-medium">
-									{user?.user_metadata?.display_name
+									{user?.username
 										?.split(' ')
 										?.map((word: string) => word[0])
 										?.join('')
@@ -56,8 +57,8 @@ export default function UserMenu() {
 								</AvatarFallback>
 							</Avatar>
 							<div>
-								<p className="font-semibold text-sm text-white">{user.user_metadata.display_name}</p>
-								<p className="text-xs text-slate-400">{user.email}</p>
+								<p className="font-semibold text-sm text-white">{user.username}</p>
+								<p className="text-xs text-slate-400">{user.primaryEmailAddress?.toString() || user.emailAddresses[0].toString()}</p>
 							</div>
 						</div>
 					</div>
@@ -124,7 +125,7 @@ export default function UserMenu() {
 
 					{/* Log out */}
 					<DropdownMenu.Item 
-						onClick={signOut} 
+						onClick={() => signOut({ redirectUrl: "/auth" })}
 						className="relative flex cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-sm outline-none hover:bg-red-500/10 focus:bg-red-500/10 rounded-lg mx-2 my-1 transition-colors text-red-400 hover:text-red-300"
 					>
 						<LogOut size={16} />

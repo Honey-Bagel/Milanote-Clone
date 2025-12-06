@@ -1,69 +1,47 @@
 'use client';
 
-import { ShareModalProps, BoardCollaborator, BoardRole } from '@/lib/types';
+import { ShareModalProps, BoardRole } from '@/lib/types';
 import { X, Link as LinkIcon, Check, Globe, Lock, UserPlus, RefreshCw, Users, UserIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import {
-	getBoardCollaborators,
-	addBoardCollaborator,
-	updateCollaboratorRole,
-	removeBoardCollaborator,
-	toggleBoardPublic,
-	toggleBoardPublicRecursive,
-	generateShareToken,
-	getBoardInfo,
-} from '@/lib/data/boards-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@radix-ui/react-avatar';
+import {
+	useCollaborators,
+	useIsCollaborator,
+	useAddCollaboratorByEmail,
+	useUpdateCollaboratorRole,
+	useRemoveCollaborator
+} from '@/lib/hooks/collaborators';
+import { useBoardSharing, useBoard } from '@/lib/hooks/boards';
 
 export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps) {
+	const { isOwner } = useIsCollaborator(boardId);
+	const { board } = useBoard(boardId);
+	const { addCollaboratorByEmail, error: addCollaboratorError, isAdding } = useAddCollaboratorByEmail();
+	const { removeCollaborator, error: removeCollaboratorError } = useRemoveCollaborator();
+	const { updateRole, error: updateCollaboratorError } = useUpdateCollaboratorRole();
+	const { collaborators } = useCollaborators(boardId);
+
+	const {
+		toggleBoardPublic,
+		toggleBoardPublicRecursive,
+		generateShareToken,
+		getBoardInfo,
+		isUpdating: sharingLoading,
+		error: sharingError,
+	} = useBoardSharing();
+
 	const modalRef = useRef<HTMLDivElement | null>(null);
-	const [collaborators, setCollaborators] = useState<BoardCollaborator[]>([]);
-	const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-	const [ownerId, setOwnerId] = useState<string | null>(null);
-	const [isPublic, setIsPublic] = useState(false);
-	const [shareToken, setShareToken] = useState<string | null>(null);
-	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
 
 	// Email invite form
 	const [email, setEmail] = useState('');
 	const [selectedRole, setSelectedRole] = useState<BoardRole>('viewer');
-	const [inviteLoading, setInviteLoading] = useState(false);
 
 	// Recursive toggle state
 	const [includeChildBoards, setIncludeChildBoards] = useState(false);
 	const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 	const [pendingPublicState, setPendingPublicState] = useState(false);
-
-	const supabase = createClient();
-
-	// Fetch current user and board info
-	useEffect(() => {
-		const fetchData = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			if (user) {
-				setCurrentUserId(user.id);
-			}
-
-			// Fetch board info
-			const boardInfo = await getBoardInfo(boardId);
-			if (boardInfo) {
-				setOwnerId(boardInfo.owner_id);
-				setIsPublic(boardInfo.is_public || false);
-				setShareToken(boardInfo.share_token);
-			}
-
-			// Fetch collaborators
-			const collabs = await getBoardCollaborators(boardId);
-			setCollaborators(collabs);
-		};
-
-		if (isOpen) {
-			fetchData();
-		}
-	}, [isOpen, boardId, supabase]);
 
 	// Handle click outside
 	useEffect(() => {
@@ -88,46 +66,34 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 			return;
 		}
 
-		setInviteLoading(true);
 		setError(null);
 
-		const result = await addBoardCollaborator(boardId, email, selectedRole);
+		const result = await addCollaboratorByEmail(boardId, email, selectedRole);
 
-		if (result.success && result.collaborator) {
-			setCollaborators([...collaborators, result.collaborator]);
+		if (result?.user) {
 			setEmail('');
 			setSelectedRole('viewer');
-		} else {
-			setError(result.error || 'Failed to add collaborator');
-		}
-
-		setInviteLoading(false);
-	};
-
-	const handleRoleChange = async (userId: string, newRole: BoardRole) => {
-		const result = await updateCollaboratorRole(boardId, userId, newRole);
-
-		if (result.success) {
-			setCollaborators(collaborators.map(c =>
-				c.userId === userId ? { ...c, role: newRole } : c
-			));
-		} else {
-			setError(result.error || 'Failed to update role');
 		}
 	};
 
-	const handleRemove = async (userId: string) => {
-		const result = await removeBoardCollaborator(boardId, userId);
+	const handleRoleChange = async (collabId: string, newRole: BoardRole) => {
+		const success = await updateRole(collabId, newRole, boardId);
 
-		if (result.success) {
-			setCollaborators(collaborators.filter(c => c.userId !== userId));
-		} else {
-			setError(result.error || 'Failed to remove collaborator');
+		if (!success) {
+			setError(updateCollaboratorError || 'Failed to update role');
+		}
+	};
+
+	const handleRemove = async (collabId: string) => {
+		const success = await removeCollaborator(collabId, boardId);
+
+		if (success) {
+			setError(removeCollaboratorError || 'Failed to remove collaborator');
 		}
 	};
 
 	const handleTogglePublic = async () => {
-		const newPublicState = !isPublic;
+		const newPublicState = !board?.is_public;
 
 		// If checkbox is checked, show confirmation dialog
 		if (includeChildBoards) {
@@ -137,41 +103,24 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 		}
 
 		// Otherwise, toggle only this board
-		setLoading(true);
 		const result = await toggleBoardPublic(boardId, newPublicState);
 
-		if (result.success) {
-			setIsPublic(newPublicState);
-			if (result.shareToken) {
-				setShareToken(result.shareToken);
-			}
-		} else {
+		if (!result.success) {
 			setError(result.error || 'Failed to update public status');
 		}
-
-		setLoading(false);
 	};
 
 	const handleConfirmRecursiveToggle = async () => {
 		setShowConfirmDialog(false);
-		setLoading(true);
 
 		const result = await toggleBoardPublicRecursive(boardId, pendingPublicState);
 
 		if (result.success) {
-			setIsPublic(pendingPublicState);
-			// Refresh board info to get new share token if making public
-			const boardInfo = await getBoardInfo(boardId);
-			if (boardInfo) {
-				setShareToken(boardInfo.share_token);
-			}
 			// Show success message
 			setError(null);
 		} else {
 			setError(result.error || 'Failed to update public status');
 		}
-
-		setLoading(false);
 	};
 
 	const handleCancelRecursiveToggle = () => {
@@ -179,48 +128,22 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 	};
 
 	const handleRegenerateLink = async () => {
-		setLoading(true);
 		const result = await generateShareToken(boardId);
 
-		if (result.success && result.shareToken) {
-			setShareToken(result.shareToken);
-		} else {
+		if (!result.success || !result.shareToken) {
 			setError(result.error || 'Failed to regenerate link');
 		}
-
-		setLoading(false);
 	};
 
 	const handleCopyLink = () => {
-		const link = shareToken
-			? `${window.location.origin}/board/public/${shareToken}`
+		const link = board?.share_token
+			? `${window.location.origin}/board/public/${board?.share_token}`
 			: `${window.location.origin}/board/${boardId}`;
 
 		navigator.clipboard.writeText(link);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
 	};
-
-	const getInitials = (name: string | null, email: string) => {
-		if (name) {
-			return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
-		}
-		return email.substring(0, 2).toUpperCase();
-	};
-
-	const getAvatarColor = (email: string) => {
-		const colors = [
-			'from-blue-400 to-purple-500',
-			'from-green-400 to-blue-500',
-			'from-pink-400 to-red-500',
-			'from-yellow-400 to-orange-500',
-			'from-indigo-400 to-purple-500',
-		];
-		const index = email.charCodeAt(0) % colors.length;
-		return colors[index];
-	};
-
-	const isOwner = currentUserId === ownerId;
 
 	if (!isOpen) return null;
 
@@ -244,10 +167,10 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 				</div>
 
 				<div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
-					{error && (
+					{(error || addCollaboratorError) && (
 						<div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-400 flex items-start gap-3">
 							<div className="w-1 h-full bg-red-500 rounded-full flex-shrink-0"></div>
-							<span>{error}</span>
+							<span>{addCollaboratorError || error}</span>
 						</div>
 					)}
 
@@ -276,10 +199,10 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 								</select>
 								<button
 									onClick={handleInvite}
-									disabled={inviteLoading}
+									disabled={isAdding}
 									className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
 								>
-									{inviteLoading ? 'Sending...' : 'Invite'}
+									{isAdding ? 'Sending...' : 'Invite'}
 								</button>
 							</div>
 						</div>
@@ -302,14 +225,14 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 									>
 										<div className="flex items-center gap-3 flex-1">
 											<Avatar className="w-10 h-10">
-												<AvatarImage src={collab.user?.avatar_url || undefined} />
+												<AvatarImage src={collab.user?.profile?.avatar_url || undefined} />
 												<AvatarFallback className="bg-indigo-600 text-white font-medium">
 													<UserIcon />
 												</AvatarFallback>
 											</Avatar>
 											<div className="min-w-0 flex-1">
 												<p className="text-sm font-medium text-white truncate">
-													{collab.user?.display_name || 'Unknown User'}
+													{collab.user?.profile?.display_name || 'Unknown User'}
 												</p>
 												<p className="text-xs text-slate-500 truncate">{collab.user?.email}</p>
 											</div>
@@ -320,9 +243,9 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 												onChange={(e) => {
 													const value = e.target.value;
 													if (value === 'remove') {
-														handleRemove(collab.userId);
+														handleRemove(collab.id);
 													} else {
-														handleRoleChange(collab.userId, value as BoardRole);
+														handleRoleChange(collab.id, value as BoardRole);
 													}
 												}}
 												className="text-xs text-slate-300 bg-[#0f172a] border border-white/10 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 flex-shrink-0 cursor-pointer hover:border-white/20 transition-all"
@@ -348,31 +271,31 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 							<div className="flex items-center justify-between p-4 bg-[#020617] border border-white/10 rounded-xl hover:border-white/20 transition-all">
 								<div className="flex items-center gap-3">
 									<div className={`p-2.5 rounded-lg transition-all ${
-										isPublic 
+										board?.is_public 
 											? 'bg-emerald-500/20 text-emerald-400' 
 											: 'bg-slate-700/50 text-slate-400'
 									}`}>
-										{isPublic ? <Globe size={20} /> : <Lock size={20} />}
+										{board?.is_public ? <Globe size={20} /> : <Lock size={20} />}
 									</div>
 									<div>
 										<p className="text-sm font-semibold text-white">
-											{isPublic ? 'Public Access' : 'Private Access'}
+											{board?.is_public ? 'Public Access' : 'Private Access'}
 										</p>
 										<p className="text-xs text-slate-500">
-											{isPublic ? 'Anyone with the link can view' : 'Only invited members can access'}
+											{board?.is_public ? 'Anyone with the link can view' : 'Only invited members can access'}
 										</p>
 									</div>
 								</div>
 								{/* Toggle switch */}
 								<button
 									onClick={handleTogglePublic}
-									disabled={loading}
+									disabled={sharingLoading}
 									className={`w-12 h-6 rounded-full transition-all relative flex-shrink-0 ${
-										isPublic ? 'bg-indigo-600' : 'bg-slate-700'
-									} ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
+										board?.is_public ? 'bg-indigo-600' : 'bg-slate-700'
+									} ${sharingLoading ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'}`}
 								>
 									<div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow-lg ${
-										isPublic ? 'translate-x-6' : 'translate-x-0.5'
+										board?.is_public ? 'translate-x-6' : 'translate-x-0.5'
 									}`}></div>
 								</button>
 							</div>
@@ -400,7 +323,7 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 					)}
 
 					{/* Link sharing */}
-					{isPublic && shareToken && (
+					{board?.is_public && board.share_token && (
 						<div>
 							<h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">
 								Public Share Link
@@ -409,7 +332,7 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 								<LinkIcon className="text-slate-500 w-4 h-4 flex-shrink-0" />
 								<input
 									type="text"
-									value={`${window.location.origin}/board/public/${shareToken}`}
+									value={`${window.location.origin}/board/public/${board.share_token}`}
 									readOnly
 									className="flex-1 bg-transparent text-sm text-slate-300 focus:outline-none"
 								/>
@@ -431,10 +354,10 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 								<div className="mt-3 flex items-center justify-end">
 									<button
 										onClick={handleRegenerateLink}
-										disabled={loading}
+										disabled={sharingLoading}
 										className="text-slate-400 hover:text-white text-sm font-medium disabled:opacity-50 flex items-center gap-2 hover:bg-white/5 px-3 py-1.5 rounded-lg transition-all"
 									>
-										<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+										<RefreshCw size={14} className={sharingLoading ? 'animate-spin' : ''} />
 										Regenerate link
 									</button>
 								</div>

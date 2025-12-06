@@ -495,3 +495,58 @@ export interface UserSettings {
 	profile: UserProfile;
 	preferences: UserPreferences;
 }
+
+export type CardData = {
+	id: string;
+	board_id: string;
+	card_type: 'note' | 'image' | 'text' | 'task_list' | 'link' | 'file' | 'color_palette' | 'column' | 'board' | 'line';
+	position_x: number;
+	position_y: number;
+	width: number;
+	height?: number;
+	order_key: string;
+	created_by?: string;
+	
+	// All type-specific fields as optional
+	note_content?: string;
+	note_color?: string;
+	image_url?: string;
+	image_caption?: string;
+	text_title?: string;
+	text_content?: string;
+	task_list_title?: string;
+	tasks?: Array<{ text: string; completed: boolean; position: number }>;
+	link_title?: string;
+	link_url?: string;
+	file_name?: string;
+	file_url?: string;
+	palette_title?: string;
+	palette_colors?: string[];
+	column_title?: string;
+	column_background_color?: string;
+	column_is_collapsed?: boolean;
+	column_items?: Array<{ card_id: string; position: number }>;
+	linked_board_id?: string;
+	board_title?: string;
+	line_start_x?: number;
+	line_start_y?: number;
+	line_end_x?: number;
+	line_end_y?: number;
+	line_color?: string;
+	line_stroke_width?: number;
+	line_style?: string;
+	line_start_cap?: string;
+	line_end_cap?: string;
+	line_curvature?: number;
+	line_control_point_offset?: number;
+	line_reroute_nodes?: JSON;
+	line_start_attached_card_id?: string;
+	line_start_attached_side?: string;
+	line_end_attached_card_id?: string;
+	line_end_attached_side?: string;
+
+	created_at: number;
+	updated_at: number;
+};
+
+export type CollaboratorRole = 'owner' | 'editor' | 'viewer';
