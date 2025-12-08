@@ -20,6 +20,7 @@ export function useBoard(boardId: string | null) {
 							id: boardId,
 						},
 					},
+					owner: {}
 				},
 			} : null
 	);

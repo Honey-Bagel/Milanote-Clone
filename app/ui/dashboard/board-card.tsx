@@ -1,11 +1,10 @@
 "use client";
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { getTimeAgo } from '@/lib/utils';
 import { BoardSettingsModal } from './board-settings-modal';
-import { Settings, Star, Users, Palette, Book, Briefcase, Layers, Clock, MoreVertical } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Star, Layers, Clock, MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { db } from '@/lib/instant/db';

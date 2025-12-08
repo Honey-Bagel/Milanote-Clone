@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import type { LineCard } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { updateCardContent } from '@/lib/data/cards-client';
 import { useDebouncedCallback } from 'use-debounce';
 
 interface LinePropertiesToolbarProps {
@@ -66,14 +65,13 @@ const ColorButton = ({
 );
 
 export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarProps) {
-  const { updateCard } = useCanvasStore();
-  const lineData = card.line_cards;
+	const lineData = card;
 
   // Debounced save to database
   const debouncedSave = useDebouncedCallback(
-    async (updates: Partial<LineCard['line_cards']>) => {
+    async (updates: Partial<LineCard>) => {
       try {
-        await updateCardContent(card.id, 'line', updates);
+        //await updateCardContent(card.id, 'line', updates);
       } catch (error) {
         console.error('Failed to save line properties:', error);
       }
@@ -82,20 +80,20 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
   );
 
   // Update local state and trigger save
-  const updateLineProperty = useCallback((updates: Partial<LineCard['line_cards']>) => {
-    updateCard(card.id, {
-      ...card,
-      line_cards: {
-        ...lineData,
-        ...updates,
-      },
-    });
+  const updateLineProperty = useCallback((updates: Partial<LineCard>) => {
+    // updateCard(card.id, {
+    //   ...card,
+    //   line_cards: {
+    //     ...lineData,
+    //     ...updates,
+    //   },
+    // });
     debouncedSave(updates);
-  }, [card, lineData, updateCard, debouncedSave]);
+  }, [card, debouncedSave]);
 
   const colors = ['#6b7280', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#000000'];
 
-  const endCapOptions: Array<{ value: LineCard['line_cards']['end_cap']; icon: React.ReactNode; label: string }> = [
+  const endCapOptions: Array<{ value: LineCard['line_end_cap']; icon: React.ReactNode; label: string }> = [
     { value: 'none', icon: <Minus className="w-4 h-4" />, label: 'None' },
     { value: 'arrow', icon: <MoveRight className="w-4 h-4" />, label: 'Arrow' },
     { value: 'dot', icon: <Circle className="w-4 h-4" />, label: 'Dot' },
@@ -116,8 +114,8 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
             <ColorButton
               key={color}
               color={color}
-              isActive={lineData.color === color}
-              onClick={() => updateLineProperty({ color })}
+              isActive={lineData.line_color === color}
+              onClick={() => updateLineProperty({ line_color: color })}
             />
           ))}
         </div>
@@ -152,8 +150,8 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
         {/* Stroke Width */}
         <span className="text-xs font-medium text-slate-400">Width</span>
         <select
-          value={lineData.stroke_width}
-          onChange={(e) => updateLineProperty({ stroke_width: parseInt(e.target.value) })}
+          value={lineData.line_stroke_width}
+          onChange={(e) => updateLineProperty({ line_stroke_width: parseInt(e.target.value) })}
           className="bg-[#020617] text-slate-300 text-sm rounded-lg px-3 py-1.5 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer hover:border-white/20 transition-all"
         >
           <option value={1}>1px</option>
@@ -168,32 +166,32 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
 
         {/* Curvature */}
         <ToolbarButton
-          onClick={() => updateLineProperty({ curvature: 0 })}
-          isActive={lineData.curvature === 0}
+          onClick={() => updateLineProperty({ line_curvature: 0 })}
+          isActive={lineData.line_curvature === 0}
           title="Straight line"
         >
           <Minus className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => updateLineProperty({ curvature: 0.5 })}
-          isActive={lineData.curvature > 0}
+          onClick={() => updateLineProperty({ line_curvature: 0.5 })}
+          isActive={lineData.line_curvature > 0}
           title="Curved line"
         >
           <Spline className="w-4 h-4" />
         </ToolbarButton>
 
-        {lineData.curvature > 0 && (
+        {lineData.line_curvature > 0 && (
           <input
             type="range"
             min="0.1"
             max="1"
             step="0.1"
-            value={lineData.curvature}
-            onChange={(e) => updateLineProperty({ curvature: parseFloat(e.target.value) })}
+            value={lineData.line_curvature}
+            onChange={(e) => updateLineProperty({ line_curvature: parseFloat(e.target.value) })}
             className="w-24 h-1.5 bg-[#020617] rounded-lg appearance-none cursor-pointer slider-thumb"
             title="Curvature amount"
             style={{
-              background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${lineData.curvature * 100}%, #020617 ${lineData.curvature * 100}%, #020617 100%)`
+              background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${lineData.line_curvature * 100}%, #020617 ${lineData.line_curvature * 100}%, #020617 100%)`
             }}
           />
         )}
@@ -206,8 +204,8 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
           {endCapOptions.map((option) => (
             <ToolbarButton
               key={`start-${option.value}`}
-              onClick={() => updateLineProperty({ start_cap: option.value })}
-              isActive={lineData.start_cap === option.value}
+              onClick={() => updateLineProperty({ line_start_cap: option.value })}
+              isActive={lineData.line_start_cap === option.value}
               title={`Start: ${option.label}`}
             >
               {option.icon}
@@ -223,8 +221,8 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
           {endCapOptions.map((option) => (
             <ToolbarButton
               key={`end-${option.value}`}
-              onClick={() => updateLineProperty({ end_cap: option.value })}
-              isActive={lineData.end_cap === option.value}
+              onClick={() => updateLineProperty({ line_end_cap: option.value })}
+              isActive={lineData.line_end_cap === option.value}
               title={`End: ${option.label}`}
             >
               {option.icon}

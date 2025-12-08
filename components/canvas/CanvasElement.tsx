@@ -9,6 +9,7 @@ import { useResizable } from '@/lib/hooks/useResizable';
 import { getDefaultCardDimensions } from '@/lib/utils';
 import { ConnectionHandles } from './ConnectionHandle';
 import { useCallback } from 'react';
+import { useBoardCards } from '@/lib/hooks/cards';
 
 interface CanvasElementProps {
 	card: Card;
@@ -55,7 +56,6 @@ export function CanvasElement({
 		selectedCardIds,
 		setEditingCardId,
 		editingCardId,
-		cards: allCards,
 		snapToGrid,
 		isConnectionMode,
 		isDraggingLineEndpoint,
@@ -63,6 +63,7 @@ export function CanvasElement({
 		startConnection,
 		completeConnection,
 	} = useCanvasStore();
+	const { cards: allCards } = useBoardCards(boardId);
 	
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
@@ -71,17 +72,27 @@ export function CanvasElement({
 	const cssZIndex = useCardZIndex(card, allCards);
 
 	// Only enable dragging/resizing if NOT inside a column
-	const { handleMouseDown, isDragging } = useDraggable({
+	const { handleMouseDown, isDragging, currentPosition } = useDraggable({
 		card: card,
 		snapToGrid: snapToGrid,
 		dragThreshold: 3
 	});
 
-	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({
-		cardId: card.id,
+	const { handleMouseDown: handleMouseDownResizable, isResizing, currentDimensions } = useResizable({
+		card: card,
 		maxWidth: 1200,
 		maxHeight: 1200,
 	});
+
+	// Combine current position from drag with current dimensions from resize
+	const finalPosition = {
+		x: currentPosition.x,
+		y: currentPosition.y,
+	};
+	const finalDimensions = {
+		width: currentDimensions.width,
+		height: currentDimensions.height,
+	};
 
 	const handleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -218,8 +229,8 @@ export function CanvasElement({
 			className="canvas-element select-none"
 			style={{
 				position: 'absolute',
-				top: card.position_y,
-				left: card.position_x,
+				top: finalPosition.y,
+				left: finalPosition.x,
 				zIndex: cssZIndex,
 				userSelect: isEditing ? 'auto' : 'none',
 				WebkitUserSelect: isEditing ? 'auto' : 'none',
@@ -246,9 +257,9 @@ export function CanvasElement({
 					style={{
 						display: 'block',
 						// Line cards need no width/height constraint - they render their own SVG
-						width: card.card_type === 'line' ? 0 : card.width,
-						height: card.card_type === 'line' ? 0 : (card.height || 'auto'),
-						minHeight: card.card_type === 'line' ? 0 : (card.height ? card.height : 'auto'),
+						width: card.card_type === 'line' ? 0 : finalDimensions.width,
+						height: card.card_type === 'line' ? 0 : (finalDimensions.height || 'auto'),
+						minHeight: card.card_type === 'line' ? 0 : (finalDimensions.height ? finalDimensions.height : 'auto'),
 						overflow: card.card_type === 'line' ? 'visible' : undefined,
 						userSelect: isEditing ? 'auto' : 'none',
 						WebkitUserSelect: isEditing ? 'auto' : 'none',

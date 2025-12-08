@@ -43,7 +43,7 @@ const graph = i.schema({
 			position_x: i.number(),
 			position_y: i.number(),
 			width: i.number(),
-			height: i.number(),
+			height: i.number().optional(),
 			order_key: i.string().indexed(),
 
 			// Note card fields

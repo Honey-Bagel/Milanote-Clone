@@ -7,7 +7,11 @@
 
 import { useEffect } from 'react';
 import { useCanvasStore, useCanvasHistory } from '../stores/canvas-store';
-import { updateCardTransform, updateCardContent, deleteCard, restoreCard } from '../data/cards-client';
+import { deleteCard as deleteCardDB, bringCardsToFront, sendCardsToBack, alignCardsTop, alignCardsBottom, alignCardsLeft, alignCardsRight } from '@/lib/instant/card-mutations';
+import { useUndoStore } from '@/lib/stores/undo-store';
+import { useBoardCards } from '@/lib/hooks/cards/use-board-cards';
+// TODO Phase 3-7: Re-enable these imports when migrating content updates
+// import { updateCardContent, restoreCard } from '../data/cards-client';
 import type { Card } from '../types';
 
 /**
@@ -192,30 +196,29 @@ interface UseKeyboardShortcutsOptions {
 	enabled?: boolean;
 }
 
-export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) {
+export function useKeyboardShortcuts(
+	boardId: string | null,
+	options: UseKeyboardShortcutsOptions = {}
+) {
 	const { enabled = true } = options;
 
 	const {
 		selectedCardIds,
 		deleteCards,
-		copySelected,
-		cutSelected,
-		paste,
-		selectAll,
-		duplicateCard,
-		bringToFront,
-		sendToBack,
+		// TODO Phase 3-5: Re-enable these when implementing with InstantDB
+		// copySelected,
+		// cutSelected,
+		// paste,
+		// duplicateCard,
 		zoomIn,
 		zoomOut,
 		resetViewport,
-		zoomToFit,
-		alignTop,
-		alignBottom,
-		alignLeft,
-		alignRight,
 	} = useCanvasStore();
 
 	const { undo, redo, clear } = useCanvasHistory();
+
+	// Get cards for z-ordering and alignment
+	const { cards } = useBoardCards(boardId);
 
 	useEffect(() => {
 		if (!enabled) return;
@@ -234,45 +237,47 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 			// SELECTION SHORTCUTS
 			// ============================================================================
 
+			// TODO Phase 3: Re-enable Select All
 			// Select All: Cmd/Ctrl + A
-			if (isMod && e.key === 'a' && !isEditing) {
-				e.preventDefault();
-				selectAll();
-				return;
-			}
+			// if (isMod && e.key === 'a' && !isEditing) {
+			// 	e.preventDefault();
+			// 	selectAll();
+			// 	return;
+			// }
 
 			// ============================================================================
 			// CLIPBOARD SHORTCUTS
 			// ============================================================================
 
+			// TODO Phase 3-5: Re-enable clipboard operations with InstantDB
 			// Copy: Cmd/Ctrl + C
-			if (isMod && e.key === 'c' && !isEditing && selectedCardIds.size > 0) {
-				e.preventDefault();
-				copySelected();
-				return;
-			}
+			// if (isMod && e.key === 'c' && !isEditing && selectedCardIds.size > 0) {
+			// 	e.preventDefault();
+			// 	copySelected();
+			// 	return;
+			// }
 
 			// Cut: Cmd/Ctrl + X
-			if (isMod && e.key === 'x' && !isEditing && selectedCardIds.size > 0) {
-				e.preventDefault();
-				cutSelected();
-				return;
-			}
+			// if (isMod && e.key === 'x' && !isEditing && selectedCardIds.size > 0) {
+			// 	e.preventDefault();
+			// 	cutSelected();
+			// 	return;
+			// }
 
 			// Paste: Cmd/Ctrl + V
-			if (isMod && e.key === 'v' && !isEditing) {
-				e.preventDefault();
-				paste();
-				return;
-			}
+			// if (isMod && e.key === 'v' && !isEditing) {
+			// 	e.preventDefault();
+			// 	paste();
+			// 	return;
+			// }
 
 			// Duplicate: Cmd/Ctrl + D
-			if (isMod && e.key === 'd' && !isEditing && selectedCardIds.size > 0) {
-				e.preventDefault();
-				// Duplicate all selected cards
-				Array.from(selectedCardIds).forEach((id) => duplicateCard(id));
-				return;
-			}
+			// if (isMod && e.key === 'd' && !isEditing && selectedCardIds.size > 0) {
+			// 	e.preventDefault();
+			// 	// Duplicate all selected cards
+			// 	Array.from(selectedCardIds).forEach((id) => duplicateCard(id));
+			// 	return;
+			// }
 
 			// ============================================================================
 			// DELETE SHORTCUTS
@@ -285,21 +290,52 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 				selectedCardIds.size > 0
 			) {
 				e.preventDefault();
-				deleteCards(Array.from(selectedCardIds));
+
+				if (!boardId) return;
+
+				const cardIds = Array.from(selectedCardIds);
+
+				// Get the card data for each card to handle board card cascade deletes
+				const selectedCards = cards.filter(c => cardIds.includes(c.id));
+
+				// Delete from database - use individual deleteCard for each to handle cascade (no await for instant UI update)
+				selectedCards.forEach(card =>
+					deleteCardDB(card.id, boardId, card).catch((error) => {
+						console.error(`Failed to delete card ${card.id}:`, error);
+					})
+				);
+
+				// Update UI state
+				deleteCards(cardIds);
+
+				// Add undo action (skip for now - complex)
+				useUndoStore.getState().addAction({
+					type: 'batch',
+					timestamp: Date.now(),
+					description: `Delete ${cardIds.length} card${cardIds.length > 1 ? 's' : ''}`,
+					do: async () => {
+						const deletePromises = selectedCards.map(card =>
+							deleteCardDB(card.id, boardId, card)
+						);
+						await Promise.all(deletePromises);
+					},
+					undo: async () => {
+						console.warn('Undo multi-delete not yet implemented');
+					},
+				});
+
 				return;
 			}
 
 			// ============================================================================
-			// UNDO/REDO SHORTCUTS (powered by Zundo)
+			// UNDO/REDO SHORTCUTS (powered by Zundo - viewport only for now)
 			// ============================================================================
 
+			// TODO Phase 2: Implement custom undo store for card operations
 			// Undo: Cmd/Ctrl + Z
 			if (isMod && e.key === 'z' && !e.shiftKey && !isEditing) {
 				e.preventDefault();
-				const oldCards = new Map(useCanvasStore.getState().cards);
-				undo();
-				const newCards = useCanvasStore.getState().cards;
-				syncCardsToDatabase(oldCards, newCards);
+				undo(); // Only undoes viewport changes for now
 				return;
 			}
 
@@ -309,10 +345,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 				!isEditing
 			) {
 				e.preventDefault();
-				const oldCards = new Map(useCanvasStore.getState().cards);
-				redo();
-				const newCards = useCanvasStore.getState().cards;
-				syncCardsToDatabase(oldCards, newCards);
+				redo(); // Only redoes viewport changes for now
 				return;
 			}
 
@@ -321,16 +354,18 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 			// ============================================================================
 
 			// Bring to Front: Cmd/Ctrl + ]
-			if (isMod && e.key === ']' && !isEditing && selectedCardIds.size > 0) {
+			if (isMod && e.key === ']' && !isEditing && selectedCardIds.size > 0 && boardId) {
 				e.preventDefault();
-				Array.from(selectedCardIds).forEach((id) => bringToFront(id));
+				const cardIds = Array.from(selectedCardIds);
+				bringCardsToFront(cardIds, boardId, cards);
 				return;
 			}
 
 			// Send to Back: Cmd/Ctrl + [
-			if (isMod && e.key === '[' && !isEditing && selectedCardIds.size > 0) {
+			if (isMod && e.key === '[' && !isEditing && selectedCardIds.size > 0 && boardId) {
 				e.preventDefault();
-				Array.from(selectedCardIds).forEach((id) => sendToBack(id));
+				const cardIds = Array.from(selectedCardIds);
+				sendCardsToBack(cardIds, boardId, cards);
 				return;
 			}
 
@@ -359,44 +394,47 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 				return;
 			}
 
+			// TODO Phase 5: Re-enable zoom to fit (needs card data)
 			// Zoom to Fit: Cmd/Ctrl + 1
-			if (isMod && e.key === '1' && !isEditing) {
-				e.preventDefault();
-				zoomToFit();
-				return;
-			}
+			// if (isMod && e.key === '1' && !isEditing) {
+			// 	e.preventDefault();
+			// 	zoomToFit();
+			// 	return;
+			// }
 
 			// ============================================================================
 			// ALIGNMENT SHORTCUTS (Arrow Keys)
 			// ============================================================================
 
 			// Only trigger alignment if multiple cards are selected and not editing
-			if (!isEditing && selectedCardIds.size >= 2) {
+			if (!isEditing && selectedCardIds.size >= 2 && boardId) {
+				const selectedCards = cards.filter(c => selectedCardIds.has(c.id));
+
 				// Align Top: Up Arrow
 				if (e.key === 'ArrowUp' && !isMod) {
 					e.preventDefault();
-					alignTop();
+					alignCardsTop(selectedCards, boardId);
 					return;
 				}
 
 				// Align Bottom: Down Arrow
 				if (e.key === 'ArrowDown' && !isMod) {
 					e.preventDefault();
-					alignBottom();
+					alignCardsBottom(selectedCards, boardId);
 					return;
 				}
 
 				// Align Left: Left Arrow
 				if (e.key === 'ArrowLeft' && !isMod) {
 					e.preventDefault();
-					alignLeft();
+					alignCardsLeft(selectedCards, boardId);
 					return;
 				}
 
 				// Align Right: Right Arrow
 				if (e.key === 'ArrowRight' && !isMod) {
 					e.preventDefault();
-					alignRight();
+					alignCardsRight(selectedCards, boardId);
 					return;
 				}
 			}
@@ -419,25 +457,14 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions = {}) 
 		};
 	}, [
 		enabled,
+		boardId,
 		selectedCardIds,
 		deleteCards,
-		copySelected,
-		cutSelected,
-		paste,
 		undo,
 		redo,
-		selectAll,
-		duplicateCard,
-		bringToFront,
-		sendToBack,
 		zoomIn,
 		zoomOut,
 		resetViewport,
-		zoomToFit,
-		alignTop,
-		alignBottom,
-		alignLeft,
-		alignRight,
 	]);
 }
 

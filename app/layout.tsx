@@ -2,7 +2,6 @@ import "@/app/ui/globals.css";
 import { inter } from '@/app/ui/fonts';
 import type { Metadata } from 'next';
 import { ThemeProvider } from "@/lib/contexts/theme-context";
-import { AuthProvider } from "@/lib/contexts/auth-context";
 import { ClerkProvider } from "@clerk/nextjs";
 import InstantDBAuthSync from "@/components/auth/InstantDBAuthSync";
 
@@ -21,11 +20,9 @@ export default function RootLayout({
 			<InstantDBAuthSync />
 			<html lang="en" suppressHydrationWarning={true}>
 				<body className={`${inter.className} antialised`}>
-					<AuthProvider>
 						<ThemeProvider>
 							{children}
 						</ThemeProvider>
-					</AuthProvider>
 				</body>
 			</html>
 		</ClerkProvider>

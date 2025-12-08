@@ -1,7 +1,6 @@
 import TopToolbar from '@/app/ui/board/top-toolbar';
 import { Canvas } from '@/components/canvas/Canvas';
-import { getBoardCards } from '@/lib/data/cards';
-import { getBoardByShareToken } from '@/lib/data/boards';
+import { getBoardByShareToken } from '@/lib/instant/server-queries';
 import { notFound } from 'next/navigation';
 
 export default async function PublicBoardPage({ params }: { params: Promise<{ token: string }> }) {
@@ -14,8 +13,7 @@ export default async function PublicBoardPage({ params }: { params: Promise<{ to
 		notFound();
 	}
 
-	// Fetch cards for the board
-	const cards = await getBoardCards(board.id);
+	// Cards will be loaded by InstantDB in the Canvas component via useBoardCards hook
 
 	return (
 		<div className="flex h-screen flex-col">
@@ -28,7 +26,6 @@ export default async function PublicBoardPage({ params }: { params: Promise<{ to
 			<main className="flex-1 overflow-hidden">
 				{/* Note: Full read-only mode to be implemented - board is currently viewable */}
 				<Canvas
-					initialCards={cards}
 					boardId={board.id}
 					enablePan={true}
 					enableZoom={true}

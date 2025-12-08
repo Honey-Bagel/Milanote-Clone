@@ -1,89 +1,16 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Card, ColumnCard } from '@/lib/types';
-import { createCard, addCardToColumn } from '@/lib/data/cards-client';
-import { createClient } from '@/lib/supabase/client';
+import { Card, CardData } from '@/lib/types';
+import { CardService, FileService, BoardService } from '@/lib/services';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { getDefaultCardDimensions } from '../utils';
 import { getCardRect } from '@/lib/utils/collision-detection';
-
-// Maximum file size before compression (1MB)
-const MAX_IMAGE_SIZE = 1024 * 1024;
-// Target quality for JPEG compression
-const COMPRESSION_QUALITY = 0.8;
-// Maximum dimension for images
-const MAX_IMAGE_DIMENSION = 2000;
-
-/**
- * Compress an image file using canvas
- */
-async function compressImage(file: File): Promise<File> {
-	// Skip non-images or small images
-	if (!file.type.startsWith('image/') || file.size <= MAX_IMAGE_SIZE) {
-		return file;
-	}
-
-	// Skip GIFs (to preserve animation)
-	if (file.type === 'image/gif') {
-		return file;
-	}
-
-	return new Promise((resolve) => {
-		const img = new Image();
-		const url = URL.createObjectURL(file);
-
-		img.onload = () => {
-			URL.revokeObjectURL(url);
-
-			// Calculate new dimensions while maintaining aspect ratio
-			let { width, height } = img;
-			if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
-				const ratio = Math.min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height);
-				width = Math.round(width * ratio);
-				height = Math.round(height * ratio);
-			}
-
-			// Create canvas and draw scaled image
-			const canvas = document.createElement('canvas');
-			canvas.width = width;
-			canvas.height = height;
-			const ctx = canvas.getContext('2d');
-			if (!ctx) {
-				resolve(file);
-				return;
-			}
-
-			ctx.drawImage(img, 0, 0, width, height);
-
-			// Convert to blob
-			canvas.toBlob(
-				(blob) => {
-					if (blob && blob.size < file.size) {
-						// Create new file with compressed data
-						const compressedFile = new File([blob], file.name, {
-							type: 'image/jpeg',
-							lastModified: Date.now(),
-						});
-						resolve(compressedFile);
-					} else {
-						// Compression didn't help, use original
-						resolve(file);
-					}
-				},
-				'image/jpeg',
-				COMPRESSION_QUALITY
-			);
-		};
-
-		img.onerror = () => {
-			URL.revokeObjectURL(url);
-			resolve(file);
-		};
-
-		img.src = url;
-	});
-}
+import { useBoardCards } from './cards';
+import { db } from '../instant/db';
+import { generateId } from '@/lib/db/client';
+import { useBoard } from './boards';
+import { getOrderKeyForNewCard, cardsToOrderKeyList } from '@/lib/utils/order-key-manager';
 
 /**
  * Find a column card at a given canvas position
@@ -91,13 +18,13 @@ async function compressImage(file: File): Promise<File> {
 function findColumnAtPoint(
 	canvasX: number,
 	canvasY: number,
-	cards: Map<string, Card>
-): ColumnCard | null {
-	const columns: ColumnCard[] = [];
+	cards: CardData[]
+): CardData | null {
+	const columns: CardData[] = [];
 
 	cards.forEach((card) => {
 		if (card.card_type === 'column') {
-			const rect = getCardRect(card);
+			const rect = getCardRect(card as unknown as Card);
 			// Check if point is inside the column bounds
 			if (
 				canvasX >= rect.x &&
@@ -105,7 +32,7 @@ function findColumnAtPoint(
 				canvasY >= rect.y &&
 				canvasY <= rect.y + rect.height
 			) {
-				columns.push(card as ColumnCard);
+				columns.push(card);
 			}
 		}
 	});
@@ -115,156 +42,58 @@ function findColumnAtPoint(
 	return columns.sort((a, b) => a.order_key > b.order_key ? -1 : 1)[0];
 }
 
-/**
- * Build an optimistic card object with default type-specific data
- */
-function buildOptimisticCard(
-	id: string,
-	boardId: string,
-	cardType: Card['card_type'],
-	posX: number,
-	posY: number,
-	width: number,
-	height: number | null,
-	orderKey: string,
-	typeSpecificData: any,
-	timestamp: string
-): Card {
-	const baseCard = {
-		id,
-		board_id: boardId,
-		card_type: cardType,
-		position_x: posX,
-		position_y: posY,
-		width,
-		height,
-		z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-		order_key: orderKey,
-		created_by: null,
-		created_at: timestamp,
-		updated_at: timestamp,
-	};
-
-	// Build type-specific card structure
-	switch (cardType) {
-		case 'note':
-			return { ...baseCard, card_type: 'note', note_cards: typeSpecificData } as Card;
-		case 'image':
-			return { ...baseCard, card_type: 'image', image_cards: typeSpecificData } as Card;
-		case 'text':
-			return { ...baseCard, card_type: 'text', text_cards: typeSpecificData } as Card;
-		case 'task_list':
-			return { ...baseCard, card_type: 'task_list', task_list_cards: typeSpecificData } as Card;
-		case 'link':
-			return { ...baseCard, card_type: 'link', link_cards: typeSpecificData } as Card;
-		case 'file':
-			return { ...baseCard, card_type: 'file', file_cards: typeSpecificData } as Card;
-		case 'color_palette':
-			return { ...baseCard, card_type: 'color_palette', color_palette_cards: typeSpecificData } as Card;
-		case 'column':
-			return { ...baseCard, card_type: 'column', column_cards: { ...typeSpecificData, column_items: [] } } as Card;
-		case 'board':
-			return { ...baseCard, card_type: 'board', board_cards: typeSpecificData } as Card;
-		case 'line':
-			return { ...baseCard, card_type: 'line', line_cards: typeSpecificData } as Card;
-		default:
-			return baseCard as Card;
-	}
-}
-
 export function useCanvasDrop(boardId: string) {
 	const [isDraggingOver, setIsDraggingOver] = useState(false);
 	const {
-		addCard,
 		viewport,
-		getNewCardOrderKey,
 		addUploadingCard,
 		removeUploadingCard,
-		cards,
-		updateCard,
 		setPotentialColumnTarget,
-		addOptimisticCard,
-		confirmOptimisticCard,
-		removeOptimisticCard
 	} = useCanvasStore();
-	const supabase = createClient();
+	const { cards } = useBoardCards(boardId);
+	const { board } = useBoard(boardId);
 
-	const getDefaultCardData = (cardType: Card['card_type']) => {
+	const getDefaultCardData = useCallback((cardType: Card['card_type']) => {
 		switch (cardType) {
 			case 'note':
-				return { content: '', color: 'yellow' as const };
+				return { note_content: '', note_color: 'yellow' as const };
 			case 'image':
-				return { image_url: '', caption: '' };
+				return { image_url: '', image_caption: '' };
 			case 'task_list':
-				return { title: 'Task List', tasks: [{ id: `task-${Date.now()}`, text: 'test', completed: false, position: 0 }] };
+				return { task_list_title: 'Task List', tasks: [{ id: `task-${Date.now()}`, text: 'test', completed: false, position: 0 }] };
 			case 'link':
-				return { title: 'New Link', url: 'https://example.com' };
+				return { link_title: 'New Link', link_url: 'https://example.com' };
 			case 'file':
 				return { file_name: 'file.pdf', file_url: '', file_type: 'pdf', file_size: 0 };
 			case 'color_palette':
-				return { title: 'Palette', colors: ['#FF0000', '#00FF00', '#0000FF'] };
+				return { palette_title: 'Palette', palette_colors: ['#FF0000', '#00FF00', '#0000FF'] };
 			case 'column':
-				return { title: 'Column', background_color: '#f3f4f6' };
+				return { column_title: 'Column', column_background_color: '#f3f4f6', column_is_collapsed: false, column_items: [] };
 			case 'board':
-				return { linked_board_id: boardId, board_title: 'New Board', board_color: '#3B82F6', card_count: 0 };
+				return { linked_board_id: "", board_title: 'New Board', board_color: '#3B82F6', board_card_count: '0' };
 			case 'line':
 				return {
-					start_x: 0,
-					start_y: 50,
-					end_x: 200,
-					end_y: 50,
-					color: '#6b7280',
-					stroke_width: 2,
-					line_style: 'solid',
-					start_cap: 'none',
-					end_cap: 'arrow',
-					curvature: 0,
-					control_point_offset: 0,
-					reroute_nodes: null,
-					start_attached_card_id: null,
-					start_attached_side: null,
-					end_attached_card_id: null,
-					end_attached_side: null,
+					line_start_x: 0,
+					line_start_y: 50,
+					line_end_x: 200,
+					line_end_y: 50,
+					line_color: '#6b7280',
+					line_stroke_width: 2,
+					line_style: 'solid' as const,
+					line_start_cap: 'none' as const,
+					line_end_cap: 'arrow' as const,
+					line_curvature: 0,
+					line_control_point_offset: 0,
+					line_reroute_nodes: null,
+					line_start_attached_card_id: null,
+					line_start_attached_side: null,
+					line_end_attached_card_id: null,
+					line_end_attached_side: null,
 				};
 			default:
 				return {};
 		}
-	};
-	
-	/**
-	 * Upload file to Supabase Storage
-	 * Images go to 'board-images' bucket, others to 'board-files' bucket
-	 */
-	const uploadFileToStorage = useCallback(async (file: File, boardId: string): Promise<string> => {
-		// Determine which bucket to use based on file type
-		const isImage = file.type.startsWith('image/');
-		const bucketName = isImage ? 'board-images' : 'board-files';
-
-		// Generate unique filename with timestamp
-		const timestamp = Date.now();
-		const fileExt = file.name.split('.').pop();
-		const fileName = `${boardId}/${timestamp}-${file.name}`;
-		
-		// Upload to appropriate Supabase storage bucket
-		const { data, error } = await supabase.storage
-			.from(bucketName)
-			.upload(fileName, file, {
-				cacheControl: '3600',
-				upsert: false
-			});
-
-		if (error) {
-			console.error(`Error uploading file to ${bucketName}:`, error);
-			throw error;
-		}
-
-		// Get public URL
-		const { data: urlData, } = supabase.storage
-			.from(bucketName)
-			.getPublicUrl(fileName);
-
-		return urlData.publicUrl;
-	}, [supabase]);
+	}, [boardId]);
 
 	/**
 	 * Determine card type based on file mime type
@@ -275,14 +104,6 @@ export function useCanvasDrop(boardId: string) {
 		}
 		return 'file';
 	};
-
-	/**
-	 * Get file type extension for display
-	 */
-	const getFileTypeExtension = (file: File): string => {
-		const ext = file.name.split('.').pop()?.toLowerCase();
-		return ext || 'file'
-	}
 
 	/**
 	 * Handle file drop from computer
@@ -323,62 +144,36 @@ export function useCanvasDrop(boardId: string) {
 				type: cardType,
 			});
 
-			try {
-				// Get order key
-				const orderKey = getNewCardOrderKey();
+				try {
+				// Upload file to storage (using FileService with placeholder)
+				const fileUrl = cardType === 'image'
+					? await FileService.uploadImage(file, boardId)
+					: await FileService.uploadFile(file, boardId);
 
-				// Compress image if needed
-				const processedFile = await compressImage(file);
+				// Pre-calculate order key from already-loaded cards
+				const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cards));
 
-				// Upload file to supabase
-				const fileUrl = await uploadFileToStorage(processedFile, boardId);
-
-				// Prepare card data based on type
-				let cardData: any;
-				if (cardType === 'image') {
-					cardData = {
+				// Create card in database with stacked positioning (no await for instant UI update)
+				CardService.createCard({
+					boardId: boardId,
+					cardType: cardType,
+					position: { x: posX, y: posY },
+					dimensions: { width: defaultWidth, height: defaultHeight ?? undefined },
+					data: cardType === 'image' ? {
 						image_url: fileUrl,
-						caption: file.name
-					};
-				} else {
-					cardData = {
-						file_name: file.name,
+						image_caption: file.name,
+					} : {
 						file_url: fileUrl,
-						file_type: getFileTypeExtension(file),
-						file_size: processedFile.size
-					};
-				}
-
-				// Create card in database with stacked positioning
-				const cardId = await createCard(
-					boardId,
-					cardType,
-					{
-						position_x: posX,
-						position_y: posY,
-						width: defaultWidth,
-						height: defaultHeight,
-						order_key: orderKey,
-						z_index: parseInt(orderKey.replace(/\D/g, '')) || (i * 10),
+						file_name: file.name,
+						file_mime_type: file.type,
+						file_size: file.size,
 					},
-					cardData
-				);
+					orderKey: orderKey,
+					withUndo: true,
+				});
 
-				// Fetch the created card with all related data
-				const { data } = await supabase
-					.from('cards')
-					.select(`
-						*,
-						${cardType}_cards(*)
-					`)
-					.eq('id', cardId)
-					.single();
-
-				// Remove uploading placeholder and add the real card
+				// Remove uploading placeholder - card will appear via InstantDB subscription
 				removeUploadingCard(tempId);
-				if (data) {
-					addCard(data as Card);
-				}
 
 				// Offset next file drop positioning
 				yOffset += 50;
@@ -388,7 +183,7 @@ export function useCanvasDrop(boardId: string) {
 				removeUploadingCard(tempId);
 			}
 		}
-	}, [boardId, viewport, addCard, supabase, getNewCardOrderKey, uploadFileToStorage, addUploadingCard, removeUploadingCard]);
+	}, [boardId, viewport, addUploadingCard, removeUploadingCard, cards]);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
@@ -462,113 +257,88 @@ export function useCanvasDrop(boardId: string) {
 			? findColumnAtPoint(canvasX, canvasY, cards)
 			: null;
 
-		// Generate temporary ID and order key for optimistic card
-		const tempId = `temp_${crypto.randomUUID()}`;
-		const orderKey = getNewCardOrderKey();
+		// Get default data for card type
 		const defaultData = getDefaultCardData(cardType);
 
-		// Build optimistic card object
+		// Calculate position centered on drop point
 		const posX = canvasX - defaultWidth / 2;
 		const posY = canvasY - (defaultHeight || minHeight || 100) / 2;
-		const now = new Date().toISOString();
 
-		const optimisticCard = buildOptimisticCard(
-			tempId,
-			boardId,
-			cardType,
-			posX,
-			posY,
-			defaultWidth,
-			defaultHeight,
-			orderKey,
-			defaultData,
-			now
-		);
+		// Pre-calculate order key from already-loaded cards
+		const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cards));
 
-		// Add optimistic card immediately for instant UI feedback
-		if (targetColumn) {
-			// If dropping into column, update column state first
-			const columnItems = targetColumn.column_cards?.column_items || [];
-			const newPosition = columnItems.length;
-			const updatedColumnItems = [
-				...columnItems,
-				{ card_id: tempId, position: newPosition }
-			];
-			updateCard(targetColumn.id, {
-				column_cards: {
-					...targetColumn.column_cards,
-					column_items: updatedColumnItems
+		// If creating a board card, pre-generate IDs for true parallel execution
+		if (cardType === 'board') {
+			if (!board?.owner) return;
+
+			// Pre-generate the board ID so both operations can start immediately
+			const newBoardId = generateId();
+			defaultData.linked_board_id = newBoardId;
+
+			// Create both board and card in TRUE parallel (no await, no dependency chain)
+			BoardService.createBoard({
+				boardId: newBoardId, // Pass pre-generated ID
+				ownerId: board?.owner?.id,
+				title: defaultData.board_title,
+				parentId: boardId,
+				color: defaultData.board_color,
+			}).catch(error => {
+				console.error('Failed to create linked board:', error);
+			});
+
+			// Card creation can start immediately without waiting for board
+			CardService.createCard({
+				boardId: boardId,
+				cardType: cardType,
+				position: { x: posX, y: posY },
+				dimensions: { width: defaultWidth, height: defaultHeight ?? undefined },
+				data: defaultData,
+				orderKey: orderKey,
+				withUndo: true,
+			}).then(cardId => {
+				// If dropping into column, update column items
+				if (targetColumn) {
+					const columnItems = targetColumn.column_items || [];
+					const newPosition = columnItems.length;
+					const updatedColumnItems = [
+						...columnItems,
+						{ card_id: cardId, position: newPosition }
+					];
+
+					// Update column in database
+					CardService.updateColumnItems(targetColumn.id, boardId, updatedColumnItems);
 				}
+			}).catch(error => {
+				console.error('Failed to create board card:', error);
+			});
+		} else {
+			// Create card in database (no await for instant UI update)
+			CardService.createCard({
+				boardId: boardId,
+				cardType: cardType,
+				position: { x: posX, y: posY },
+				dimensions: { width: defaultWidth, height: defaultHeight ?? undefined },
+				data: defaultData,
+				orderKey: orderKey,
+				withUndo: true,
+			}).then(cardId => {
+				// If dropping into column, update column items
+				if (targetColumn) {
+					const columnItems = targetColumn.column_items || [];
+					const newPosition = columnItems.length;
+					const updatedColumnItems = [
+						...columnItems,
+						{ card_id: cardId, position: newPosition }
+					];
+
+					// Update column in database
+					CardService.updateColumnItems(targetColumn.id, boardId, updatedColumnItems);
+				}
+			}).catch(error => {
+				console.error('Failed to create card on drop:', error);
 			});
 		}
-		addOptimisticCard(tempId, optimisticCard);
-
-		// Now create in database asynchronously
-		try {
-			const cardId = await createCard(
-				boardId,
-				cardType,
-				{
-					position_x: posX,
-					position_y: posY,
-					width: defaultWidth,
-					height: defaultHeight,
-					order_key: orderKey,
-					z_index: parseInt(orderKey.replace(/\D/g, '')) || 0,
-				},
-				defaultData
-			);
-
-			// Fetch the created card with all related data
-			const selectQuery = cardType === 'line'
-				? `*, line_cards!line_cards_id_fkey(*)`
-				: `*, ${cardType}_cards(*)`;
-
-			const { data } = await supabase
-				.from('cards')
-				.select(selectQuery)
-				.eq('id', cardId)
-				.single();
-
-			if (data) {
-				// If was in column, update column to use real ID
-				if (targetColumn) {
-					const columnItems = targetColumn.column_cards?.column_items || [];
-					const updatedColumnItems = columnItems.map((item: { card_id: string; position: number }) =>
-						item.card_id === tempId ? { ...item, card_id: cardId } : item
-					);
-					updateCard(targetColumn.id, {
-						column_cards: {
-							...targetColumn.column_cards,
-							column_items: updatedColumnItems
-						}
-					});
-					addCardToColumn(targetColumn.id, cardId, columnItems.length);
-				}
-
-				// Replace optimistic card with real card
-				confirmOptimisticCard(tempId, data as Card);
-			} else {
-				// No data returned, remove optimistic card
-				removeOptimisticCard(tempId);
-			}
-		} catch (error) {
-			console.error('Failed to create card on drop:', error);
-			// Remove optimistic card on error
-			removeOptimisticCard(tempId);
-			// If was in column, remove from column items
-			if (targetColumn) {
-				const columnItems = targetColumn.column_cards?.column_items || [];
-				const filteredItems = columnItems.filter((item: { card_id: string }) => item.card_id !== tempId);
-				updateCard(targetColumn.id, {
-					column_cards: {
-						...targetColumn.column_cards,
-						column_items: filteredItems
-					}
-				});
-			}
-		}
-	}, [boardId, viewport, supabase, handleFileDrop, getNewCardOrderKey, cards, updateCard, setPotentialColumnTarget, addOptimisticCard, confirmOptimisticCard, removeOptimisticCard, getDefaultCardData]);
+	}, [boardId, viewport, handleFileDrop, cards, setPotentialColumnTarget, getDefaultCardData, board]);
 
 	return {
 		isDraggingOver,

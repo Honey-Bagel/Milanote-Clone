@@ -11,12 +11,13 @@ const nextConfig: NextConfig = {
 			},
 			{
 				protocol: 'https',
-				hostname: 'cjwizcvnujouehwhvowe.supabase.co',
-			},
-			{
-				protocol: 'https',
 				hostname: 'www.google.com'
 			}
+			// TODO: Add S3 bucket hostname when AWS S3 is integrated
+			// {
+			// 	protocol: 'https',
+			// 	hostname: 'your-bucket.s3.amazonaws.com',
+			// },
 		],
 	},
 };

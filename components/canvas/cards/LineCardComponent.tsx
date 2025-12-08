@@ -10,7 +10,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { LineCard, Card, ConnectionSide, RerouteNode } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { updateCardContent } from '@/lib/data/cards-client';
 import { useDebouncedCallback } from 'use-debounce';
 import { getAnchorPosition } from '@/lib/utils/connection-path';
 
@@ -71,7 +70,7 @@ interface LineCardComponentProps {
 type DragTarget = 'start' | 'end' | 'control' | { type: 'reroute'; index: number } | { type: 'segment_control'; index: number } | null;
 
 export function LineCardComponent({ card, isEditing, isSelected }: LineCardComponentProps) {
-  const { updateCard, viewport, cards, setDraggingLineEndpoint } = useCanvasStore();
+  const { viewport, setDraggingLineEndpoint } = useCanvasStore();
   const [dragTarget, setDragTarget] = useState<DragTarget>(null);
   const [hoveredEndpoint, setHoveredEndpoint] = useState<DragTarget>(null);
   const [hoveredReroute, setHoveredReroute] = useState<number | null>(null);

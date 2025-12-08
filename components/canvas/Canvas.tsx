@@ -60,7 +60,8 @@ export function Canvas({
 	const [cardContextMenuData, setCardContextMenuData] = useState<{ card: null | Card, position: { x: number, y: number }}>({card: null, position: { x: 0, y: 0}});
 	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
 
-	const { cards, isLoading } = useBoardCards(boardId);
+	const { cards: cardArray, isLoading } = useBoardCards(boardId);
+	const cards: Map<string, CardData> = new Map(cardArray.map((card) => [card.id, card]));
 
 	const {
 		viewport,
@@ -76,7 +77,10 @@ export function Canvas({
 		cancelConnection,
 		deleteConnection,
 		uploadingCards,
+		setBoardId,
 	} = useCanvasStore();
+
+	if (boardId) setBoardId(boardId);
 
 	// Merge real cards with optimistic cards for rendering
 	const allCardsMap = new Map<string, CardData>();
@@ -153,7 +157,7 @@ export function Canvas({
 		enableZoom,
 	});
 	
-	useKeyboardShortcuts({
+	useKeyboardShortcuts(boardId, {
 		enabled: enableKeyboardShortcuts,
 	});
 	
@@ -194,7 +198,7 @@ export function Canvas({
 		const allCardsArray = Array.from(allCardsMap.values());
 		return allCardsArray.some(c =>
 			c.card_type === 'column' &&
-			c.column_cards?.column_items?.some(item => item.card_id === cardId)
+			(c as any).column_items?.some((item: any) => item.card_id === cardId)
 		);
 	};
 
@@ -229,129 +233,110 @@ export function Canvas({
 			updated_at: new Date().toISOString(),
 		};
 
-		// Create type-specific preview card
+		// Create type-specific preview card using flat InstantDB structure
 		switch (cardType) {
 			case 'note':
 				return {
 					...baseCard,
 					card_type: 'note',
-					note_cards: {
-						content: '<p>Type something...</>',
-						color: 'yellow' as const,
-					},
+					note_content: '<p>Type something...</p>',
+					note_color: 'yellow' as const,
 				} as Card;
-			
+
 			case 'text':
 				return {
 					...baseCard,
 					card_type: 'text',
-					text_cards: {
-						title: 'New Text',
-						content: 'Type your text here...',
-					},
+					text_title: 'New Text',
+					text_content: 'Type your text here...',
 				} as Card;
-			
+
 			case 'task_list':
 				return {
 					...baseCard,
 					card_type: 'task_list',
-					task_list_cards: {
-						title: 'New Task List',
-						tasks: [],
-					},
+					task_list_title: 'New Task List',
+					tasks: [],
 				} as Card;
-			
+
 			case 'image':
 				return {
 					...baseCard,
 					card_type: 'image',
-					image_cards: {
-						image_url: '',
-						caption: null,
-						alt_text: null,
-					},
+					image_url: '',
+					image_caption: null,
+					image_alt_text: null,
 				} as Card;
-			
+
 			case 'link':
 				return {
 					...baseCard,
 					card_type: 'link',
-					link_cards: {
-						title: 'New Link',
-						url: 'https://example.com',
-						favicon_url: null,
-					},
+					link_title: 'New Link',
+					link_url: 'https://example.com',
+					link_favicon_url: null,
 				} as Card;
-			
+
 			case 'file':
 				return {
 					...baseCard,
 					card_type: 'file',
-					file_cards: {
-						file_name: 'document.pdf',
-						file_url: '',
-						file_size: null,
-						file_type: 'pdf',
-						mime_type: null,
-					},
+					file_name: 'document.pdf',
+					file_url: '',
+					file_size: null,
+					file_type: 'pdf',
+					file_mime_type: null,
 				} as Card;
-			
+
 			case 'color_palette':
 				return {
 					...baseCard,
 					card_type: 'color_palette',
-					color_palette_cards: {
-						title: 'New Palette',
-						description: null,
-						colors: ['#3B82F6', '#8B5CF6', '#EC4899'],
-					},
+					palette_title: 'New Palette',
+					palette_description: null,
+					palette_colors: ['#3B82F6', '#8B5CF6', '#EC4899'],
 				} as Card;
-			
+
 			case 'column':
 				return {
 					...baseCard,
 					card_type: 'column',
-					column_cards: {
-						title: 'New Column',
-						background_color: '#f3f4f6',
-						is_collapsed: false,
-						column_items: [],
-					},
+					column_title: 'New Column',
+					column_background_color: '#f3f4f6',
+					column_is_collapsed: false,
+					column_items: [],
 				} as Card;
-			
+
 			case 'board':
 				return {
 					...baseCard,
 					card_type: 'board',
-					board_cards: {
-						linked_board_id: '',
-						board_title: 'New Board',
-						board_color: '#3B82F6',
-						card_count: 0,
-					},
+					linked_board_id: '',
+					board_title: 'New Board',
+					board_color: '#3B82F6',
+					board_card_count: '0',
 				} as Card;
 
 			case 'line':
 				return {
 					...baseCard,
 					card_type: 'line',
-					line_cards: {
-						start_x: 0,
-						start_y: 50,
-						end_x: 200,
-						end_y: 50,
-						color: '#6b7280',
-						stroke_width: 2,
-						line_style: 'solid',
-						start_cap: 'none',
-						end_cap: 'arrow',
-						curvature: 0,
-						control_point_offset: 0,
-						start_attached_card_id: null,
-						start_attached_side: null,
-						end_attached_card_id: null,
-						end_attached_side: null,
-					},
+					line_start_x: 0,
+					line_start_y: 50,
+					line_end_x: 200,
+					line_end_y: 50,
+					line_color: '#6b7280',
+					line_stroke_width: 2,
+					line_style: 'solid' as const,
+					line_start_cap: 'none' as const,
+					line_end_cap: 'arrow' as const,
+					line_curvature: 0,
+					line_control_point_offset: 0,
+					line_reroute_nodes: null,
+					line_start_attached_card_id: null,
+					line_start_attached_side: null,
+					line_end_attached_card_id: null,
+					line_end_attached_side: null,
 				} as Card;
 
 			default:

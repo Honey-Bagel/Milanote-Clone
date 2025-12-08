@@ -10,7 +10,7 @@ import { useBoardsWithCollaborators } from '@/lib/hooks/boards';
 import { db } from '@/lib/instant/db';
 
 export default function Dashboard() {
-	const { boards, isLoading, count } = useBoardsWithCollaborators();
+	const { boards, isLoading, count } = useBoardsWithCollaborators(true);
 
 	return (
 		<db.SignedIn>

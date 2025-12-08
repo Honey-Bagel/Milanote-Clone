@@ -5,6 +5,8 @@ import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { GetCardTypeContextMenu } from '@/components/canvas/cards/CardComponentContextMenus';
+import { deleteCard as deleteCardDB, duplicateCard } from '@/lib/instant/card-mutations';
+import { useUndoStore } from '@/lib/stores/undo-store';
 
 export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
@@ -53,7 +55,44 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 	};
 
 	const handleDeleteButton = () => {
-		deleteCard(data?.card?.id);
+		const cardId = data?.card?.id;
+		const boardId = data?.card?.board_id;
+
+		if (!cardId || !boardId) return;
+
+		// Store card data for undo and cascade delete
+		const cardToDelete = data.card;
+
+		// Delete from database (no await for instant UI update)
+		deleteCardDB(cardId, boardId, cardToDelete);
+
+		// Update UI state (remove from selection, etc.)
+		deleteCard(cardId);
+
+		// Add undo action (skip redo for deletes - complex)
+		useUndoStore.getState().addAction({
+			type: 'card_delete',
+			timestamp: Date.now(),
+			description: `Delete card ${cardId}`,
+			do: () => deleteCardDB(cardId, boardId, cardToDelete),
+			undo: async () => {
+				// Restore would require re-creating with same ID
+				// Can implement in later phase or skip
+				console.warn('Undo delete not yet implemented');
+			},
+		});
+
+		onClose();
+	};
+
+	const handleDuplicateButton = async () => {
+		const card = data?.card;
+
+		if (!card) return;
+
+		// Duplicate card with a 20px offset
+		await duplicateCard(card, { x: 20, y: 20 });
+
 		onClose();
 	};
 
@@ -81,7 +120,7 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 			{data.card && (
 				GetCardTypeContextMenu(data.card, onClose)
 			)}
-			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+			<button onClick={handleDuplicateButton} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
 				<Copy className="w-4 h-4 text-slate-400" />
 				<span>Duplicate</span>
 			</button>

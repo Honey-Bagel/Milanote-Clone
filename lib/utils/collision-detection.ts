@@ -79,12 +79,12 @@ export function findOverlappingColumns(
 			card.id !== draggedCardId
 		) {
 			const columnCard = card as ColumnCard;
-			
+
 			// Check if card is already in this column
-			const alreadyInColumn = columnCard.column_cards.column_items?.some(
+			const alreadyInColumn = columnCard.column_cards?.column_items?.some(
 				item => item.card_id === draggedCardId
 			) || false;
-			
+
 			if (!alreadyInColumn) {
 				const columnRect = getCardRect(card);
 				if (doRectsOverlap(draggedRect, columnRect)) {

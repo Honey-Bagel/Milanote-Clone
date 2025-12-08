@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@clerk/nextjs";
-import { createBoard } from "@/lib/helpers/board-helpers";
+import { BoardService } from "@/lib/services";
 import { db } from "@/lib/instant/db";
 
 export function useCreateBoard() {
@@ -26,7 +26,7 @@ export function useCreateBoard() {
 		setError(null);
 
 		try {
-			const boardId = await createBoard({
+			const boardId = await BoardService.createBoard({
 				...params,
 				ownerId: instantUser.id,
 			});

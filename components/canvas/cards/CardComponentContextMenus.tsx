@@ -5,9 +5,9 @@ import { ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 
 function LinkCardContextMenu(card: Card, onClose: () => void) {
-	const full_url = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
-				card.link_cards.url :
-				"https://" + card.link_cards.url
+	const full_url = card.link_url.startsWith("https://") || card.link_url.startsWith("http://") ?
+				card.link_url :
+				"https://" + card.link_url
 
 	const handleClose = () => {
 		onClose?.();

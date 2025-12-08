@@ -11,7 +11,7 @@ interface CanvasContextMenuProps {
 };
 
 export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasContextMenuProps) {
-	const { selectAll } = useCanvasStore();
+	// const { selectAll } = useCanvasStore(); // TODO: Implement selectAll
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
 
 	useLayoutEffect(() => {
@@ -53,7 +53,7 @@ export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasC
 
 	const onSelectAll = (e: React.MouseEvent) => {
 		e.preventDefault();
-		selectAll();
+		// selectAll(); // TODO: Implement selectAll
 		onClose();
 	}
 

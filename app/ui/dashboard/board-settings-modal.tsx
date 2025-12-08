@@ -4,7 +4,6 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { X, Trash2, Loader2, Palette } from 'lucide-react';
 
@@ -57,18 +56,6 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 	const handleSave = async () => {
 		setIsLoading(true);
 		try {
-			const supabase = createClient();
-			const { error } = await supabase
-				.from('boards')
-				.update({
-					title,
-					description,
-					color,
-					updated_at: new Date().toISOString(),
-				})
-				.eq('id', board.id);
-
-			if (error) throw error;
 
 			router.refresh();
 			onClose();
@@ -87,13 +74,6 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 
 		setIsDeleting(true);
 		try {
-			const supabase = createClient();
-			const { error } = await supabase
-				.from('boards')
-				.delete()
-				.eq('id', board.id);
-
-			if (error) throw error;
 
 			router.refresh();
 			onClose();

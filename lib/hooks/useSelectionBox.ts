@@ -4,10 +4,11 @@
  * Handles drawing a selection box to select multiple cards
  */
 
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { screenToCanvas, boxesIntersect, getNormalizedBox } from '@/lib/utils/transform';
 import { getDefaultCardDimensions } from '../utils';
+import { useBoardCards } from './cards';
 
 interface UseSelectionBoxOptions {
 	/**
@@ -25,7 +26,7 @@ export function useSelectionBox(
 
 	const {
 		viewport,
-		cards,
+		boardId,
 		setIsDrawingSelection,
 		setSelectionBox,
 		selectCards,
@@ -34,6 +35,12 @@ export function useSelectionBox(
 		isDragging,
 		editingCardId,
 	} = useCanvasStore();
+	const { cards: cardArray } = useBoardCards(boardId);
+
+	const cards = useMemo(
+		() => new Map(cardArray.map(c => [c.id, c])),
+		[cardArray]
+	);
 
 	const isDrawingRef = useRef(false);
 	const startPosRef = useRef({ x: 0, y: 0 });
@@ -129,12 +136,12 @@ export function useSelectionBox(
 				const rect = canvas.getBoundingClientRect();
 
 				// Special handling for line cards - use their start/end points and control point
-				if (card.card_type === 'line' && card.line_cards) {
-					const lineData = card.line_cards;
-					const absStartX = card.position_x + lineData.start_x;
-					const absStartY = card.position_y + lineData.start_y;
-					const absEndX = card.position_x + lineData.end_x;
-					const absEndY = card.position_y + lineData.end_y;
+				if (card.card_type === 'line') {
+					const lineData = card;
+					const absStartX = card.position_x + lineData.line_start_x;
+					const absStartY = card.position_y + lineData.line_start_y;
+					const absEndX = card.position_x + lineData.line_end_x;
+					const absEndY = card.position_y + lineData.line_end_y;
 
 					// Calculate control point position for curved lines
 					const dx = absEndX - absStartX;
@@ -146,15 +153,15 @@ export function useSelectionBox(
 					let controlX = midX;
 					let controlY = midY;
 
-					if (distance > 0 && lineData.control_point_offset) {
+					if (distance > 0 && lineData.line_control_point_offset) {
 						const nx = -dy / distance;
 						const ny = dx / distance;
-						controlX = midX + nx * lineData.control_point_offset;
-						controlY = midY + ny * lineData.control_point_offset;
+						controlX = midX + nx * lineData.line_control_point_offset;
+						controlY = midY + ny * lineData.line_control_point_offset;
 					}
 
 					// Include reroute nodes in bounds
-					const rerouteNodes = lineData.reroute_nodes || [];
+					const rerouteNodes = lineData.line_reroute_nodes || [];
 					const allX = [absStartX, absEndX, controlX, ...rerouteNodes.map((n: any) => n ? card.position_x + n.x : midX)];
 					const allY = [absStartY, absEndY, controlY, ...rerouteNodes.map((n: any) => n ? card.position_y + n.y : midY)];
 

@@ -9,7 +9,8 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import type { NoteCard, ImageCard, TextCard, TaskListCard, LinkCard, FileCard, ColorPaletteCard, ColumnCard, Card } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { updateCardContent, removeCardFromColumn, updateCardTransform } from '@/lib/data/cards-client';
+import { CardService, BoardService } from '@/lib/services';
+import { useUndoStore } from '@/lib/stores/undo-store';
 import { CardBase } from './CardBase';
 import Image from 'next/image';
 import { useEditor, EditorContent, Editor as TipTapEditor } from '@tiptap/react';
@@ -23,6 +24,8 @@ import { useDebouncedCallback } from 'use-debounce';
 import { CanvasElement } from '../CanvasElement';
 import { useResizable } from '@/lib/hooks/useResizable';
 import { CardRenderer } from './CardRenderer';
+import { db } from '@/lib/instant/db';
+import { useBoardCards } from '@/lib/hooks/cards';
 
 // ============================================================================
 // NOTE CARD - WITH TIPTAP
@@ -37,15 +40,31 @@ export function NoteCardComponent({
 	isEditing: boolean;
 	onEditorReady?: (editor: TipTapEditor) => void;
 }) {
-	const { updateCard, setEditingCardId, isDragging } = useCanvasStore();
+	const { setEditingCardId, isDragging  } = useCanvasStore();
+
+	const previousContentRef = useRef(card.note_content);
 
 	const debouncedSave = useDebouncedCallback(
 		async (content: string) => {
 			try {
 				if (card.id === 'preview-card') return;
-				await updateCardContent(card.id, 'note', {
-					content,
-				}, card.board_id);
+
+				const oldContent = previousContentRef.current;
+
+				await CardService.updateCardContent(card.id, card.board_id, 'note', {
+					note_content: content,
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit note content',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'note', { note_content: content }),
+					undo: () => CardService.updateCardContent(card.id, card.board_id, 'note', { note_content: oldContent }),
+				});
+
+				previousContentRef.current = content;
 			} catch (error) {
 				console.error('Failed to update note:', error);
 			}
@@ -79,7 +98,7 @@ export function NoteCardComponent({
 				showOnlyCurrent: false,
 			}),
 		],
-		content: card.note_cards.content || '',
+		content: card.note_content || '',
 		editorProps: {
 			attributes: {
 				class: 'prose prose-sm max-w-none focus:outline-none p-4 min-h-[60px] text-slate-300 text-sm leading-relaxed',
@@ -93,14 +112,7 @@ export function NoteCardComponent({
 
 			const html = editor.getHTML();
 
-			// Update local state
-			updateCard(card.id, {
-				...card,
-				note_cards: {
-					...card.note_cards,
-					content: html,
-				},
-			});
+			// Local state updates happen via InstantDB subscription
 
 			// Debounced save to database
 			debouncedSave(html);
@@ -115,10 +127,10 @@ export function NoteCardComponent({
 
 	// Update editor content when card content changes externally
 	useEffect(() => {
-		if (editor && card.note_cards.content !== editor.getHTML()) {
-			editor.commands.setContent(card.note_cards.content || '');
+		if (editor && card.note_content !== editor.getHTML()) {
+			editor.commands.setContent(card.note_content || '');
 		}
-	}, [card.note_cards.content, editor]);
+	}, [card.note_content, editor]);
 
 	// Update editor editable state when isEditing changes
 	useEffect(() => {
@@ -221,17 +233,42 @@ export function ImageCardComponent({
 	card: ImageCard; 
 	isEditing: boolean;
 }) {
-	const { updateCard } = useCanvasStore();
 	const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number; } | null>(null);
+	const previousDataRef = useRef({
+		image_url: card.image_url,
+		caption: card.image_caption,
+		alt_text: card.image_alt_text,
+	});
 
 	const debouncedSave = useDebouncedCallback(
 		async (image_url: string, caption: string | null, alt_text: string | null) => {
 			try {
-				await updateCardContent(card.id, 'image', {
+				const oldData = previousDataRef.current;
+
+				await CardService.updateCardContent(card.id, card.board_id, 'image', {
 					image_url,
-					caption,
-					alt_text,
-				}, card.board_id);
+					image_caption: caption,
+					image_alt_text: alt_text,
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit image card',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'image', {
+						image_url,
+						image_caption: caption,
+						image_alt_text: alt_text,
+					}),
+					undo: () => CardService.updateCardContent(card.id, card.board_id, 'image', {
+						image_url: oldData.image_url,
+						image_caption: oldData.caption,
+						image_alt_text: oldData.alt_text,
+					}),
+				});
+
+				previousDataRef.current = { image_url, caption, alt_text };
 			} catch (error) {
 				console.error('Failed to update image card:', error);
 			}
@@ -246,75 +283,51 @@ export function ImageCardComponent({
 			const newHeight = Math.round(card.width * aspectRatio);
 
 			if (card.height !== newHeight) {
-				updateCard(card.id, {
-					...card,
-					height: newHeight,
-				});
+				// Removed: updateCard - using InstantDB subscription
 
 				updateCardTransform(card.id, { height: newHeight }).catch(err => {
 					console.error('Failed to update card height:', err);
 				});
 			}
 		}
-	}, [imageDimensions, card, card.width, card.height, card.id, updateCard]);
+	}, [imageDimensions, card, card.width, card.height, card.id]);
 
 	const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newUrl = e.target.value;
-		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			image_cards: {
-				...card.image_cards,
-				image_url: newUrl,
-			},
-		});
+
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
-		debouncedSave(newUrl, card.image_cards.caption, card.image_cards.alt_text);
+		debouncedSave(newUrl, card.image_caption, card.image_alt_text);
 	};
 
 	const handleCaptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newCaption = e.target.value;
-		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			image_cards: {
-				...card.image_cards,
-				caption: newCaption,
-			},
-		});
+
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
-		debouncedSave(card.image_cards.image_url, newCaption, card.image_cards.alt_text);
+		debouncedSave(card.image_url, newCaption, card.image_alt_text);
 	};
 
 	const handleAltTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newAltText = e.target.value;
-		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			image_cards: {
-				...card.image_cards,
-				alt_text: newAltText,
-			},
-		});
+
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
-		debouncedSave(card.image_cards.image_url, card.image_cards.caption, newAltText);
+		debouncedSave(card.image_url, card.image_caption, newAltText);
 	};
 
 	return (
 		<CardBase isEditing={isEditing} className="backdrop-blur-xl shadow-xl hover:border-cyan-500/50 bg-[#1e293b]/90 border-white/10">
 			<div className="image-card flex flex-col" style={{ height: '100%' }}>
-				{card.image_cards.image_url ? (
+				{card.image_url ? (
 					<>
 						<div className="flex-shrink-0 relative" style={{ width: '100%', height: 'auto' }}>
 							<Image
-								src={card.image_cards.image_url}
-								alt={card.image_cards.alt_text || 'Image'}
+								src={card.image_url}
+								alt={card.image_alt_text || 'Image'}
 								width={card.width || 300}
 								height={card.height || 300}
 								className="w-full h-auto"
@@ -332,7 +345,7 @@ export function ImageCardComponent({
 							<div className="p-3 space-y-2 bg-slate-800/50 border-t border-white/10">
 								<input
 									type="text"
-									value={card.image_cards.caption || ''}
+									value={card.image_caption || ''}
 									onChange={handleCaptionChange}
 									className="w-full px-2 py-1 text-xs bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 									placeholder="Caption (optional)"
@@ -340,7 +353,7 @@ export function ImageCardComponent({
 								/>
 								<input
 									type="text"
-									value={card.image_cards.alt_text || ''}
+									value={card.image_alt_text || ''}
 									onChange={handleAltTextChange}
 									className="w-full px-2 py-1 text-xs bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 									placeholder="Alt text (optional)"
@@ -356,7 +369,7 @@ export function ImageCardComponent({
 								<label className="text-xs text-slate-400 block">Image URL</label>
 								<input
 									type="url"
-									value={card.image_cards.image_url}
+									value={card.image_url}
 									onChange={handleImageUrlChange}
 									className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 									placeholder="https://example.com/image.jpg"
@@ -386,15 +399,38 @@ export function TextCardComponent({
 	card: TextCard; 
 	isEditing: boolean;
 }) {
-	const { updateCard, setEditingCardId } = useCanvasStore();
+	const { setEditingCardId  } = useCanvasStore();
+	const previousDataRef = useRef({
+		title: card.text_title,
+		content: card.text_content,
+	});
 
 	const debouncedSave = useDebouncedCallback(
 		async (title: string, content: string) => {
 			try {
-				await updateCardContent(card.id, 'text', {
-					title,
-					content,
-				}, card.board_id);
+				const oldData = previousDataRef.current;
+
+				await CardService.updateCardContent(card.id, card.board_id, 'text', {
+					text_title: title,
+					text_content: content,
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit text card',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'text', {
+						text_title: title,
+						text_content: content,
+					}),
+					undo: () => CardService.updateCardContent(card.id, card.board_id, 'text', {
+						text_title: oldData.title,
+						text_content: oldData.content,
+					}),
+				});
+
+				previousDataRef.current = { title, content };
 			} catch (error) {
 				console.error('Failed to update text card:', error);
 			}
@@ -405,43 +441,29 @@ export function TextCardComponent({
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			text_cards: {
-				...card.text_cards,
-				title: newTitle,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
-		debouncedSave(newTitle, card.text_cards.content);
+		debouncedSave(newTitle, card.text_content);
 	};
 
 	const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		const newContent = e.target.value;
 		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			text_cards: {
-				...card.text_cards,
-				content: newContent,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
-		debouncedSave(card.text_cards.title || '', newContent);
+		debouncedSave(card.text_title || '', newContent);
 	};
 
 	return (
 		<CardBase isEditing={isEditing} className="bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border-white/10">
 			<div className="text-card p-4 h-full flex flex-col overflow-auto">
-				{card.text_cards.title && (
+				{card.text_title && (
 					isEditing ? (
 						<input
 							type="text"
-							value={card.text_cards.title}
+							value={card.text_title}
 							onChange={handleTitleChange}
 							className="text-xl font-bold text-white mb-1 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
 							placeholder="Title"
@@ -449,13 +471,13 @@ export function TextCardComponent({
 						/>
 					) : (
 						<h3 className="text-xl font-bold text-white mb-1 flex-shrink-0">
-							{card.text_cards.title}
+							{card.text_title}
 						</h3>
 					)
 				)}
 				{isEditing ? (
 					<textarea
-						value={card.text_cards.content}
+						value={card.text_content}
 						onChange={handleContentChange}
 						className="text-base text-slate-300 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 flex-1 resize-none"
 						placeholder="Type your text..."
@@ -463,7 +485,7 @@ export function TextCardComponent({
 					/>
 				) : (
 					<p className="text-base text-slate-300 whitespace-pre-wrap flex-1 overflow-auto">
-						{card.text_cards.content}
+						{card.text_content}
 					</p>
 				)}
 			</div>
@@ -482,16 +504,31 @@ export function TaskListCardComponent({
 	card: TaskListCard; 
 	isEditing: boolean;
 }) {
-	const { updateCard, setEditingCardId } = useCanvasStore();
+	const { setEditingCardId  } = useCanvasStore();
 	const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 	const [taskText, setTaskText] = useState('');
+	const previousTitleRef = useRef(card.task_list_title);
+	const previousTasksRef = useRef(card.tasks);
 
 	const debouncedSaveTitle = useDebouncedCallback(
 		async (title: string) => {
 			try {
-				await updateCardContent(card.id, 'task_list', {
-					title,
-				}, card.board_id);
+				const oldTitle = previousTitleRef.current;
+
+				await CardService.updateCardContent(card.id, card.board_id, 'task_list', {
+					task_list_title: title,
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit task list title',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'task_list', { task_list_title: title }),
+					undo: () => CardService.updateCardContent(card.id, card.board_id, 'task_list', { task_list_title: oldTitle }),
+				});
+
+				previousTitleRef.current = title;
 			} catch (error) {
 				console.error('Failed to update task list title:', error);
 			}
@@ -500,11 +537,24 @@ export function TaskListCardComponent({
 	);
 
 	const debouncedSaveTasks = useDebouncedCallback(
-		async (tasks: TaskListCard['task_list_cards']['tasks']) => {
+		async (tasks: TaskListCard['tasks']) => {
 			try {
-				await updateCardContent(card.id, 'task_list', {
-					tasks,
-				}, card.board_id);
+				const oldTasks = previousTasksRef.current;
+
+				await CardService.updateCardContent(card.id, card.board_id, 'task_list', {
+					tasks: tasks,
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit task list',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'task_list', { tasks: tasks }),
+					undo: () => CardService.updateCardContent(card.id, card.board_id, 'task_list', { tasks: oldTasks }),
+				});
+
+				previousTasksRef.current = tasks;
 			} catch (error) {
 				console.error('Failed to update tasks:', error);
 			}
@@ -513,18 +563,11 @@ export function TaskListCardComponent({
 	);
 
 	const handleToggleTask = (taskId: string) => {
-		const updatedTasks = card.task_list_cards.tasks.map(task =>
+		const updatedTasks = card.tasks.map(task =>
 			task.id === taskId ? { ...task, completed: !task.completed } : task
 		);
 
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			task_list_cards: {
-				...card.task_list_cards,
-				tasks: updatedTasks,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save to database
 		debouncedSaveTasks(updatedTasks);
@@ -533,56 +576,35 @@ export function TaskListCardComponent({
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			task_list_cards: {
-				...card.task_list_cards,
-				title: newTitle,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
 		debouncedSaveTitle(newTitle);
 	};
 
 	const handleTaskTextChange = (taskId: string, newText: string) => {
-		const updatedTasks = card.task_list_cards.tasks.map(task =>
+		const updatedTasks = card.tasks.map(task =>
 			task.id === taskId ? { ...task, text: newText } : task
 		);
 
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			task_list_cards: {
-				...card.task_list_cards,
-				tasks: updatedTasks,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
 		debouncedSaveTasks(updatedTasks);
 	};
 
 	const handleAddTask = () => {
-		console.log(card.task_list_cards.tasks.length)
+		console.log(card.tasks.length)
 		const newTask = {
 			id: `task-${Date.now()}`,
 			text: 'New task',
 			completed: false,
-			position: card.task_list_cards.tasks.length,
+			position: card.tasks.length,
 		};
 
-		const updatedTasks = [...card.task_list_cards.tasks, newTask];
+		const updatedTasks = [...card.tasks, newTask];
 
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			task_list_cards: {
-				...card.task_list_cards,
-				tasks: updatedTasks,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Save immediately
 		debouncedSaveTasks(updatedTasks);
@@ -590,18 +612,11 @@ export function TaskListCardComponent({
 	};
 
 	const handleDeleteTask = (taskId: string) => {
-		const updatedTasks = card.task_list_cards.tasks
+		const updatedTasks = card.tasks
 			.filter(task => task.id !== taskId)
 			.map((task, index) => ({ ...task, position: index }));
 
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			task_list_cards: {
-				...card.task_list_cards,
-				tasks: updatedTasks,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Save immediately
 		debouncedSaveTasks(updatedTasks);
@@ -619,19 +634,19 @@ export function TaskListCardComponent({
 				{isEditing ? (
 					<input
 						type="text"
-						value={card.task_list_cards.title}
+						value={card.task_list_title}
 						onChange={handleTitleChange}
 						className="font-semibold text-white mb-3 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
 						onClick={(e) => e.stopPropagation()}
 					/>
 				) : (
 					<h3 className="font-semibold text-white mb-3 border-b border-white/5 pb-2">
-						{card.task_list_cards.title}
+						{card.task_list_title}
 					</h3>
 				)}
 
 				<div className="space-y-2 mb-3">
-					{[...card.task_list_cards.tasks || []]
+					{[...card.tasks || []]
 						.sort((a, b) => a.position - b.position)
 						.map(task => (
 						<div
@@ -735,16 +750,21 @@ export function LinkCardComponent({
 	card: LinkCard; 
 	isEditing: boolean;
 }) {
-	const { updateCard, clearSelection, setEditingCardId } = useCanvasStore();
+	const { clearSelection, setEditingCardId  } = useCanvasStore();
 	const [faviconUrl, setFaviconUrl] = useState<string>('');
 	const [fullURL, setFullURL] = useState<string | null>(null);
 	const [faviconError, setFaviconError] = useState(false);
+	const previousDataRef = useRef({
+		title: card.link_title,
+		url: card.link_url,
+		favicon_url: card.link_favicon_url,
+	});
 
 	useEffect(() => {
 		const getFullUrl = async () => {
-			const newUrl = card.link_cards.url.startsWith("https://") || card.link_cards.url.startsWith("http://") ?
-				card.link_cards.url :
-				"https://" + card.link_cards.url;
+			const newUrl = card.link_url.startsWith("https://") || card.link_url.startsWith("http://") ?
+				card.link_url :
+				"https://" + card.link_url;
 
 			setFullURL(newUrl);
 		}
@@ -783,11 +803,32 @@ export function LinkCardComponent({
 	const debouncedSave = useDebouncedCallback(
 		async (title: string, url: string, favicon_url: string | null) => {
 			try {
-				await updateCardContent(card.id, 'link', {
-					title,
-					url,
-					favicon_url,
-				}, card.board_id);
+				const oldData = previousDataRef.current;
+
+				await CardService.updateCardContent(card.id, card.board_id, 'link', {
+					link_title: title,
+					link_url: url,
+					link_favicon_url: favicon_url,
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit link card',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'link', {
+						link_title: title,
+						link_url: url,
+						link_favicon_url: favicon_url,
+					}),
+					undo: () => CardService.updateCardContent(card.id, card.board_id, 'link', {
+						link_title: oldData.title,
+						link_url: oldData.url,
+						link_favicon_url: oldData.favicon_url,
+					}),
+				});
+
+				previousDataRef.current = { title, url, favicon_url };
 			} catch (error) {
 				console.error('Failed to update link card:', error);
 			}
@@ -798,33 +839,19 @@ export function LinkCardComponent({
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			link_cards: {
-				...card.link_cards,
-				title: newTitle,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
-		debouncedSave(newTitle, card.link_cards.url, card.link_cards.favicon_url);
+		debouncedSave(newTitle, card.link_url, card.link_favicon_url);
 	};
 
 	const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newUrl = e.target.value;
 		
-		// Update local state
-		updateCard(card.id, {
-			...card,
-			link_cards: {
-				...card.link_cards,
-				url: newUrl,
-			},
-		});
+		// Local state updates happen via InstantDB subscription
 
 		// Debounced save
-		debouncedSave(card.link_cards.title, newUrl, card.link_cards.favicon_url);
+		debouncedSave(card.link_title, newUrl, card.link_favicon_url);
 	};
 
 	if (isEditing) {
@@ -836,7 +863,7 @@ export function LinkCardComponent({
 							<label className="text-xs text-slate-400 block mb-1">Title</label>
 							<input
 								type="text"
-								value={card.link_cards.title}
+								value={card.link_title}
 								onChange={handleTitleChange}
 								className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 								placeholder="Link title"
@@ -847,7 +874,7 @@ export function LinkCardComponent({
 							<label className="text-xs text-slate-400 block mb-1">URL</label>
 							<input
 								type="url"
-								value={card.link_cards.url}
+								value={card.link_url}
 								onChange={handleUrlChange}
 								className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 								placeholder="https://example.com"
@@ -886,7 +913,7 @@ export function LinkCardComponent({
 					)}
 					<div className="flex-1 min-w-0">
 						<h3 className="font-semibold text-sm text-white mb-1 group-hover:text-cyan-400 transition-colors truncate">
-							{card.link_cards.title || card.link_cards.url}
+							{card.link_title || card.link_url}
 						</h3>
 						{fullURL && (
 							<div className="flex items-center gap-1.5 text-[10px] text-slate-500">
@@ -959,18 +986,43 @@ export function ColorPaletteCardComponent({
 	card: ColorPaletteCard;
 	isEditing: boolean;
 }) {
-	const { updateCard } = useCanvasStore();
 	const [newColor, setNewColor] = useState('#000000');
 	const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+	const previousDataRef = useRef({
+		title: card.palette_title,
+		description: card.palette_description,
+		colors: card.palette_colors,
+	});
 
 	const debouncedSave = useDebouncedCallback(
 		async (title: string, description: string | null, colors: string[]) => {
 			try {
-				await updateCardContent(card.id, 'color_palette', {
-					title,
-					description,
-					colors,
-				}, card.board_id);
+				const oldData = previousDataRef.current;
+
+				await CardService.updateCardContent(card.id, card.board_id, 'color_palette', {
+					palette_title: title,
+					palette_description: description,
+					palette_colors: colors,
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit color palette',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'color_palette', {
+						palette_title: title,
+						palette_description: description,
+						palette_colors: colors,
+					}),
+					undo: () => CardService.updateCardContent(card.id, card.board_id, 'color_palette', {
+						palette_title: oldData.title,
+						palette_description: oldData.description,
+						palette_colors: oldData.colors,
+					}),
+				});
+
+				previousDataRef.current = { title, description, colors };
 			} catch (error) {
 				console.error('Failed to update color palette:', error);
 			}
@@ -981,73 +1033,43 @@ export function ColorPaletteCardComponent({
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 
-		updateCard(card.id, {
-			...card,
-			color_palette_cards: {
-				...card.color_palette_cards,
-				title: newTitle,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(newTitle, card.color_palette_cards.description, card.color_palette_cards.colors);
+		debouncedSave(newTitle, card.palette_description, card.palette_colors);
 	};
 
 	const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
 		const newDescription = e.target.value;
 
-		updateCard(card.id, {
-			...card,
-			color_palette_cards: {
-				...card.color_palette_cards,
-				description: newDescription,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(card.color_palette_cards.title, newDescription, card.color_palette_cards.colors);
+		debouncedSave(card.palette_title, newDescription, card.palette_colors);
 	};
 
 	const handleAddColor = () => {
-		const updatedColors = [...card.color_palette_cards.colors, newColor];
+		const updatedColors = [...card.palette_colors, newColor];
 
-		updateCard(card.id, {
-			...card,
-			color_palette_cards: {
-				...card.color_palette_cards,
-				colors: updatedColors,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
+		debouncedSave(card.palette_title, card.palette_description, updatedColors);
 		setNewColor('#000000');
 	};
 
 	const handleRemoveColor = (index: number) => {
-		const updatedColors = card.color_palette_cards.colors.filter((_, i) => i !== index);
+		const updatedColors = card.palette_colors.filter((_, i) => i !== index);
 
-		updateCard(card.id, {
-			...card,
-			color_palette_cards: {
-				...card.color_palette_cards,
-				colors: updatedColors,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
+		debouncedSave(card.palette_title, card.palette_description, updatedColors);
 	};
 
 	const handleColorChange = (index: number, newColor: string) => {
-		const updatedColors = [...card.color_palette_cards.colors];
+		const updatedColors = [...card.palette_colors];
 		updatedColors[index] = newColor;
 
-		updateCard(card.id, {
-			...card,
-			color_palette_cards: {
-				...card.color_palette_cards,
-				colors: updatedColors,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(card.color_palette_cards.title, card.color_palette_cards.description, updatedColors);
+		debouncedSave(card.palette_title, card.palette_description, updatedColors);
 	};
 
 	const handleCopyColor = async (color: string, index: number) => {
@@ -1062,12 +1084,12 @@ export function ColorPaletteCardComponent({
 	};
 
 	// Calculate height based on number of colors and editing state
-	const colorCount = card.color_palette_cards.colors.length;
+	const colorCount = card.palette_colors.length;
 	const rows = Math.ceil(colorCount / 3); // 3 colors per row
 
 	// Base heights
 	const headerHeight = 35; // Title + icon
-	const descriptionHeight = isEditing ? 50 : (card.color_palette_cards.description ? 25 : 0);
+	const descriptionHeight = isEditing ? 50 : (card.palette_description ? 25 : 0);
 	const colorRowHeight = isEditing ? 70 : 60; // Taller in edit mode for Remove buttons
 	const addColorHeight = isEditing ? 50 : 0;
 	const padding = 24; // Reduced padding
@@ -1092,7 +1114,7 @@ export function ColorPaletteCardComponent({
 					{isEditing ? (
 						<input
 							type="text"
-							value={card.color_palette_cards.title}
+							value={card.palette_title}
 							onChange={handleTitleChange}
 							className="font-semibold text-white flex-1 bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
 							placeholder="Palette name"
@@ -1100,7 +1122,7 @@ export function ColorPaletteCardComponent({
 						/>
 					) : (
 						<h3 className="font-semibold text-white">
-							{card.color_palette_cards.title}
+							{card.palette_title}
 						</h3>
 					)}
 				</div>
@@ -1108,22 +1130,22 @@ export function ColorPaletteCardComponent({
 				{/* Description Section */}
 				{isEditing ? (
 					<textarea
-						value={card.color_palette_cards.description || ''}
+						value={card.palette_description || ''}
 						onChange={handleDescriptionChange}
 						className="text-xs text-slate-400 mb-4 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 resize-none"
 						placeholder="Description (optional)"
 						rows={2}
 						onClick={(e) => e.stopPropagation()}
 					/>
-				) : card.color_palette_cards.description ? (
+				) : card.palette_description ? (
 					<p className="text-xs text-slate-400 mb-4">
-						{card.color_palette_cards.description}
+						{card.palette_description}
 					</p>
 				) : null}
 
 				{/* Colors Grid - Fixed 3 columns with space for tooltips */}
 				<div className="grid grid-cols-3 gap-2 mb-1">
-					{card.color_palette_cards.colors.map((color, index) => (
+					{card.palette_colors.map((color, index) => (
 						<div key={index} className="relative group flex flex-col items-center">
 							{isEditing ? (
 								<>
@@ -1212,24 +1234,28 @@ interface ColumnCardComponentProps {
 	onEditorReady?: (cardId: string, editor: any) => void;
 }
 
-export function ColumnCardComponent({ 
-	card, 
+export function ColumnCardComponent({
+	card,
 	isEditing,
 	isSelected,
-	onEditorReady 
+	onEditorReady
 }: ColumnCardComponentProps) {
-	const { 
-		updateCard,
-		potentialColumnTarget,
-		cards,
+	const { potentialColumnTarget,
 		selectCard,
 		setEditingCardId,
 		selectedCardIds,
 		setDragPreview,
 		viewport
-	} = useCanvasStore();
-	
-	const [isCollapsed, setIsCollapsed] = useState(card.column_cards.is_collapsed || false);
+	 } = useCanvasStore();
+
+	// Get cards from InstantDB
+	const { cards: cardsArray } = useBoardCards(card.board_id);
+	const cards = useMemo(
+		() => new Map(cardsArray.map(c => [c.id, c])),
+		[cardsArray]
+	);
+
+	const [isCollapsed, setIsCollapsed] = useState(card.column_is_collapsed || false);
 	const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
 	const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 	const [cardHoverId, setCardHoverId] = useState<string | null>(null);
@@ -1238,28 +1264,62 @@ export function ColumnCardComponent({
 	const dragStartIndexRef = useRef<number | null>(null);
 	const columnListRef = useRef<HTMLDivElement>(null);
 	const dragOverIndexRef = useRef<number | null>(null);
-	
-	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({
-		cardId: card.id
+
+	const { handleMouseDown: handleMouseDownResizable, isResizing, currentDimensions } = useResizable({
+		card: card
 	});
-	
+
 	const isDropTarget = potentialColumnTarget === card.id;
+	const previousDataRef = useRef({
+		title: card.column_title,
+		background_color: card.column_background_color,
+		is_collapsed: card.column_is_collapsed,
+		column_items: card.column_items,
+	});
 
 	const debouncedSave = useDebouncedCallback(
 		async (title: string, background_color: string, is_collapsed?: boolean, column_items?: Array<{card_id: string, position: number}>) => {
 			try {
+				const oldData = previousDataRef.current;
+
 				const updateData: any = {
-					title,
-					background_color,
+					column_title: title,
+					column_background_color: background_color,
 				};
 				if (is_collapsed !== undefined) {
-					updateData.is_collapsed = is_collapsed;
+					updateData.column_is_collapsed = is_collapsed;
 				}
 				if (column_items !== undefined) {
 					updateData.column_items = column_items;
 				}
 
-				await updateCardContent(card.id, 'column', updateData, card.board_id);
+				await CardService.updateCardContent(card.id, card.board_id, 'column', updateData);
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit column',
+					do: () => CardService.updateCardContent(card.id, card.board_id, 'column', updateData),
+					undo: () => {
+						const undoData: any = {
+							column_title: oldData.title,
+							column_background_color: oldData.background_color,
+							column_is_collapsed: oldData.is_collapsed,
+						};
+						if (column_items !== undefined) {
+							undoData.column_items = oldData.column_items;
+						}
+						return CardService.updateCardContent(card.id, card.board_id, 'column', undoData);
+					},
+				});
+
+				previousDataRef.current = {
+					title,
+					background_color,
+					is_collapsed: is_collapsed ?? oldData.is_collapsed,
+					column_items: column_items ?? oldData.column_items,
+				};
 			} catch (error) {
 				console.error('Failed to update column:', error);
 			}
@@ -1270,61 +1330,37 @@ export function ColumnCardComponent({
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 		
-		updateCard(card.id, {
-			...card,
-			column_cards: {
-				...card.column_cards,
-				title: newTitle,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(newTitle, card.column_cards.background_color);
+		debouncedSave(newTitle, card.column_background_color);
 	};
 
 	const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newColor = e.target.value;
 		
-		updateCard(card.id, {
-			...card,
-			column_cards: {
-				...card.column_cards,
-				background_color: newColor,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(card.column_cards.title, newColor);
+		debouncedSave(card.column_title, newColor);
 	};
 
 	const handleToggleCollapse = async () => {
 		const newCollapsed = !isCollapsed;
 		setIsCollapsed(newCollapsed);
 		
-		updateCard(card.id, {
-			...card,
-			column_cards: {
-				...card.column_cards,
-				is_collapsed: newCollapsed,
-			},
-		});
+		// Removed: updateCard - using InstantDB subscription
 
-		debouncedSave(card.column_cards.title, card.column_cards.background_color, newCollapsed);
+		debouncedSave(card.column_title, card.column_background_color, newCollapsed);
 	};
 
 	const handleRemoveCard = async (cardId: string) => {
 		try {
 			await removeCardFromColumn(card.id, cardId);
 			
-			const updatedItems = (card.column_cards.column_items || [])
+			const updatedItems = (card.column_items || [])
 				.filter(item => item.card_id !== cardId)
 				.map((item, index) => ({ ...item, position: index }));
 			
-			updateCard(card.id, {
-				...card,
-				column_cards: {
-					...card.column_cards,
-					column_items: updatedItems
-				}
-			});
+			// Removed: updateCard - using InstantDB subscription
 		} catch (error) {
 			console.error('Failed to remove card from column:', error);
 		}
@@ -1424,7 +1460,7 @@ export function ColumnCardComponent({
 
 				// Only reorder if positions actually changed
 				if (startIndex !== endIndex) {
-					const items = [...(card.column_cards.column_items || [])];
+					const items = [...(card.column_items || [])];
 
 					// Remove from old position
 					const [movedItem] = items.splice(startIndex, 1);
@@ -1439,19 +1475,12 @@ export function ColumnCardComponent({
 						position: index
 					}));
 
-					// Update local state
-					updateCard(card.id, {
-						...card,
-						column_cards: {
-							...card.column_cards,
-							column_items: updatedItems
-						}
-					});
+					// Local state updates happen via InstantDB subscription
 
 					// Save to db
 					debouncedSave(
-						card.column_cards.title,
-						card.column_cards.background_color,
+						card.column_title,
+						card.column_background_color,
 						undefined,
 						updatedItems
 					);
@@ -1471,13 +1500,13 @@ export function ColumnCardComponent({
 
 		document.addEventListener('mousemove', handleMouseMove);
 		document.addEventListener('mouseup', handleMouseUp);
-	}, [card, updateCard, debouncedSave, setDragPreview, viewport]);
+	}, [card, debouncedSave, setDragPreview, viewport]);
 
 	// Get cards that belong to this column
-	const columnItems = ([...card.column_cards.column_items || []])
+	const columnItems = ([...card.column_items || []])
 		.sort((a, b) => a.position - b.position)
 		.map(item => cards.get(item.card_id))
-		.filter((c): c is Card => c !== undefined);
+		.filter(c => c !== undefined);
 
 	const itemCount = columnItems.length;
 
@@ -1536,7 +1565,7 @@ export function ColumnCardComponent({
 				{/* Color indicator dot */}
 				<div
 					className="w-2 h-2 rounded-full flex-shrink-0"
-					style={{ backgroundColor: card.column_cards.background_color }}
+					style={{ backgroundColor: card.column_background_color }}
 				/>
 
 				{/* Title */}
@@ -1544,7 +1573,7 @@ export function ColumnCardComponent({
 					{isEditing ? (
 						<input
 							type="text"
-							value={card.column_cards.title}
+							value={card.column_title}
 							onChange={handleTitleChange}
 							className="w-full px-2 py-1 text-sm font-medium bg-slate-700/50 text-white border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 							placeholder="Column title"
@@ -1552,7 +1581,7 @@ export function ColumnCardComponent({
 						/>
 					) : (
 						<h3 className="text-sm font-bold text-white truncate">
-							{card.column_cards.title}
+							{card.column_title}
 						</h3>
 					)}
 				</div>
@@ -1572,7 +1601,7 @@ export function ColumnCardComponent({
 				{isEditing && (
 					<input
 						type="color"
-						value={card.column_cards.background_color}
+						value={card.column_background_color}
 						onChange={handleColorChange}
 						className="w-6 h-6 rounded cursor-pointer flex-shrink-0"
 						title="Change column color"
@@ -1631,7 +1660,7 @@ export function ColumnCardComponent({
 										<div className="h-0.5 bg-cyan-500 rounded mb-2 shadow-lg animate-pulse" />
 									)}
 									
-									<div 
+									<div
 										className={`
 											column-card-wrapper relative
 											transition-opacity duration-150
@@ -1643,7 +1672,7 @@ export function ColumnCardComponent({
 										onMouseDown={(e) => {
 											// Only allow reordering when not editing the column
 											if (!isEditing) {
-												handleCardDragStart(e, itemCard, index);
+												handleCardDragStart(e, itemCard as unknown as Card, index);
 											}
 										}}
 										onMouseEnter={() => setCardHoverId(itemCard.id)}
@@ -1678,7 +1707,7 @@ export function ColumnCardComponent({
 										
 										{/* Render the actual card */}
 										<CanvasElement
-											card={itemCard}
+											card={itemCard as unknown as Card}
 											boardId={card.board_id}
 											onCardClick={handleCardClick}
 											onCardDoubleClick={handleCardDoubleClick}
@@ -1769,20 +1798,56 @@ export function BoardCardComponent({
 	isEditing: boolean;
 	isPublicView?: boolean;
 }) {
-	const { updateCard } = useCanvasStore();
 	const [availableBoards, setAvailableBoards] = useState<Array<{id: string, title: string, color: string}>>([]);
 	const [isCreatingNew, setIsCreatingNew] = useState(false);
 	const [newBoardTitle, setNewBoardTitle] = useState('New Board');
 	const [newBoardColor, setNewBoardColor] = useState('#3B82F6');
 
+	// Local state for immediate UI feedback while editing
+	const [localTitle, setLocalTitle] = useState(card.board_title || '');
+
+	const previousDataRef = useRef({
+		linked_board_id: card.linked_board_id || '',
+		board_title: card.board_title || '',
+		board_color: card.board_color || '#3B82F6',
+	});
+
+	// Update local title when card prop changes (from DB) and not editing
+	useEffect(() => {
+		if (!isEditing) {
+			setLocalTitle(card.board_title || '');
+		}
+	}, [card.board_title, isEditing]);
+
 	const debouncedSave = useDebouncedCallback(
 		async (linked_board_id: string, board_title: string, board_color: string, expectedBoardId: string) => {
 			try {
-				await updateCardContent(card.id, 'board', {
-					linked_board_id,
+				const oldData = previousDataRef.current;
+
+				await CardService.updateCardContent(card.id, expectedBoardId, 'board', {
+					linked_board_id: linked_board_id,
 					board_title,
 					board_color,
-				}, expectedBoardId);
+				});
+
+				// Add undo action
+				useUndoStore.getState().addAction({
+					type: 'card_content',
+					timestamp: Date.now(),
+					description: 'Edit board card',
+					do: () => CardService.updateCardContent(card.id, expectedBoardId, 'board', {
+						board_linked_board_id: linked_board_id,
+						board_title,
+						board_color,
+					}),
+					undo: () => CardService.updateCardContent(card.id, expectedBoardId, 'board', {
+						board_linked_board_id: oldData.linked_board_id,
+						board_title: oldData.board_title,
+						board_color: oldData.board_color,
+					}),
+				});
+
+				previousDataRef.current = { linked_board_id, board_title, board_color };
 			} catch (error) {
 				console.error('Failed to update board card:', error);
 			}
@@ -1791,91 +1856,72 @@ export function BoardCardComponent({
 	);
 
 	// Fetch available boards when in edit mode
-	useEffect(() => {
-		if (isEditing) {
-			fetchAvailableBoards();
-		}
-	}, [isEditing]);
+	const instantUser = db.useAuth();
 
-	const fetchAvailableBoards = async () => {
-		try {
-			const { createClient } = await import('@/lib/supabase/client');
-			const supabase = createClient();
-			
-			const { data, error } = await supabase
-				.from('boards')
-				.select('id, title, color')
-				.order('updated_at', { ascending: false });
-			
-			if (!error && data) {
-				setAvailableBoards(data);
-			}
-		} catch (error) {
-			console.error('Failed to fetch boards:', error);
+	// Fetch available boards using InstantDB
+	const { data: boardsData } = db.useQuery(
+		instantUser.user?.id ? {
+			$users: {
+				$: { where: { id: instantUser.user.id } },
+				owned_boards: {
+					$: {
+						order: { updated_at: 'desc' as const },
+					},
+				},
+			},
+		} : null
+	);
+
+	useEffect(() => {
+		if (isEditing && boardsData) {
+			const userBoards = boardsData.$users?.[0]?.owned_boards || [];
+			setAvailableBoards(userBoards.map((b: any) => ({
+				id: b.id,
+				title: b.title,
+				color: b.color,
+			})));
 		}
-	};
+	}, [isEditing, boardsData]);
 
 	const handleCreateNewBoard = async () => {
 		try {
-			const { createClient } = await import('@/lib/supabase/client');
-			const supabase = createClient();
-			
-			const { data: { user } } = await supabase.auth.getUser();
-			if (!user) throw new Error('Not authenticated');
+			if (!instantUser.user?.id) throw new Error('Not authenticated');
 
-			const { data: newBoard, error } = await supabase
-				.from('boards')
-				.insert({
-					title: newBoardTitle,
-					color: newBoardColor,
-					user_id: user.id,
-				})
-				.select()
-				.single();
-			
-			if (error) throw error;
-			
-			if (newBoard) {
-				// Update card to link to new board
-				updateCard(card.id, {
-					...card,
-					board_cards: {
-						...card.board_cards,
-						linked_board_id: newBoard.id,
-						board_title: newBoard.title,
-						board_color: newBoard.color,
-					},
-				});
-				
-				// Save to database
-				await updateCardContent(card.id, 'board', {
-					linked_board_id: newBoard.id,
-					board_title: newBoard.title,
-					board_color: newBoard.color,
-				});
-				
-				setIsCreatingNew(false);
-			}
+			console.log('[BoardCardComponent] Creating new board with parent:', {
+				parentBoardId: card.board_id,
+				newBoardTitle,
+				newBoardColor,
+			});
+
+			// Create new board using BoardService with parent link
+			const newBoardId = await BoardService.createBoard({
+				ownerId: instantUser.user.id,
+				title: newBoardTitle,
+				color: newBoardColor,
+				parentId: card.board_id, // Link to parent board
+			});
+
+			console.log('[BoardCardComponent] New board created:', newBoardId);
+
+			// Update card to link to new board
+			await CardService.updateCardContent(card.id, card.board_id, 'board', {
+				linked_board_id: newBoardId,
+				board_title: newBoardTitle,
+				board_color: newBoardColor,
+			});
+
+			console.log('[BoardCardComponent] Card updated with linked_board_id');
+
+			setIsCreatingNew(false);
 		} catch (error) {
 			console.error('Failed to create board:', error);
 		}
 	};
 
 	const handleSelectBoard = async (boardId: string, boardTitle: string, boardColor: string) => {
-		// Update card
-		updateCard(card.id, {
-			...card,
-			board_cards: {
-				...card.board_cards,
-				linked_board_id: boardId,
-				board_title: boardTitle,
-				board_color: boardColor,
-			},
-		});
-		
-		// Save to database
-		await updateCardContent(card.id, 'board', {
-			linked_board_id: boardId,
+		// Save to database (InstantDB will update local state via subscription)
+		await CardService.updateCardContent(card.id, card.board_id, 'board', {
+			board_linked_board_id: boardId,
 			board_title: boardTitle,
 			board_color: boardColor,
 		});
@@ -1883,35 +1929,37 @@ export function BoardCardComponent({
 
 	const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
-		
-		updateCard(card.id, {
-			...card,
-			board_cards: {
-				...card.board_cards,
-				board_title: newTitle,
-			},
-		});
-		
-		debouncedSave(card.board_cards.linked_board_id, newTitle, card.board_cards.board_color, card.board_id);
+
+		// Update local state immediately for responsive UI
+		setLocalTitle(newTitle);
+
+		// Debounce the database save
+		debouncedSave(card.linked_board_id, newTitle, card.board_color, card.board_id);
 	};
 
 	const handleNavigateToBoard = async (e: React.MouseEvent) => {
-		if (!isEditing && card.board_cards.linked_board_id) {
+		if (!isEditing && card.linked_board_id) {
 			e.stopPropagation();
 
 			// If in public view, fetch the child board's share token and use public link
 			if (isPublicView) {
 				try {
-					const { createClient } = await import('@/lib/supabase/client');
-					const supabase = createClient();
+					// Query InstantDB for the child board
+					const { data } = await db.queryOnce({
+						boards: {
+							$: {
+								where: {
+									id: card.linked_board_id,
+									is_public: true,
+								},
+								limit: 1,
+							},
+						},
+					});
 
-					const { data: childBoard, error } = await supabase
-						.from('boards')
-						.select('share_token, is_public')
-						.eq('id', card.board_cards.linked_board_id)
-						.single();
+					const childBoard = data?.boards?.[0];
 
-					if (!error && childBoard && childBoard.is_public && childBoard.share_token) {
+					if (childBoard && childBoard.is_public && childBoard.share_token) {
 						// Navigate to public share link
 						window.location.href = `/board/public/${childBoard.share_token}`;
 					} else {
@@ -1923,7 +1971,7 @@ export function BoardCardComponent({
 				}
 			} else {
 				// Regular navigation for authenticated users
-				window.location.href = `/board/${card.board_cards.linked_board_id}`;
+				window.location.href = `/board/${card.linked_board_id}`;
 			}
 		}
 	};
@@ -1936,7 +1984,7 @@ export function BoardCardComponent({
 						<label className="text-xs text-slate-400 block mb-1">Board Title</label>
 						<input
 							type="text"
-							value={card.board_cards.board_title}
+							value={localTitle}
 							onChange={handleTitleChange}
 							className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
 							placeholder="Board name"
@@ -2006,7 +2054,7 @@ export function BoardCardComponent({
 								<div>
 									<label className="text-xs text-slate-400 block mb-1">Or Link to Existing</label>
 									<select
-										value={card.board_cards.linked_board_id || ''}
+										value={card.linked_board_id || ''}
 										onChange={(e) => {
 											const selectedBoard = availableBoards.find(b => b.id === e.target.value);
 											if (selectedBoard) {
@@ -2041,7 +2089,7 @@ export function BoardCardComponent({
 			>
 				<div
 					className="h-32 flex items-center justify-center relative bg-gradient-to-br from-indigo-600 to-indigo-800"
-					style={{ background: `linear-gradient(to bottom right, ${card.board_cards.board_color}, ${card.board_cards.board_color}dd)` }}
+					style={{ background: `linear-gradient(to bottom right, ${card.board_color}, ${card.board_color}dd)` }}
 				>
 					<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
 					<svg
@@ -2060,13 +2108,13 @@ export function BoardCardComponent({
 				</div>
 				<div className="p-4 border-t border-white/5">
 					<h3 className="font-semibold text-white truncate mb-1 group-hover:text-cyan-400 transition-colors">
-						{card.board_cards.board_title}
+						{card.board_title}
 					</h3>
 					<p className="text-xs text-slate-500 flex items-center gap-1">
 						<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
 							<path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
 						</svg>
-						{card.board_cards.card_count || 0} {(!!card.board_cards.card_count !== null && (card.board_cards.card_count > 1 || card.board_cards.card_count === 0)) ? 'cards' : 'card'}
+						{card.board_card_count || 0} {(!!card.board_card_count !== null && (card.board_card_count > 1 || card.board_card_count === 0)) ? 'cards' : 'card'}
 					</p>
 				</div>
 			</div>

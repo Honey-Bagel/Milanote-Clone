@@ -5,12 +5,13 @@ import { db } from "@/lib/instant/db";
 /**
  * Fetch a board with all it's collaborators
  * 
+ * @param {boolean} forDashboard - Boolean to check if should fetch for dashboard (only retrieves top level boards)
  * @returns {Object} board - Board object (with collaborators) or null
  * @returns {boolean} isLoading - Loading state
  * @returns {Error} error - Error object if any
  * @returns {number} count - Total number of boards returned
  */
-export function useBoardsWithCollaborators() {
+export function useBoardsWithCollaborators(forDashboard: boolean) {
 	const { user } = db.useAuth();
 	const id = user?.id;
 
@@ -29,6 +30,12 @@ export function useBoardsWithCollaborators() {
 							order: {
 								updated_at: 'desc',
 							},
+							// If forDashboard is true, only fetch boards where parent_board_id is null
+							...(forDashboard && {
+								where: {
+									parent_board_id: { $isNull: true },
+								},
+							}),
 						},
 						collaborators: {
 							user: {},
@@ -36,6 +43,14 @@ export function useBoardsWithCollaborators() {
 					},
 					collaborations: { // Boards where user is a collaborator
 						board: {
+							$: {
+								// If forDashboard is true, only fetch boards where parent_board_id is null
+								...(forDashboard && {
+									where: {
+										parent_board_id: { $isNull: true },
+									},
+								}),
+							},
 							owner: {},
 							collaborators: {
 								user: {},

@@ -153,7 +153,6 @@ export type BaseCard = {
 	position_y: number;
 	width: number;
 	height: number | null;
-	z_index: number;
 	order_key: string;
 	created_by: string | null;
 	created_at: string;
@@ -162,82 +161,66 @@ export type BaseCard = {
 
 export type NoteCard = BaseCard & {
 	card_type: "note";
-	note_cards: {
-		content: string;
-		color: "yellow" | "blue" | "green" | "pink" | "purple";
-	};
+	note_content: string;
+	note_color: "yellow" | "blue" | "green" | "pink" | "purple";
 };
 
 export type ImageCard = BaseCard & {
 	card_type: "image";
-	image_cards: {
-		image_url: string;
-		caption: string | null;
-		alt_text: string | null;
-	};
+	image_url: string;
+	image_caption: string | null;
+	image_alt_text: string | null;
 };
 
 export type TextCard = BaseCard & {
 	card_type: "text";
-	text_cards: {
-		title: string | null;
-		content: string;
-	};
+	text_title: string | null;
+	text_content: string;
 };
 
 export type TaskListCard = BaseCard & {
 	card_type: "task_list";
-	task_list_cards: {
-		title: string;
-		tasks: Array<{
-			id: string;
-			text: string;
-			completed: boolean;
-			position: number;
-		}>;
-	};
+	task_list_title: string;
+	tasks: Array<{
+		id?: string;
+		text: string;
+		completed: boolean;
+		position: number;
+	}>;
 };
 
 export type LinkCard = BaseCard & {
 	card_type: "link";
-	link_cards: {
-		title: string;
-		url: string;
-		favicon_url: string | null;
-	};
+	link_title: string;
+	link_url: string;
+	link_favicon_url: string | null;
 };
 
 export type FileCard = BaseCard & {
 	card_type: "file";
-	file_cards: {
-		file_name: string;
-		file_url: string;
-		file_size: number | null;
-		file_type: string | null;
-		mime_type: string | null;
-	};
+	file_name: string;
+	file_url: string;
+	file_size: number | null;
+	file_type: string | null;
+	file_mime_type: string | null;
 };
 
 export type ColorPaletteCard = BaseCard & {
 	card_type: "color_palette";
-	color_palette_cards: {
-		title: string;
-		description: string | null;
-		colors: string[];
-	};
+	palette_title: string;
+	palette_description: string | null;
+	palette_colors: string[];
 };
 
 export type ColumnCard = BaseCard & {
 	card_type: "column";
-	column_cards: {
-		title: string;
-		background_color: string;
-		is_collapsed: boolean;
-		column_items: Array<{
-			card_id: string;
-			position: number;
-		}>;
-	};
+	column_title: string;
+	column_background_color: string;
+	column_is_collapsed: boolean;
+	column_items: Array<{
+		card_id: string;
+		position: number;
+	}>;
 };
 
 // Reroute node for line breaks (like UE5 Blueprint reroute nodes)
@@ -251,31 +234,29 @@ export interface RerouteNode {
 
 export type LineCard = BaseCard & {
 	card_type: "line";
-	line_cards: {
-		// Start and end points (relative to card position)
-		start_x: number;
-		start_y: number;
-		end_x: number;
-		end_y: number;
-		// Styling
-		color: string;
-		stroke_width: number;
-		line_style: "solid" | "dashed" | "dotted";
-		// End caps
-		start_cap: "none" | "arrow" | "dot" | "diamond";
-		end_cap: "none" | "arrow" | "dot" | "diamond";
-		// Curvature: 0 = straight, positive/negative = curve direction & amount
-		curvature: number;
-		// Control point offset (perpendicular distance from midpoint, can be negative)
-		control_point_offset: number;
-		// Reroute nodes - intermediate points for line routing
-		reroute_nodes: RerouteNode[] | null;
-		// Optional card attachments
-		start_attached_card_id: string | null;
-		start_attached_side: "top" | "right" | "bottom" | "left" | null;
-		end_attached_card_id: string | null;
-		end_attached_side: "top" | "right" | "bottom" | "left" | null;
-	};
+	// Start and end points (relative to card position)
+	line_start_x: number;
+	line_start_y: number;
+	line_end_x: number;
+	line_end_y: number;
+	// Styling
+	line_color: string;
+	line_stroke_width: number;
+	line_style: "solid" | "dashed" | "dotted";
+	// End caps
+	line_start_cap: "none" | "arrow" | "dot" | "diamond";
+	line_end_cap: "none" | "arrow" | "dot" | "diamond";
+	// Curvature: 0 = straight, positive/negative = curve direction & amount
+	line_curvature: number;
+	// Control point offset (perpendicular distance from midpoint, can be negative)
+	line_control_point_offset: number;
+	// Reroute nodes - intermediate points for line routing
+	line_reroute_nodes: RerouteNode[] | null;
+	// Optional card attachments
+	line_start_attached_card_id: string | null;
+	line_start_attached_side: "top" | "right" | "bottom" | "left" | null;
+	line_end_attached_card_id: string | null;
+	line_end_attached_side: "top" | "right" | "bottom" | "left" | null;
 };
 
 export type Card =
@@ -384,12 +365,10 @@ export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 
 export type BoardCard = BaseCard & {
 	card_type: "board";
-	board_cards: {
-		linked_board_id: string;
-		board_title: string;
-		board_color: string;
-		card_count: number;
-	};
+	linked_board_id: string;
+	board_title: string;
+	board_color: string;
+	board_card_count: string;
 };
 
 export type BoardCardData = {

@@ -30,7 +30,6 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 				/>
 				<main className="flex-1 overflow-hidden relative">
 					<Canvas
-						initialCards={[]}
 						boardId={id}
 						enablePan={true}
 						enableZoom={true}
