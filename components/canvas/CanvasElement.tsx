@@ -1,6 +1,6 @@
 'use client';
 
-import type { Card, ConnectionSide } from '@/lib/types';
+import type { Card, ConnectionSide, LineCard } from '@/lib/types';
 import type { Editor } from '@tiptap/react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useDraggable } from '@/lib/hooks/useDraggable';
@@ -128,6 +128,15 @@ export function CanvasElement({
 		if (isEditing) {
 			e.stopPropagation();
 			return;
+		}
+
+		// For line cards, disable dragging if either endpoint is attached to a card
+		if (card.card_type === 'line') {
+			const lineCard = card as LineCard;
+			if (lineCard.line_start_attached_card_id || lineCard.line_end_attached_card_id) {
+				e.stopPropagation();
+				return;
+			}
 		}
 
 		// Allow dragging even from inside column
@@ -275,6 +284,7 @@ export function CanvasElement({
 						isSelected={isSelected}
 						isPublicView={isReadOnly}
 						onEditorReady={handleEditorReady}
+						boardId={boardId}
 					/>
 
 					{/* Selection indicator - not for line cards (they have their own) */}

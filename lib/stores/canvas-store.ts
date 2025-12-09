@@ -3,7 +3,7 @@ import { immer } from 'zustand/middleware/immer';
 import { devtools } from 'zustand/middleware';
 import { temporal, TemporalState } from 'zundo';
 import { enableMapSet } from 'immer';
-import type { Card, Connection } from '@/lib/types';
+import type { Card, CardData, Connection } from '@/lib/types';
 export type { Connection } from '@/lib/types';
 
 // Enable Immer's Map and Set support
@@ -76,6 +76,9 @@ interface CanvasState {
 	snapToGrid: boolean;
 	editingCardId: string | null;
 
+	// Drag positions (map of card IDs to their current positions during drag)
+	dragPositions: Map<string, Position>;
+
 	// Column interaction state
 	potentialColumnTarget: string | null;
 
@@ -134,6 +137,7 @@ interface CanvasState {
 	resetViewport: () => void;
 	zoomIn: () => void;
 	zoomOut: () => void;
+	zoomToFit: (cards: Array<Partial<CardData>>) => void;
 
 	// ============================================================================
 	// INTERACTION STATE ACTIONS
@@ -145,6 +149,10 @@ interface CanvasState {
 	setIsResizing: (isResizing: boolean) => void;
 	setEditingCardId: (id: string | null) => void;
 	setSnapToGrid: (snapToGrid: boolean) => void;
+
+	// Drag positions
+	setDragPositions: (positions: Map<string, Position>) => void;
+	clearDragPositions: () => void;
 
 	// Column
 	setPotentialColumnTarget: (columnId: string | null) => void;
@@ -179,6 +187,7 @@ export const useCanvasStore = create<CanvasState>()(
 				isResizing: false,
 				showGrid: true,
 				editingCardId: null,
+				dragPositions: new Map(),
 				potentialColumnTarget: null,
 				isConnectionMode: false,
 				pendingConnection: null,
@@ -332,6 +341,42 @@ export const useCanvasStore = create<CanvasState>()(
 						state.viewport.zoom = newZoom;
 					}),
 
+				zoomToFit: (cards) =>
+					set((state) => {
+						if (cards.length === 0) return;
+
+						let minX = Infinity,
+							minY = Infinity,
+							maxX = -Infinity,
+							maxY = -Infinity;
+
+						cards.forEach((card) => {
+							minX = Math.min(minX, card.position_x);
+							minY = Math.min(minY, card.position_y);
+							maxX = Math.max(maxX, card.position_x + card.width);
+							maxY = Math.max(maxY, card.position_y + (card.height || 150));
+						});
+
+						const width = maxX - minX;
+						const height = maxY - minY;
+						const padding = 100;
+
+						const viewportWidth = window.innerWidth;
+						const viewportHeight = window.innerHeight;
+
+						const zoom = Math.min(
+							(viewportWidth - padding * 2) / width,
+							(viewportHeight - padding * 2) / height,
+							1
+						);
+
+						state.viewport = {
+							x: -minX * zoom + padding,
+							y: -minY * zoom + padding,
+							zoom,
+						};
+					}),
+
 				// ============================================================================
 				// INTERACTION STATE ACTIONS
 				// ============================================================================
@@ -371,6 +416,16 @@ export const useCanvasStore = create<CanvasState>()(
 						state.potentialColumnTarget = columnId;
 					}),
 
+				setDragPositions: (positions) =>
+					set((state) => {
+						state.dragPositions = positions;
+					}),
+
+				clearDragPositions: () =>
+					set((state) => {
+						state.dragPositions.clear();
+					}),
+
 				// ============================================================================
 				// VISUAL STATE ACTIONS
 				// ============================================================================
@@ -407,6 +462,7 @@ export const useCanvasStore = create<CanvasState>()(
 						isDrawingSelection,
 						isResizing,
 						dragPreview,
+						dragPositions,
 						potentialColumnTarget,
 						snapToGrid,
 						showGrid,

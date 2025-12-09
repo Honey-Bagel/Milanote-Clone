@@ -141,7 +141,14 @@ export function useCanvasInteractions(
 		// ============================================================================
 
 		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.code === 'Space' && !e.repeat && enablePan && editingCardId === null) {
+			// Don't trigger space-to-pan when typing in an input/textarea
+			const target = e.target as HTMLElement;
+			const isEditing =
+				target.tagName === 'INPUT' ||
+				target.tagName === 'TEXTAREA' ||
+				target.isContentEditable;
+
+			if (e.code === 'Space' && !e.repeat && enablePan && editingCardId === null && !isEditing) {
 				e.preventDefault();
 				spaceKeyPressedRef.current = true;
 				if (!isPanning) {

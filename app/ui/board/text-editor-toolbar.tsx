@@ -1,7 +1,7 @@
 'use client';
 
 import { Editor } from '@tiptap/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { 
 	Bold, 
 	Italic, 
@@ -25,14 +25,14 @@ interface TextEditorToolbarProps {
 }
 
 // Define components outside of render function
-const ToolbarButton = ({ 
-	onClick, 
-	isActive, 
-	children, 
-	title 
-}: { 
-	onClick: () => void; 
-	isActive?: boolean; 
+const ToolbarButton = ({
+	onClick,
+	isActive,
+	children,
+	title
+}: {
+	onClick: () => void;
+	isActive?: boolean;
 	children: React.ReactNode;
 	title: string;
 }) => (
@@ -40,12 +40,13 @@ const ToolbarButton = ({
 		onMouseDown={(e) => {
 			// Prevent the button from taking focus away from the editor
 			e.preventDefault();
+			// Execute the action immediately on mouse down
+			onClick();
 		}}
-		onClick={onClick}
 		title={title}
 		className={`p-2 rounded-lg transition-all ${
-			isActive 
-				? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' 
+			isActive
+				? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
 				: 'text-slate-400 hover:bg-white/5 hover:text-white'
 		}`}
 		type="button"
@@ -61,6 +62,7 @@ const ToolbarDivider = () => (
 export default function TextEditorToolbar({ editor }: TextEditorToolbarProps) {
 	// Force re-render when editor state changes
 	const [, forceUpdate] = useState({});
+	const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
 	// Force update immediately when editor changes (when selecting a different card)
 	useEffect(() => {
@@ -72,19 +74,37 @@ export default function TextEditorToolbar({ editor }: TextEditorToolbarProps) {
 
 		// Listen to editor updates (selection changes, content changes, etc.)
 		const updateHandler = () => {
-			forceUpdate({});
+			// Clear any pending update
+			if (updateTimeoutRef.current) {
+				clearTimeout(updateTimeoutRef.current);
+			}
+
+			// Use double requestAnimationFrame to ensure state is fully updated
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					forceUpdate({});
+				});
+			});
 		};
 
 		editor.on('selectionUpdate', updateHandler);
 		editor.on('transaction', updateHandler);
 		editor.on('focus', updateHandler);
 		editor.on('blur', updateHandler);
+		editor.on('update', updateHandler);
+
+		// Initial update
+		updateHandler();
 
 		return () => {
+			if (updateTimeoutRef.current) {
+				clearTimeout(updateTimeoutRef.current);
+			}
 			editor.off('selectionUpdate', updateHandler);
 			editor.off('transaction', updateHandler);
 			editor.off('focus', updateHandler);
 			editor.off('blur', updateHandler);
+			editor.off('update', updateHandler);
 		};
 	}, [editor]);
 

@@ -25,6 +25,7 @@ import { LineCardComponent } from './LineCardComponent';
 
 interface CardRendererProps {
   card: Card;
+  boardId: string | null;
   isEditing: boolean;
   isSelected?: boolean;
   isPublicView?: boolean;
@@ -35,7 +36,7 @@ interface CardRendererProps {
  * Main router component for rendering different card types
  * Routes based on your database card_type field
  */
-export function CardRenderer({ card, isEditing, isSelected, isPublicView, onEditorReady }: CardRendererProps) {
+export function CardRenderer({ card, boardId, isEditing, isSelected, isPublicView, onEditorReady }: CardRendererProps) {
   switch (card.card_type) {
     case 'note':
       return <NoteCardComponent card={card} isEditing={isEditing} onEditorReady={onEditorReady} />;
@@ -65,7 +66,7 @@ export function CardRenderer({ card, isEditing, isSelected, isPublicView, onEdit
       return <BoardCardComponent card={card} isEditing={isEditing} isPublicView={isPublicView} />;
 
     case 'line':
-      return <LineCardComponent card={card} isEditing={isEditing} isSelected={isSelected ?? false} />;
+      return <LineCardComponent card={card} boardId={boardId} isEditing={isEditing} isSelected={isSelected ?? false} />;
 
     default:
       // TypeScript should prevent this, but just in case

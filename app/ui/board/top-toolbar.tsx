@@ -2,7 +2,7 @@
 
 import { Minus, Plus, Maximize2, Share2, Settings, Home } from 'lucide-react';
 import ShareModal from './share-modal';
-import { Fragment, useState, useMemo } from 'react';
+import { Fragment, useState, useMemo, useRef, useEffect } from 'react';
 import SettingsModal from '../home/settings-modal';
 import Link from 'next/link';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
@@ -17,6 +17,8 @@ import {
 	BreadcrumbSeparator,
 	BreadcrumbEllipsis
 } from "@/components/ui/breadcrumb";
+import { BoardService } from '@/lib/services/board-service';
+import { useBoardCards } from '@/lib/hooks/cards';
 
 type TopToolbarProps = {
 	boardId: string;
@@ -35,9 +37,57 @@ export default function TopToolbar({
 }: TopToolbarProps) {
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+	const [isEditingTitle, setIsEditingTitle] = useState(false);
+	const [editedTitle, setEditedTitle] = useState(boardTitle);
+	const inputRef = useRef<HTMLInputElement>(null);
 	const { viewport, zoomIn, zoomOut, zoomToFit } = useCanvasStore();
+	const { cards } = useBoardCards(boardId);
 
 	const { breadcrumbs } = useBreadcrumbs(boardId, isPublicView);
+
+	const handleZoomToFit = () => {
+		zoomToFit(cards);
+	};
+
+	// Focus input when entering edit mode
+	useEffect(() => {
+		if (isEditingTitle && inputRef.current) {
+			inputRef.current.focus();
+			inputRef.current.select();
+		}
+	}, [isEditingTitle]);
+
+	const handleDoubleClick = () => {
+		if (!isPublicView && !isViewerOnly) {
+			setIsEditingTitle(true);
+			setEditedTitle(boardTitle);
+		}
+	};
+
+	const handleSaveTitle = async () => {
+		if (editedTitle.trim() && editedTitle !== boardTitle) {
+			try {
+				await BoardService.updateBoard(boardId, {
+					title: editedTitle.trim()
+				});
+			} catch (error) {
+				console.error('Failed to update board title:', error);
+				setEditedTitle(boardTitle); // Revert on error
+			}
+		} else {
+			setEditedTitle(boardTitle); // Revert if empty or unchanged
+		}
+		setIsEditingTitle(false);
+	};
+
+	const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === 'Enter') {
+			handleSaveTitle();
+		} else if (e.key === 'Escape') {
+			setEditedTitle(boardTitle);
+			setIsEditingTitle(false);
+		}
+	};
 
 	const { displayBreadcrumbs, isBreadcrumbsCondensed } = useMemo(() => {
 		if (breadcrumbs.length > 4) {
@@ -198,17 +248,35 @@ export default function TopToolbar({
 											<BreadcrumbSeparator className="text-slate-600"/>
 											<BreadcrumbItem key={crumb.id}>
 												{isLast ? (
-													// Current board - not clickable
-													<BreadcrumbPage className="flex items-center space-x-2">
+													// Current board - editable on double click
+													<BreadcrumbPage
+														className="flex items-center space-x-2"
+														onDoubleClick={handleDoubleClick}
+													>
 														{crumb.color && (
 															<div
 																className="w-4 h-4 rounded shadow-[0_0_8px_rgba(255,255,255,0.2)]"
 																style={{ backgroundColor: crumb.color }}
 															/>
 														)}
-														<span className="text-white font-semibold truncate max-w-[200px]">
-															{crumb.title}
-														</span>
+														{isEditingTitle ? (
+															<input
+																ref={inputRef}
+																type="text"
+																value={editedTitle}
+																onChange={(e) => setEditedTitle(e.target.value)}
+																onBlur={handleSaveTitle}
+																onKeyDown={handleKeyDown}
+																className="text-white font-semibold bg-white/10 px-2 py-1 rounded outline-none focus:ring-2 focus:ring-indigo-500 max-w-[200px]"
+															/>
+														) : (
+															<span
+																className="text-white font-semibold truncate max-w-[200px] cursor-text hover:bg-white/5 px-2 py-1 rounded transition-colors"
+																title="Double-click to edit board name"
+															>
+																{crumb.title}
+															</span>
+														)}
 													</BreadcrumbPage>
 												) : (
 													// Parent boards - clickable
@@ -261,7 +329,11 @@ export default function TopToolbar({
 							</div>
 
 							{/* View Mode */}
-							<button onClick={zoomToFit} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors">
+							<button
+								onClick={handleZoomToFit}
+								className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors"
+								title="Zoom to fit all cards"
+							>
 								<Maximize2 size={16} />
 							</button>
 

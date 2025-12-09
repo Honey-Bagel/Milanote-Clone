@@ -312,6 +312,106 @@ button:disabled,
   background: rgba(59, 130, 246, 0.3) !important;
 }
 
+/* TipTap list styling */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 2rem;
+  margin: 0.75rem 0;
+  display: block;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+  list-style-position: outside;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+}
+
+.ProseMirror li {
+  display: list-item;
+  margin: 0.25rem 0;
+  color: inherit;
+  padding-left: 0.25rem;
+}
+
+.ProseMirror li p {
+  margin: 0;
+  display: inline;
+}
+
+/* Remove extra spacing from empty paragraphs after lists */
+.ProseMirror ul + p:empty,
+.ProseMirror ol + p:empty {
+  display: none;
+}
+
+/* Nested lists */
+.ProseMirror ul ul,
+.ProseMirror ol ol,
+.ProseMirror ul ol,
+.ProseMirror ol ul {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+
+/* TipTap heading styles */
+.ProseMirror h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 2.25rem;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 2rem;
+  margin: 0.875rem 0 0.5rem 0;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+  margin: 0.75rem 0 0.5rem 0;
+}
+
+/* TipTap bold, italic, underline, strike styles */
+.ProseMirror strong {
+  font-weight: 700;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror u {
+  text-decoration: underline;
+}
+
+.ProseMirror s {
+  text-decoration: line-through;
+}
+
+/* TipTap horizontal rule */
+.ProseMirror hr {
+  border: none;
+  border-top: 2px solid currentColor;
+  opacity: 0.2;
+  margin: 1rem 0;
+}
+
+/* TipTap highlight */
+.ProseMirror mark {
+  background-color: #fef08a;
+  color: #000;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.125rem;
+}
+
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
 	width: 8px;

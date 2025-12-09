@@ -522,6 +522,7 @@ export function Canvas({
 													card={previewCard}
 													isEditing={false}
 													isSelected={false}
+													boardId={boardId}
 												/>
 											</div>
 										);

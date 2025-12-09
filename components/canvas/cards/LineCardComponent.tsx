@@ -7,11 +7,14 @@
 
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import type { LineCard, Card, ConnectionSide, RerouteNode } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useDebouncedCallback } from 'use-debounce';
 import { getAnchorPosition } from '@/lib/utils/connection-path';
+import { CardService } from '@/lib/services';
+import { useBoardCards } from '@/lib/hooks/cards';
+import { useUndoStore } from '@/lib/stores/undo-store';
 
 const SNAP_DISTANCE = 20; // pixels
 
@@ -63,31 +66,37 @@ function findSnapTarget(
 
 interface LineCardComponentProps {
   card: LineCard;
+  boardId: string;
   isEditing: boolean;
   isSelected: boolean;
 }
 
 type DragTarget = 'start' | 'end' | 'control' | { type: 'reroute'; index: number } | { type: 'segment_control'; index: number } | null;
 
-export function LineCardComponent({ card, isEditing, isSelected }: LineCardComponentProps) {
-  const { viewport, setDraggingLineEndpoint } = useCanvasStore();
+export function LineCardComponent({ card, boardId, isEditing, isSelected }: LineCardComponentProps) {
+  const { viewport, setDraggingLineEndpoint, dragPositions } = useCanvasStore();
   const [dragTarget, setDragTarget] = useState<DragTarget>(null);
   const [hoveredEndpoint, setHoveredEndpoint] = useState<DragTarget>(null);
   const [hoveredReroute, setHoveredReroute] = useState<number | null>(null);
   const [snapPreview, setSnapPreview] = useState<SnapTarget | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const lineData = card.line_cards;
+  // Local state for drag operations (provides immediate visual feedback)
+  const [localStartX, setLocalStartX] = useState<number | null>(null);
+  const [localStartY, setLocalStartY] = useState<number | null>(null);
+  const [localEndX, setLocalEndX] = useState<number | null>(null);
+  const [localEndY, setLocalEndY] = useState<number | null>(null);
+  const [localControlOffset, setLocalControlOffset] = useState<number | null>(null);
+  const [localRerouteNodes, setLocalRerouteNodes] = useState<RerouteNode[] | null>(null);
 
-  // Guard against missing data (can happen if DB fetch fails)
-  if (!lineData) {
-    console.error('LineCardComponent: line_cards data is missing for card:', card.id);
-    return (
-      <div className="p-2 text-red-500 text-xs">
-        Line data missing
-      </div>
-    );
-  }
+  // Fetch board cards with real-time updates via InstantDB subscription
+  const { cards: cardsArray } = useBoardCards(boardId);
+  const cards = useMemo(
+    () => new Map(cardsArray.map(c => [c.id, c])),
+    [cardsArray]
+  );
+
+  const lineData = card;
 
   // Calculate line positions - if attached to a card, follow that card's position
   const getEndpointPosition = useCallback((
@@ -99,41 +108,81 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
     if (attachedCardId && attachedSide) {
       const attachedCard = cards.get(attachedCardId);
       if (attachedCard && attachedCard.card_type !== 'line') {
-        const anchor = getAnchorPosition(attachedCard, attachedSide, 0.5);
-        return { x: anchor.x - card.position_x, y: anchor.y - card.position_y };
+        // Check if the attached card is being dragged
+        const dragPosition = dragPositions.get(attachedCardId);
+
+        // Use drag position if available, otherwise use card's position
+        const posX = dragPosition ? dragPosition.x : attachedCard.position_x;
+        const posY = dragPosition ? dragPosition.y : attachedCard.position_y;
+
+        // Calculate anchor position manually using the potentially updated position
+        const width = attachedCard.width;
+        const height = attachedCard.height || 150;
+
+        let anchorX = posX;
+        let anchorY = posY;
+
+        switch (attachedSide) {
+          case 'top':
+            anchorX = posX + width / 2;
+            anchorY = posY;
+            break;
+          case 'right':
+            anchorX = posX + width;
+            anchorY = posY + height / 2;
+            break;
+          case 'bottom':
+            anchorX = posX + width / 2;
+            anchorY = posY + height;
+            break;
+          case 'left':
+            anchorX = posX;
+            anchorY = posY + height / 2;
+            break;
+        }
+
+        return { x: anchorX - card.position_x, y: anchorY - card.position_y };
       }
     }
     return { x: fallbackX, y: fallbackY };
-  }, [cards, card.position_x, card.position_y]);
+  }, [cards, card.position_x, card.position_y, dragPositions]);
 
   const startPos = getEndpointPosition(
-    lineData.start_attached_card_id,
-    lineData.start_attached_side as ConnectionSide | null,
-    lineData.start_x,
-    lineData.start_y
+    lineData.line_start_attached_card_id,
+    lineData.line_start_attached_side as ConnectionSide | null,
+    lineData.line_start_x,
+    lineData.line_start_y
   );
   const endPos = getEndpointPosition(
-    lineData.end_attached_card_id,
-    lineData.end_attached_side as ConnectionSide | null,
-    lineData.end_x,
-    lineData.end_y
+    lineData.line_end_attached_card_id,
+    lineData.line_end_attached_side as ConnectionSide | null,
+    lineData.line_end_x,
+    lineData.line_end_y
   );
 
-  const startX = startPos.x;
-  const startY = startPos.y;
-  const endX = endPos.x;
-  const endY = endPos.y;
+  // Use local state during drag for immediate visual feedback, otherwise use DB values
+  const startX = localStartX !== null ? localStartX : startPos.x;
+  const startY = localStartY !== null ? localStartY : startPos.y;
+  const endX = localEndX !== null ? localEndX : endPos.x;
+  const endY = localEndY !== null ? localEndY : endPos.y;
 
   // Debounced save
   const debouncedSave = useDebouncedCallback(
-    async (updates: Partial<LineCard['line_cards']>) => {
+    async (updates: Record<string, any>) => {
       try {
-        await updateCardContent(card.id, 'line', updates);
+        if (card.id === 'preview-card') return;
+
+        await CardService.updateCardContent(
+          card.id,
+          boardId,
+          'line',
+          updates
+        );
       } catch (error) {
         console.error('Failed to update line:', error);
       }
     },
-    500
+    1000
   );
 
   // Calculate control point position
@@ -152,18 +201,20 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
     const ny = dx / distance;
 
     // Use control_point_offset directly (can be positive or negative)
-    const offset = lineData.control_point_offset || 0;
+    // Use local state during drag, otherwise use DB value
+    const offset = localControlOffset !== null ? localControlOffset : (lineData.line_control_point_offset || 0);
 
     return {
       x: midX + nx * offset,
       y: midY + ny * offset,
     };
-  }, [startX, startY, endX, endY, lineData.control_point_offset]);
+  }, [startX, startY, endX, endY, lineData.line_control_point_offset, localControlOffset]);
 
   const controlPoint = getControlPoint();
 
   // Get reroute nodes (filter out any null values)
-  const rerouteNodes: RerouteNode[] = (lineData.reroute_nodes || []).filter((n): n is RerouteNode => n != null);
+  // Use local state during drag, otherwise use DB value
+  const rerouteNodes: RerouteNode[] = (localRerouteNodes !== null ? localRerouteNodes : (lineData.line_reroute_nodes || [])).filter((n): n is RerouteNode => n != null);
 
   // Helper to calculate control point for a segment
   const getSegmentControlPoint = useCallback((
@@ -186,7 +237,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
   const generatePath = useCallback(() => {
     if (rerouteNodes.length === 0) {
       // No reroute nodes - use original curve logic
-      const offset = lineData.control_point_offset || 0;
+      const offset = lineData.line_control_point_offset || 0;
       if (offset === 0) {
         return `M ${startX} ${startY} L ${endX} ${endY}`;
       }
@@ -255,7 +306,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
     }
 
     return path;
-  }, [startX, startY, endX, endY, controlPoint, lineData.control_point_offset, rerouteNodes]);
+  }, [startX, startY, endX, endY, controlPoint, lineData.line_control_point_offset, rerouteNodes]);
 
   // Add reroute node on double-click
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
@@ -285,16 +336,8 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
       return distA - distB;
     });
 
-    updateCard(card.id, {
-      ...card,
-      line_cards: {
-        ...lineData,
-        reroute_nodes: newNodes,
-      },
-    });
-
-    debouncedSave({ reroute_nodes: newNodes });
-  }, [card, lineData, rerouteNodes, startX, startY, updateCard, debouncedSave, viewport.zoom]);
+    debouncedSave({ line_reroute_nodes: newNodes });
+  }, [rerouteNodes, startX, startY, debouncedSave, viewport.zoom]);
 
   // Delete reroute node
   const handleDeleteReroute = useCallback((index: number, e: React.MouseEvent) => {
@@ -303,16 +346,10 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
 
     const newNodes = rerouteNodes.filter((_, i) => i !== index);
 
-    updateCard(card.id, {
-      ...card,
-      line_cards: {
-        ...lineData,
-        reroute_nodes: newNodes.length > 0 ? newNodes : null,
-      },
+    debouncedSave({
+      line_reroute_nodes: newNodes.length > 0 ? newNodes : null
     });
-
-    debouncedSave({ reroute_nodes: newNodes.length > 0 ? newNodes : null });
-  }, [card, lineData, rerouteNodes, updateCard, debouncedSave]);
+  }, [rerouteNodes, debouncedSave]);
 
   // Handle endpoint drag
   const handleEndpointMouseDown = useCallback((e: React.MouseEvent, target: DragTarget) => {
@@ -342,20 +379,13 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
         const relX = canvasX - card.position_x;
         const relY = canvasY - card.position_y;
 
-        const newNodes = [...rerouteNodes];
+        const newNodes = [...(localRerouteNodes || lineData.line_reroute_nodes || [])];
         newNodes[dragTarget.index] = {
           ...newNodes[dragTarget.index],
           x: relX,
           y: relY,
         };
-
-        updateCard(card.id, {
-          ...card,
-          line_cards: {
-            ...lineData,
-            reroute_nodes: newNodes,
-          },
-        });
+        setLocalRerouteNodes(newNodes);
         return;
       }
 
@@ -387,27 +417,8 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
           const mouseOffsetY = canvasY - midY;
           const offset = mouseOffsetX * nx + mouseOffsetY * ny;
 
-          if (segIndex === 0 && rerouteNodes.length === 0) {
-            // No reroute nodes - update main control_point_offset
-            updateCard(card.id, {
-              ...card,
-              line_cards: { ...lineData, control_point_offset: offset },
-            });
-          } else if (segIndex < rerouteNodes.length) {
-            // Update the reroute node's control_offset (for segment leading TO this node)
-            const newNodes = [...rerouteNodes];
-            newNodes[segIndex] = { ...newNodes[segIndex], control_offset: offset };
-            updateCard(card.id, {
-              ...card,
-              line_cards: { ...lineData, reroute_nodes: newNodes },
-            });
-          } else {
-            // Last segment - update main control_point_offset
-            updateCard(card.id, {
-              ...card,
-              line_cards: { ...lineData, control_point_offset: offset },
-            });
-          }
+          // Visual updates happen via InstantDB subscriptions
+          // Persistence happens on mouse up
         }
         return;
       }
@@ -431,13 +442,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
           const mouseOffsetY = canvasY - midY;
           const offset = mouseOffsetX * nx + mouseOffsetY * ny;
 
-          updateCard(card.id, {
-            ...card,
-            line_cards: {
-              ...lineData,
-              control_point_offset: offset,
-            },
-          });
+          setLocalControlOffset(offset);
         }
         return;
       }
@@ -450,32 +455,16 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
       const finalX = snap ? snap.x : canvasX;
       const finalY = snap ? snap.y : canvasY;
 
-      // Update relative position
+      // Update relative position for immediate visual feedback
       const relX = finalX - card.position_x;
       const relY = finalY - card.position_y;
 
       if (dragTarget === 'start') {
-        updateCard(card.id, {
-          ...card,
-          line_cards: {
-            ...lineData,
-            start_x: relX,
-            start_y: relY,
-            start_attached_card_id: snap?.cardId || null,
-            start_attached_side: snap?.side || null,
-          },
-        });
+        setLocalStartX(relX);
+        setLocalStartY(relY);
       } else if (dragTarget === 'end') {
-        updateCard(card.id, {
-          ...card,
-          line_cards: {
-            ...lineData,
-            end_x: relX,
-            end_y: relY,
-            end_attached_card_id: snap?.cardId || null,
-            end_attached_side: snap?.side || null,
-          },
-        });
+        setLocalEndX(relX);
+        setLocalEndY(relY);
       }
     };
 
@@ -485,32 +474,44 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
 
       if (typeof dragTarget === 'object' && 'type' in dragTarget && dragTarget.type === 'reroute') {
         debouncedSave({
-          reroute_nodes: lineData.reroute_nodes,
+          line_reroute_nodes: localRerouteNodes || lineData.line_reroute_nodes,
         });
       } else if (typeof dragTarget === 'object' && 'type' in dragTarget && dragTarget.type === 'segment_control') {
         debouncedSave({
-          reroute_nodes: lineData.reroute_nodes,
-          control_point_offset: lineData.control_point_offset,
+          line_reroute_nodes: localRerouteNodes || lineData.line_reroute_nodes,
+          line_control_point_offset: localControlOffset ?? lineData.line_control_point_offset,
         });
       } else if (dragTarget === 'control') {
         debouncedSave({
-          control_point_offset: lineData.control_point_offset,
+          line_control_point_offset: localControlOffset ?? lineData.line_control_point_offset,
         });
       } else if (dragTarget === 'start') {
         debouncedSave({
-          start_x: lineData.start_x,
-          start_y: lineData.start_y,
-          start_attached_card_id: snap?.cardId || null,
-          start_attached_side: snap?.side || null,
+          line_start_x: localStartX ?? lineData.line_start_x,
+          line_start_y: localStartY ?? lineData.line_start_y,
+          line_start_attached_card_id: snap?.cardId || null,
+          line_start_attached_side: snap?.side || null,
         });
       } else if (dragTarget === 'end') {
         debouncedSave({
-          end_x: lineData.end_x,
-          end_y: lineData.end_y,
-          end_attached_card_id: snap?.cardId || null,
-          end_attached_side: snap?.side || null,
+          line_end_x: localEndX ?? lineData.line_end_x,
+          line_end_y: localEndY ?? lineData.line_end_y,
+          line_end_attached_card_id: snap?.cardId || null,
+          line_end_attached_side: snap?.side || null,
         });
       }
+
+      // Clear local state after a short delay to allow DB to update
+      // This prevents the "snap back" effect
+      setTimeout(() => {
+        setLocalStartX(null);
+        setLocalStartY(null);
+        setLocalEndX(null);
+        setLocalEndY(null);
+        setLocalControlOffset(null);
+        setLocalRerouteNodes(null);
+      }, 1500); // Wait 1.5 seconds (longer than debounce) for DB to update
+
       setDragTarget(null);
       setSnapPreview(null);
       setDraggingLineEndpoint(false);
@@ -523,7 +524,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragTarget, card, lineData, updateCard, debouncedSave, viewport, cards, snapPreview, rerouteNodes, startX, startY, endX, endY, setDraggingLineEndpoint]);
+  }, [dragTarget, card, lineData, debouncedSave, viewport, cards, snapPreview, rerouteNodes, startX, startY, endX, endY, setDraggingLineEndpoint, localStartX, localStartY, localEndX, localEndY, localControlOffset, localRerouteNodes]);
 
   // Get stroke dash array
   const getStrokeDashArray = () => {
@@ -573,7 +574,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
       <defs>
         {/* Scale markers based on stroke width */}
         {(() => {
-          const scale = Math.max(lineData.stroke_width / 2, 1);
+          const scale = Math.max(lineData.line_stroke_width / 2, 1);
           const arrowSize = 12 * scale;
           const dotSize = 8 * scale;
           const diamondSize = 12 * scale;
@@ -590,7 +591,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
                 orient="auto"
                 markerUnits="userSpaceOnUse"
               >
-                <path d={`M 0 0 L ${arrowSize} ${arrowSize/2} L 0 ${arrowSize} L ${3*scale} ${arrowSize/2} Z`} fill={lineData.color} />
+                <path d={`M 0 0 L ${arrowSize} ${arrowSize/2} L 0 ${arrowSize} L ${3*scale} ${arrowSize/2} Z`} fill={lineData.line_color} />
               </marker>
               <marker
                 id={`line-arrow-start-${card.id}`}
@@ -601,7 +602,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
                 orient="auto-start-reverse"
                 markerUnits="userSpaceOnUse"
               >
-                <path d={`M ${arrowSize} 0 L 0 ${arrowSize/2} L ${arrowSize} ${arrowSize} L ${arrowSize - 3*scale} ${arrowSize/2} Z`} fill={lineData.color} />
+                <path d={`M ${arrowSize} 0 L 0 ${arrowSize/2} L ${arrowSize} ${arrowSize} L ${arrowSize - 3*scale} ${arrowSize/2} Z`} fill={lineData.line_color} />
               </marker>
               {/* Dot marker */}
               <marker
@@ -612,7 +613,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
                 refY={dotSize / 2}
                 markerUnits="userSpaceOnUse"
               >
-                <circle cx={dotSize/2} cy={dotSize/2} r={dotSize/2 - scale} fill={lineData.color} />
+                <circle cx={dotSize/2} cy={dotSize/2} r={dotSize/2 - scale} fill={lineData.line_color} />
               </marker>
               {/* Diamond marker */}
               <marker
@@ -624,7 +625,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
                 orient="auto"
                 markerUnits="userSpaceOnUse"
               >
-                <path d={`M ${diamondSize/2} 0 L ${diamondSize} ${diamondSize/2} L ${diamondSize/2} ${diamondSize} L 0 ${diamondSize/2} Z`} fill={lineData.color} />
+                <path d={`M ${diamondSize/2} 0 L ${diamondSize} ${diamondSize/2} L ${diamondSize/2} ${diamondSize} L 0 ${diamondSize/2} Z`} fill={lineData.line_color} />
               </marker>
             </>
           );
@@ -635,7 +636,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
       <path
         d={generatePath()}
         stroke="transparent"
-        strokeWidth={Math.max(lineData.stroke_width * 4, 16)}
+        strokeWidth={Math.max(lineData.line_stroke_width * 4, 16)}
         fill="none"
         style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
         onDoubleClick={isSelected ? handleDoubleClick : undefined}
@@ -646,7 +647,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
         <path
           d={generatePath()}
           stroke="#3b82f6"
-          strokeWidth={lineData.stroke_width + 4}
+          strokeWidth={lineData.line_stroke_width + 4}
           fill="none"
           strokeLinecap="round"
           opacity={0.4}
@@ -656,13 +657,13 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
       {/* Main line */}
       <path
         d={generatePath()}
-        stroke={lineData.color}
-        strokeWidth={lineData.stroke_width}
+        stroke={lineData.line_color}
+        strokeWidth={lineData.line_stroke_width}
         fill="none"
         strokeDasharray={getStrokeDashArray()}
         strokeLinecap="round"
-        markerStart={getMarkerUrl(lineData.start_cap, true)}
-        markerEnd={getMarkerUrl(lineData.end_cap, false)}
+        markerStart={getMarkerUrl(lineData.line_start_cap, true)}
+        markerEnd={getMarkerUrl(lineData.line_end_cap, false)}
       />
 
       {/* Snap preview indicator - convert from canvas coords to local coords */}
@@ -697,7 +698,7 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
                 onMouseLeave={() => setHoveredEndpoint(null)}
               />
               {/* Control point guide lines */}
-              {(lineData.control_point_offset !== 0 || dragTarget === 'control') && (
+              {((lineData.line_control_point_offset || 0) !== 0 || dragTarget === 'control') && (
                 <line
                   x1={(startX + endX) / 2}
                   y1={(startY + endY) / 2}
@@ -716,8 +717,8 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
             cx={startX}
             cy={startY}
             r={hoveredEndpoint === 'start' || dragTarget === 'start' ? 8 : 6}
-            fill={lineData.start_attached_card_id ? '#22c55e' : (dragTarget === 'start' ? '#3b82f6' : '#ffffff')}
-            stroke={lineData.start_attached_card_id ? '#22c55e' : '#3b82f6'}
+            fill={lineData.line_start_attached_card_id ? '#22c55e' : (dragTarget === 'start' ? '#3b82f6' : '#ffffff')}
+            stroke={lineData.line_start_attached_card_id ? '#22c55e' : '#3b82f6'}
             strokeWidth={2}
             style={{ pointerEvents: 'auto', cursor: 'move' }}
             onMouseDown={(e) => handleEndpointMouseDown(e, 'start')}
@@ -729,8 +730,8 @@ export function LineCardComponent({ card, isEditing, isSelected }: LineCardCompo
             cx={endX}
             cy={endY}
             r={hoveredEndpoint === 'end' || dragTarget === 'end' ? 8 : 6}
-            fill={lineData.end_attached_card_id ? '#22c55e' : (dragTarget === 'end' ? '#3b82f6' : '#ffffff')}
-            stroke={lineData.end_attached_card_id ? '#22c55e' : '#3b82f6'}
+            fill={lineData.line_end_attached_card_id ? '#22c55e' : (dragTarget === 'end' ? '#3b82f6' : '#ffffff')}
+            stroke={lineData.line_end_attached_card_id ? '#22c55e' : '#3b82f6'}
             strokeWidth={2}
             style={{ pointerEvents: 'auto', cursor: 'move' }}
             onMouseDown={(e) => handleEndpointMouseDown(e, 'end')}

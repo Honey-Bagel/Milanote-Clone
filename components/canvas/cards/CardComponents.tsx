@@ -78,6 +78,19 @@ export function NoteCardComponent({
 				heading: {
 					levels: [1, 2, 3],
 				},
+				bulletList: {
+					keepMarks: true,
+					keepAttributes: false,
+				},
+				orderedList: {
+					keepMarks: true,
+					keepAttributes: false,
+				},
+				listItem: {
+					HTMLAttributes: {
+						class: 'tiptap-list-item',
+					},
+				},
 			}),
 			Underline,
 			TextAlign.configure({
@@ -136,20 +149,22 @@ export function NoteCardComponent({
 	useEffect(() => {
 		if (editor) {
 			editor.setEditable(isEditing);
-			
+
 			if (isEditing) {
 				// Focus editor when entering edit mode
 				setTimeout(() => {
 					editor.commands.focus('end');
+					// Notify parent that editor is ready and focused
+					onEditorReady?.(editor);
 				}, 50);
 			} else {
 				// Blur editor when exiting edit mode
 				editor.commands.blur();
 			}
 		}
-	}, [isEditing, editor]);
+	}, [isEditing, editor, onEditorReady]);
 
-	// Expose editor to parent when it becomes ready or editing state changes
+	// Expose editor to parent when it becomes ready
 	useEffect(() => {
 		if (editor && isEditing) {
 			onEditorReady?.(editor);
@@ -897,8 +912,9 @@ export function LinkCardComponent({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-start gap-3">
-					{!faviconError && faviconUrl && (
-						<div className="w-10 h-10 bg-slate-800/50 rounded-lg flex items-center justify-center shrink-0 border border-white/5 group-hover:border-cyan-500/30 transition-colors">
+					{/* Always show favicon or fallback icon to prevent layout shift */}
+					<div className="w-10 h-10 bg-slate-800/50 rounded-lg flex items-center justify-center shrink-0 border border-white/5 group-hover:border-cyan-500/30 transition-colors">
+						{!faviconError && faviconUrl ? (
 							<Image
 								src={faviconUrl}
 								alt=""
@@ -909,8 +925,13 @@ export function LinkCardComponent({
 									setFaviconError(true);
 								}}
 							/>
-						</div>
-					)}
+						) : (
+							// Fallback link icon when favicon is unavailable
+							<svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+							</svg>
+						)}
+					</div>
 					<div className="flex-1 min-w-0">
 						<h3 className="font-semibold text-sm text-white mb-1 group-hover:text-cyan-400 transition-colors truncate">
 							{card.link_title || card.link_url}

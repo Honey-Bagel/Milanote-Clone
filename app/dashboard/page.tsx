@@ -8,9 +8,19 @@ import UserMenu from '../ui/dashboard/profile-dropdown';
 import { DashboardCreateBoardButton } from '../ui/dashboard/dashboard-create-board-button';
 import { useBoardsWithCollaborators } from '@/lib/hooks/boards';
 import { db } from '@/lib/instant/db';
+import { DashboardLoadingSkeleton } from '../ui/dashboard/dashboard-loading-skeleton';
 
 export default function Dashboard() {
 	const { boards, isLoading, count } = useBoardsWithCollaborators(true);
+
+	// Show loading skeleton while data is being fetched
+	if (isLoading) {
+		return (
+			<db.SignedIn>
+				<DashboardLoadingSkeleton />
+			</db.SignedIn>
+		);
+	}
 
 	return (
 		<db.SignedIn>

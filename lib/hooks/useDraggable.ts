@@ -44,7 +44,9 @@ export function useDraggable({
 		setIsDragging: setGlobalDragging,
 		selectCard,
 		setPotentialColumnTarget,
-		setDragPreview
+		setDragPreview,
+		setDragPositions,
+		clearDragPositions
 	} = useCanvasStore();
 
 	// Get cards from InstantDB
@@ -234,6 +236,9 @@ export function useDraggable({
 						}
 					}
 				});
+
+				// Update canvas store with all drag positions for real-time line updates
+				setDragPositions(new Map(currentPositionsRef.current));
 				
 				onDrag?.(delta);
 
@@ -284,6 +289,7 @@ export function useDraggable({
 				setGlobalDragging(false);
 				setDragPreview(null);
 				setLocalPosition(null); // Clear local position
+				clearDragPositions(); // Clear drag positions from canvas store
 
 				// Stop auto-pan when drag ends
 				stopAutoPan();

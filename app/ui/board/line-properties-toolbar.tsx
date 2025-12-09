@@ -11,6 +11,7 @@ import {
 import type { LineCard } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useDebouncedCallback } from 'use-debounce';
+import { CardService } from '@/lib/services';
 
 interface LinePropertiesToolbarProps {
   card: LineCard;
@@ -69,9 +70,16 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
 
   // Debounced save to database
   const debouncedSave = useDebouncedCallback(
-    async (updates: Partial<LineCard>) => {
+    async (updates: Record<string, any>) => {
       try {
-        //await updateCardContent(card.id, 'line', updates);
+        if (card.id === 'preview-card') return;
+
+        await CardService.updateCardContent(
+          card.id,
+          card.board_id,
+          'line',
+          updates
+        );
       } catch (error) {
         console.error('Failed to save line properties:', error);
       }
@@ -80,16 +88,9 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
   );
 
   // Update local state and trigger save
-  const updateLineProperty = useCallback((updates: Partial<LineCard>) => {
-    // updateCard(card.id, {
-    //   ...card,
-    //   line_cards: {
-    //     ...lineData,
-    //     ...updates,
-    //   },
-    // });
+  const updateLineProperty = useCallback((updates: Record<string, any>) => {
     debouncedSave(updates);
-  }, [card, debouncedSave]);
+  }, [debouncedSave]);
 
   const colors = ['#6b7280', '#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#000000'];
 
@@ -164,34 +165,34 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
 
         <ToolbarDivider />
 
-        {/* Curvature */}
+        {/* Curvature - uses line_control_point_offset which can be positive or negative */}
         <ToolbarButton
-          onClick={() => updateLineProperty({ line_curvature: 0 })}
-          isActive={lineData.line_curvature === 0}
+          onClick={() => updateLineProperty({ line_control_point_offset: 0 })}
+          isActive={(lineData.line_control_point_offset || 0) === 0}
           title="Straight line"
         >
           <Minus className="w-4 h-4" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => updateLineProperty({ line_curvature: 0.5 })}
-          isActive={lineData.line_curvature > 0}
+          onClick={() => updateLineProperty({ line_control_point_offset: 50 })}
+          isActive={(lineData.line_control_point_offset || 0) !== 0}
           title="Curved line"
         >
           <Spline className="w-4 h-4" />
         </ToolbarButton>
 
-        {lineData.line_curvature > 0 && (
+        {(lineData.line_control_point_offset || 0) !== 0 && (
           <input
             type="range"
-            min="0.1"
-            max="1"
-            step="0.1"
-            value={lineData.line_curvature}
-            onChange={(e) => updateLineProperty({ line_curvature: parseFloat(e.target.value) })}
+            min="-200"
+            max="200"
+            step="10"
+            value={lineData.line_control_point_offset || 0}
+            onChange={(e) => updateLineProperty({ line_control_point_offset: parseFloat(e.target.value) })}
             className="w-24 h-1.5 bg-[#020617] rounded-lg appearance-none cursor-pointer slider-thumb"
             title="Curvature amount"
             style={{
-              background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${lineData.line_curvature * 100}%, #020617 ${lineData.line_curvature * 100}%, #020617 100%)`
+              background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${Math.abs(lineData.line_control_point_offset || 0) / 2}%, #020617 ${Math.abs(lineData.line_control_point_offset || 0) / 2}%, #020617 100%)`
             }}
           />
         )}

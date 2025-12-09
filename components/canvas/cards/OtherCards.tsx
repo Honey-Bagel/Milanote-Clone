@@ -46,9 +46,20 @@ export function LinkCard({ card, isEditing }: { card: Card; isEditing: boolean }
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
-          {favicon && (
-            <img src={favicon} alt="" className="w-5 h-5 mt-1 flex-shrink-0" />
-          )}
+          {/* Always reserve space for favicon to prevent layout shift */}
+          <div className="w-5 h-5 mt-1 flex-shrink-0">
+            {favicon && (
+              <img
+                src={favicon}
+                alt=""
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  // Hide image if it fails to load
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            )}
+          </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-medium text-sm text-gray-900 truncate">
               {title || url || 'Untitled Link'}
