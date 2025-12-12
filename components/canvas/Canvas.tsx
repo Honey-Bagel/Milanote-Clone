@@ -20,6 +20,7 @@ import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
 import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
 import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
 import { CardRenderer } from './cards/CardRenderer';
+import { CardProvider } from './cards/CardContext';
 import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
 import { useBoardCards } from '@/lib/hooks/cards';
@@ -172,6 +173,8 @@ export function Canvas({
 
 	const handleCardContextMenu = (e: React.MouseEvent, card: Card) => {
 		setCardContextMenuVisible(true);
+		selectCard(card.id);
+		setEditingCardId(null);
 		setCardContextMenuData({ card, position: { x: e.clientX, y: e.clientY } });
 	};
 
@@ -240,7 +243,7 @@ export function Canvas({
 					...baseCard,
 					card_type: 'note',
 					note_content: '<p>Type something...</p>',
-					note_color: 'yellow' as const,
+					note_color: 'default' as const,
 				} as Card;
 
 			case 'text':
@@ -416,6 +419,7 @@ export function Canvas({
 									key={card.id}
 									card={card}
 									boardId={boardId}
+									allCards={allCardsMap}
 									onCardClick={handleCardClick}
 									onCardDoubleClick={onCardDoubleClick}
 									onContextMenu={handleCardContextMenu}
@@ -432,6 +436,7 @@ export function Canvas({
 									key={card.id}
 									card={card}
 									boardId={boardId}
+									allCards={allCardsMap}
 									onCardClick={handleCardClick}
 									onCardDoubleClick={onCardDoubleClick}
 									onContextMenu={handleCardContextMenu}
@@ -512,18 +517,26 @@ export function Canvas({
 										if (!previewCard) return null;
 
 										return (
-											<div 
+											<div
 												style={{
 													width: `${previewCard.width}px`,
 													overflow: 'hidden',
 												}}
 											>
-												<CardRenderer
+												<CardProvider
 													card={previewCard}
-													isEditing={false}
+													boardId={boardId || previewCard.board_id}
 													isSelected={false}
-													boardId={boardId}
-												/>
+													isReadOnly={true}
+													isInsideColumn={false}
+												>
+													<CardRenderer
+														card={previewCard}
+														isEditing={false}
+														isSelected={false}
+														boardId={boardId}
+													/>
+												</CardProvider>
 											</div>
 										);
 									})()}

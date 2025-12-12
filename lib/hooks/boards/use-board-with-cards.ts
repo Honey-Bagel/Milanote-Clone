@@ -32,11 +32,9 @@ export function useBoardWithCards(boardId: string | null): object {
 			} : null
 	);
 
-	const board = data?.boards?.[0];
-
 	return {
-		board: board || null,
-		cards: board?.cards || [],
+		board: data?.boards?.[0] || null,
+		cards: data?.boards?.[0]?.cards || [],
 		isLoading,
 		error
 	};

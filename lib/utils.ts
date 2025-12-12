@@ -53,21 +53,22 @@ export function getTimeAgo(timestamp: string): string {
 export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 	switch (cardType) {
 		case 'note':
-			return { canResize: false, minWidth: 200, minHeight: null, defaultWidth: 250, defaultHeight: null };
+			// Notes are fully resizable (width and height)
+			return { canResize: true, minWidth: 150, minHeight: 60, defaultWidth: 250, defaultHeight: 150 };
 		case 'image':
 			return { canResize: true, keepAspectRatio: true, minWidth: 200, minHeight: 200, defaultWidth: 300, defaultHeight: null };
 		case 'task_list':
 			return { canResize: true, minWidth: 250, minHeight: 100, defaultWidth: 250, defaultHeight: 100 };
 		case 'link':
-			return { canResize: false, minWidth: 200, minHeight: 70, defaultWidth: 250, defaultHeight: 70 };
+			return { canResize: false, minWidth: 200, minHeight: 70, defaultWidth: 250, defaultHeight: null };
 		case 'file':
 			return { canResize: false, minWidth: 300, minHeight: 70, defaultWidth: 300, defaultHeight: 70 };
 		case 'color_palette':
-			return { canResize: false, minWidth: 200, minHeight: null, defaultWidth: 200, defaultHeight: null };
+			return { canResize: false, minWidth: 200, minHeight: null, defaultWidth: 200, defaultHeight: 130 };
 		case 'column':
 			return { canResize: false, minWidth: 250, minHeight: 60, defaultWidth: 250, defaultHeight: null };
 		case 'board':
-			return { canResize: true, minWidth: 200, minHeight: 200, defaultWidth: 250, defaultHeight: 250 };
+			return { canResize: false, minWidth: 200, minHeight: 200, defaultWidth: 250, defaultHeight: 250 };
 		case 'line':
 			return { canResize: false, minWidth: 0, minHeight: 0, defaultWidth: 200, defaultHeight: 100 };
 		default:

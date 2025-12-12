@@ -40,6 +40,7 @@ export function useBoardsWithCollaborators(forDashboard: boolean) {
 						collaborators: {
 							user: {},
 						},
+						owner: {},
 					},
 					collaborations: { // Boards where user is a collaborator
 						board: {

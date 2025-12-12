@@ -442,7 +442,10 @@ export function useDraggable({
 			stopAutoPan,
 			cardsMap,
 			canvas,
-			card
+			card,
+			cardsArray,
+			clearDragPositions,
+			setDragPositions
 		]
 	);
 

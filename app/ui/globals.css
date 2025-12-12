@@ -243,11 +243,7 @@ button:disabled,
   user-select: none;
 }
 
-.card.selected {
-  outline: 3px solid var(--primary);
-  outline-offset: -3px;
-}
-
+/* Legacy selection-outline - kept for backwards compatibility */
 .selection-outline {
   position: absolute;
   inset: 0;
@@ -410,6 +406,49 @@ button:disabled,
   color: #000;
   padding: 0.125rem 0.25rem;
   border-radius: 0.125rem;
+}
+
+/* Note Card TipTap styling */
+.note-card .ProseMirror {
+  min-height: 40px;
+}
+
+.note-card .ProseMirror p.is-editor-empty:first-child::before {
+  color: inherit;
+  opacity: 0.4;
+}
+
+.note-card .ProseMirror p {
+  margin: 0 0 0.5rem 0;
+}
+
+.note-card .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+/* Note card placeholder colors */
+.note-card.default .ProseMirror p.is-editor-empty:first-child::before {
+  color: #64748b;
+}
+
+.note-card.yellow .ProseMirror p.is-editor-empty:first-child::before {
+  color: #92400e;
+}
+
+.note-card.blue .ProseMirror p.is-editor-empty:first-child::before {
+  color: #0369a1;
+}
+
+.note-card.green .ProseMirror p.is-editor-empty:first-child::before {
+  color: #047857;
+}
+
+.note-card.pink .ProseMirror p.is-editor-empty:first-child::before {
+  color: #be185d;
+}
+
+.note-card.purple .ProseMirror p.is-editor-empty:first-child::before {
+  color: #6d28d9;
 }
 
 /* Custom scrollbar */

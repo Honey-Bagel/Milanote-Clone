@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useRouter } from 'next/navigation';
 import { X, Trash2, Loader2, Palette } from 'lucide-react';
+import { updateBoard, deleteBoard } from '@/lib/services/board-service';
 
 interface BoardSettingsModalProps {
 	board: {
@@ -56,7 +57,10 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 	const handleSave = async () => {
 		setIsLoading(true);
 		try {
-
+			await updateBoard(board.id, {
+				title,
+				color
+			});
 			router.refresh();
 			onClose();
 		} catch (error) {
@@ -74,7 +78,7 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 
 		setIsDeleting(true);
 		try {
-
+			await deleteBoard(board.id);
 			router.refresh();
 			onClose();
 		} catch (error) {

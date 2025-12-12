@@ -162,7 +162,7 @@ export type BaseCard = {
 export type NoteCard = BaseCard & {
 	card_type: "note";
 	note_content: string;
-	note_color: "yellow" | "blue" | "green" | "pink" | "purple";
+	note_color: "default" | "yellow" | "blue" | "green" | "pink" | "purple";
 };
 
 export type ImageCard = BaseCard & {

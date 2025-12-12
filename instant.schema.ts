@@ -136,6 +136,7 @@ const graph = i.schema({
 				on: "boards",
 				has: "one",
 				label: "owner",
+				onDelete: "cascade",
 			},
 		},
 
@@ -145,6 +146,7 @@ const graph = i.schema({
 				on: "boards",
 				has: "one",
 				label: "parent",
+				onDelete: "cascade",
 			},
 			reverse: {
 				on: "boards",
@@ -163,6 +165,7 @@ const graph = i.schema({
 				on: "board_collaborators",
 				has: "one",
 				label: "board",
+				onDelete: "cascade",
 			},
 		},
 
@@ -176,6 +179,7 @@ const graph = i.schema({
 				on: "cards",
 				has: "one",
 				label: "board",
+				onDelete: "cascade",
 			},
 		},
 
@@ -185,6 +189,7 @@ const graph = i.schema({
 				on: "board_collaborators",
 				has: "one",
 				label: "user",
+				onDelete: "cascade",
 			},
 			reverse: {
 				on: "$users",

@@ -9,8 +9,15 @@ import { db } from "@/lib/instant/db";
 
 export default function BoardPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = use(params);
+	const { user, isLoading: isAuthLoading } = db.useAuth();
 	const { board, isLoading, error } = useBoard(id);
 
+	// Wait for auth to be ready before making any decisions
+	if (isAuthLoading) {
+		return <div>Loading...</div>;
+	}
+
+	// Only show 404 if auth is ready AND we have an error or no board after loading
 	if (error || (!isLoading && !board)) {
 		notFound();
 	}

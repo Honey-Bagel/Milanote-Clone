@@ -117,6 +117,7 @@ interface CanvasState {
 	// Connection mode
 	setConnectionMode: (enabled: boolean) => void;
 	startConnection: (cardId: string, side: 'top' | 'right' | 'bottom' | 'left', offset?: number) => void;
+	completeConnection: (toCardId: string, toSide: 'top' | 'right' | 'bottom' | 'left', toOffset?: number) => void;
 	cancelConnection: () => void;
 	setDraggingLineEndpoint: (isDragging: boolean) => void;
 
@@ -269,6 +270,31 @@ export const useCanvasStore = create<CanvasState>()(
 				startConnection: (cardId, side, offset = 0.5) =>
 					set((state) => {
 						state.pendingConnection = { fromCardId: cardId, fromSide: side, fromOffset: offset };
+					}),
+
+				completeConnection: (toCardId, toSide, toOffset = 0.5) =>
+					set((state) => {
+						const pending = state.pendingConnection;
+						if (!pending || pending.fromCardId === toCardId) {
+							// No pending connection or trying to connect to self
+							state.pendingConnection = null;
+							return;
+						}
+
+						// Create new connection
+						const newConnection: Connection = {
+							id: `connection-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+							from_card_id: pending.fromCardId,
+							to_card_id: toCardId,
+							from_side: pending.fromSide,
+							to_side: toSide,
+							from_offset: pending.fromOffset,
+							to_offset: toOffset,
+						};
+
+						state.connections.set(newConnection.id, newConnection);
+						state.pendingConnection = null;
+						state.isConnectionMode = false;
 					}),
 
 				cancelConnection: () =>

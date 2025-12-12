@@ -215,7 +215,7 @@ export function useKeyboardShortcuts(
 		resetViewport,
 	} = useCanvasStore();
 
-	const { undo, redo, clear } = useCanvasHistory();
+	const { undo, redo } = useUndoStore();
 
 	// Get cards for z-ordering and alignment
 	const { cards } = useBoardCards(boardId);

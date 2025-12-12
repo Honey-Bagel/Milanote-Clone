@@ -56,7 +56,7 @@ export function useCanvasDrop(boardId: string) {
 	const getDefaultCardData = useCallback((cardType: Card['card_type']) => {
 		switch (cardType) {
 			case 'note':
-				return { note_content: '', note_color: 'yellow' as const };
+				return { note_content: '', note_color: 'default' as const };
 			case 'image':
 				return { image_url: '', image_caption: '' };
 			case 'task_list':
