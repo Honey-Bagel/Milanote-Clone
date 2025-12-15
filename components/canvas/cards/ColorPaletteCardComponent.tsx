@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import type { ColorPaletteCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 
@@ -33,12 +33,28 @@ export function ColorPaletteCardComponent({
 	// Use context values if available, otherwise use props
 	const card = (context?.card as ColorPaletteCard) ?? propCard;
 	const isEditing = context?.isEditing ?? propIsEditing;
-	const { saveContent } = context ?? {
+	const { saveContent, reportContentHeight } = context ?? {
 		saveContent: () => {},
 	};
 
 	const [newColor, setNewColor] = useState('#000000');
 	const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+	const rootRef = useRef<HTMLDivElement | null>(null);
+
+	// Keep CardDimensions in sync with actual rendered height
+	useLayoutEffect(() => {
+		if (!reportContentHeight || !rootRef.current) return;
+
+		const el = rootRef.current;
+		const observer = new ResizeObserver(entries => {
+			for (const entry of entries) {
+				reportContentHeight(entry.contentRect.height);
+			}
+		});
+
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [reportContentHeight]);
 
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +97,7 @@ export function ColorPaletteCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="color-palette-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 w-full h-full">
+		<div ref={rootRef} className="color-palette-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 w-full overflow-hidden">
 			<div className="px-4 pt-4 pb-3">
 				{/* Header Section */}
 				<div className="flex items-center gap-2 mb-2">

@@ -215,7 +215,6 @@ export default function ElementToolbar({
 								<Button
 									onClick={() => setConnectionMode(!isConnectionMode)}
 									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${isConnectionMode ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
-									title="Connection Mode"
 									variant={"ghost"}
 									size={"sm"}
 								>
@@ -234,7 +233,6 @@ export default function ElementToolbar({
 								<Button
 									onClick={() => setShowGrid(!showGrid)}
 									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${showGrid ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
-									title="Toggle Grid"
 									variant={"ghost"}
 									size={"sm"}
 								>
@@ -251,7 +249,6 @@ export default function ElementToolbar({
 								<Button
 									onClick={() => setSnapToGrid(!snapToGrid)}
 									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${snapToGrid ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
-									title="Snap to Grid"
 									variant={"ghost"}
 									size={"sm"}
 								>

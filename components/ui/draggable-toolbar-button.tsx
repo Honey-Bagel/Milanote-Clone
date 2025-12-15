@@ -44,7 +44,6 @@ export function DraggableToolbarButton({
 					style={{
 					outline: "none"
 					}}
-						title={title}
 					>
 					<Icon className="w-4 h-4" />
 				</Button>

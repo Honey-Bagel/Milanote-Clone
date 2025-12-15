@@ -21,7 +21,6 @@ import { useDraggable } from '@/lib/hooks/useDraggable';
 import { CardRenderer } from './cards/CardRenderer';
 import { CardProvider } from './cards/CardContext';
 import { CardFrame } from './cards/CardFrame';
-import { useCardDimensions } from './cards/useCardDimensions';
 
 // ============================================================================
 // TYPES
@@ -88,9 +87,6 @@ export const CanvasElement = memo(function CanvasElement({
 
 	// Z-index calculation
 	const cssZIndex = useCardZIndex(card, allCards);
-
-	// Dimensions hook
-	const dimensions = useCardDimensions(card);
 
 	// Drag handling
 	const { handleMouseDown: handleDragMouseDown, isDragging, currentPosition } = useDraggable({
@@ -198,8 +194,7 @@ export const CanvasElement = memo(function CanvasElement({
 					onMouseDown={handleDragMouseDown}
 					style={{
 						width: '100%',
-						height: card.height || 'auto',
-						minHeight: card.height ? card.height : 'auto',
+						height: 'auto',
 						userSelect: isEditing ? 'auto' : 'none',
 						cursor: isEditing ? 'auto' : 'pointer',
 						position: 'relative',
@@ -219,7 +214,6 @@ export const CanvasElement = memo(function CanvasElement({
 							isEditing={isEditing}
 							isInsideColumn={true}
 							isReadOnly={isReadOnly}
-							dimensions={dimensions}
 							cssZIndex={cssZIndex}
 						>
 							<CardRenderer
@@ -274,11 +268,6 @@ export const CanvasElement = memo(function CanvasElement({
 					onContextMenu={handleContextMenu}
 					style={{
 						display: 'block',
-						// Line cards need no width/height constraint
-						width: card.card_type === 'line' ? 0 : dimensions.width,
-						height: card.card_type === 'line' ? 0 : (dimensions.height === 'auto' ? 'auto' : dimensions.effectiveHeight),
-						minHeight: card.card_type === 'line' ? 0 : (dimensions.height === 'auto' ? dimensions.minHeight : undefined),
-						overflow: card.card_type === 'line' || isEditing ? 'visible' : undefined,
 						userSelect: isEditing ? 'auto' : 'none',
 						cursor: isEditing ? 'auto' : 'pointer',
 						pointerEvents: isEditing || !isDragging ? 'auto' : 'none',
@@ -299,7 +288,6 @@ export const CanvasElement = memo(function CanvasElement({
 							isEditing={isEditing}
 							isInsideColumn={false}
 							isReadOnly={isReadOnly}
-							dimensions={dimensions}
 							cssZIndex={cssZIndex}
 						>
 							<CardRenderer

@@ -17,7 +17,8 @@ import type { Card, ConnectionSide } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useResizable } from '@/lib/hooks/useResizable';
 import { ConnectionHandles } from '../ConnectionHandle';
-import { useCardDimensions, type CardDimensions } from './useCardDimensions';
+import { type CardDimensions } from './useCardDimensions';
+import { useCardContext } from './CardContext';
 
 // ============================================================================
 // TYPES
@@ -30,7 +31,6 @@ interface CardFrameProps {
 	isEditing: boolean;
 	isInsideColumn: boolean;
 	isReadOnly: boolean;
-	dimensions: CardDimensions;
 	cssZIndex: number;
 }
 
@@ -63,8 +63,8 @@ const SelectionOutline = memo(function SelectionOutline({ dimensions }: Selectio
 				position: 'absolute',
 				top: 0,
 				left: 0,
-				width,
-				height: 'auto',
+				width: '100%',
+				height: '100%',
 				pointerEvents: 'none',
 				border: '1px solid var(--primary)',
 				borderRadius: 'inherit',
@@ -147,7 +147,6 @@ export const CardFrame = memo(function CardFrame({
 	isEditing,
 	isInsideColumn,
 	isReadOnly,
-	dimensions,
 	cssZIndex,
 }: CardFrameProps) {
 	// Get connection state from canvas store
@@ -158,6 +157,8 @@ export const CardFrame = memo(function CardFrame({
 		startConnection,
 		completeConnection,
 	} = useCanvasStore();
+
+	const { dimensions } = useCardContext();
 
 	const { handleMouseDown, currentDimensions } = useResizable({
 		card,
@@ -185,11 +186,22 @@ export const CardFrame = memo(function CardFrame({
 
 	// Calculate frame dimensions
 	const frameWidth = currentDimensions.width;
-	const frameHeight = dimensions.height === 'auto' ? 'auto' : currentDimensions.height;
-	const frameMinHeight = dimensions.height === 'auto' ? (dimensions.minHeight ?? undefined) : undefined;
+	const isAutoHeight = dimensions.height === 'auto';
 
-	// When editing a manually constrained note card, allow overflow
-	const allowOverflow = isEditing && (card.card_type === 'note');
+	const frameStyle: React.CSSProperties = {
+		width: frameWidth,
+		position: 'relative',
+		boxSizing: 'border-box',
+	};
+
+	if (isAutoHeight) {
+		frameStyle.height = 'auto';
+		if (dimensions.minHeight != null) {
+			frameStyle.minHeight = dimensions.minHeight;
+		}
+	} else {
+		frameStyle.height = currentDimensions.height;
+	}
 
 	// Show connection handles when:
 	// - In connection mode OR
@@ -213,13 +225,7 @@ export const CardFrame = memo(function CardFrame({
 	return (
 		<div
 			className="card-frame"
-			style={{
-				width: frameWidth,
-				height: currentDimensions.height,
-				minHeight: allowOverflow ? frameHeight : frameMinHeight,
-				position: 'relative',
-				boxSizing: 'border-box',
-			}}
+			style={frameStyle}
 		>
 			{/* Card content */}
 			<div
