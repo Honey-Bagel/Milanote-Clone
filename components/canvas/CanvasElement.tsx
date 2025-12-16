@@ -17,10 +17,10 @@ import { useCallback, memo, useState } from 'react';
 import type { Card, CardData, LineCard } from '@/lib/types';
 import type { Editor } from '@tiptap/react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { useDraggable } from '@/lib/hooks/useDraggable';
 import { CardRenderer } from './cards/CardRenderer';
 import { CardProvider } from './cards/CardContext';
 import { CardFrame } from './cards/CardFrame';
+import { useDraggable } from '@dnd-kit/core';
 
 // ============================================================================
 // TYPES
@@ -88,19 +88,13 @@ export const CanvasElement = memo(function CanvasElement({
 	// Z-index calculation
 	const cssZIndex = useCardZIndex(card, allCards);
 
-	// Drag handling
-	const { handleMouseDown: handleDragMouseDown, isDragging, currentPosition } = useDraggable({
-		card,
-		snapToGrid,
-		dragThreshold: 3,
+	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform} = useDraggable({
+		id: card.id,
+		data: {
+			type: 'canvas-card',
+		},
 	});
 
-	// Final position (from drag or card)
-	const dragStorePosition = dragPositions.get(card.id);
-	const finalPosition = dragStorePosition || {
-		x: currentPosition.x,
-		y: currentPosition.y,
-	};
 
 	// Event handlers
 	const handleClick = useCallback((e: React.MouseEvent) => {
@@ -156,8 +150,7 @@ export const CanvasElement = memo(function CanvasElement({
 		}
 
 		// Allow dragging (even from inside column - useDraggable handles extraction)
-		handleDragMouseDown(e);
-	}, [card, isReadOnly, isEditing, handleDragMouseDown]);
+	}, [card, isReadOnly, isEditing]);
 
 	const handleEditorReady = useCallback((editor: Editor) => {
 		onEditorReady?.(card.id, editor);
@@ -191,7 +184,6 @@ export const CanvasElement = memo(function CanvasElement({
 					onClick={handleClick}
 					onDoubleClick={handleDoubleClick}
 					onContextMenu={handleContextMenu}
-					onMouseDown={handleDragMouseDown}
 					style={{
 						width: '100%',
 						height: 'auto',
@@ -236,15 +228,19 @@ export const CanvasElement = memo(function CanvasElement({
 	// CANVAS RENDERING (Absolute positioning)
 	// ========================================================================
 
+	const dx = transform?.x ?? 0;
+	const dy = transform?.y ?? 0;
+
 	return (
 		<div
+			ref={setNodeRef}
 			data-element-id={card.id}
 			data-card="true"
 			className="canvas-element select-none"
 			style={{
 				position: 'absolute',
-				top: finalPosition.y,
-				left: finalPosition.x,
+				top: card.position_y + dy,
+				left: card.position_x + dx,
 				zIndex: cssZIndex,
 				userSelect: isEditing ? 'auto' : 'none',
 				WebkitUserSelect: isEditing ? 'auto' : 'none',
@@ -256,21 +252,22 @@ export const CanvasElement = memo(function CanvasElement({
 				draggable={false}
 			>
 				<div
+					ref={setActivatorNodeRef}
 					className={`
 						card drag-handle group
 						${isSelected ? 'selected' : ''}
 						${isEditing ? 'editing' : ''}
 						${selectedCardIds.size === 1 && isSelected ? 'selected-single' : ''}
 					`}
-					onMouseDown={handleMouseDown}
-					onClick={handleClick}
+					{...listeners}
+					{...attributes}
 					onDoubleClick={handleDoubleClick}
 					onContextMenu={handleContextMenu}
 					style={{
 						display: 'block',
 						userSelect: isEditing ? 'auto' : 'none',
 						cursor: isEditing ? 'auto' : 'pointer',
-						pointerEvents: isEditing || !isDragging ? 'auto' : 'none',
+						pointerEvents: 'auto',
 						position: 'relative',
 					}}
 				>

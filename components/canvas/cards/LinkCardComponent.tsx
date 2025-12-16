@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { LinkCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import Image from 'next/image';
+import { useDraggable } from '@dnd-kit/core';
 
 // ============================================================================
 // PROPS INTERFACE (for legacy compatibility with CardRenderer)
@@ -38,6 +39,8 @@ export function LinkCardComponent({
 		saveContent: () => {},
 		stopEditing: () => {},
 	};
+
+	const { isDragging } = useDraggable({ id: card.id });
 
 	// Use refs for input elements to manage uncontrolled inputs
 	const titleInputRef = useRef<HTMLInputElement>(null);
@@ -149,9 +152,12 @@ export function LinkCardComponent({
 	return (
 		<div className="link-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full">
 			<a
-				href={fullURL || ''}
+				href={!isDragging ? (fullURL || '') : undefined}
 				target="_blank"
 				rel="noopener noreferrer"
+				style={{
+					pointerEvents: isDragging ? 'none' : 'auto',
+				}}
 				className="block p-4 transition-colors"
 				onClick={(e) => e.stopPropagation()}
 			>
