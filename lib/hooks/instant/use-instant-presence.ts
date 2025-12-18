@@ -27,7 +27,7 @@ export const useInstantPresence = (boardId: string) => {
 	}, [clerkUser]);
 
 	// Use presence hook with initial presence data
-	const { user: myPresence, peers, publishPresence } = db.rooms.usePresence(room, {
+	const { user: myPresence, peers, publishPresence, isLoading } = db.rooms.usePresence(room, {
 		keys: ['name', 'image'], // Only listen to changes to these fields
 	});
 
@@ -47,7 +47,14 @@ export const useInstantPresence = (boardId: string) => {
 			users.push({ name: myPresence.name, image: myPresence.image })
 		}
 
-		users.push(...Object.entries(peers));
+		const visiblePeers = Object.values(peers).filter((peer) => {
+			// Skip peers without a valid username
+			if (!peer.name) return false;
+
+			return true;
+		});
+
+		users.push(...Object.entries(visiblePeers));
 
 		return users;
 	}, [myPresence, peers]);

@@ -260,6 +260,11 @@ button:disabled,
   cursor: text;
 }
 
+.drag-handle:focus,
+.drag-handle:focus-visible {
+  outline: none !important;
+}
+
 [draggable="false"] {
   -webkit-user-drag: none;
   user-drag: none;

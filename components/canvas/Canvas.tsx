@@ -113,6 +113,7 @@ export function Canvas({
 		boardId,
 		allCardsMap,
 		viewport,
+		selectCard,
 	});
 
 	// ============================================================================
@@ -176,8 +177,8 @@ export function Canvas({
 	useKeyboardShortcuts(boardId, { enabled: enableKeyboardShortcuts });
 	useSelectionBox(canvasRef, { enabled: enableSelectionBox });
 
-	const handleCardClick = (cardId: string) => {
-		selectCard(cardId);
+	const handleCardClick = (cardId: string, isMultiSelect: boolean = false) => {
+		selectCard(cardId, isMultiSelect);
 		onCardClick?.(cardId);
 	};
 

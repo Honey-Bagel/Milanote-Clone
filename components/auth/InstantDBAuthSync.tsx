@@ -28,7 +28,7 @@ export default function InstantDBAuthSync() {
 		} else {
 			db.auth.signOut();
 		}
-	}, [isSignedIn]);
+	}, [isSignedIn, getToken]);
 
 	useEffect(() => {
 		if (isLoaded && user) {

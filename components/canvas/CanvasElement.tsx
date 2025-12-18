@@ -30,7 +30,7 @@ interface CanvasElementProps {
 	card: Card;
 	boardId?: string | null;
 	allCards: Map<string, Card | CardData>;
-	onCardClick?: (cardId: string) => void;
+	onCardClick?: (cardId: string, isMultiSelect?: boolean) => void;
 	onCardDoubleClick?: (cardId: string) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 	onEditorReady?: (cardId: string, editor: Editor) => void;
@@ -102,9 +102,9 @@ export const CanvasElement = memo(function CanvasElement({
 		if (isReadOnly) return;
 
 		const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
-		if (isMultiSelect) return;
 
-		onCardClick?.(card.id);
+		// Call parent click handler with multi-select info
+		onCardClick?.(card.id, isMultiSelect);
 	}, [card.id, isReadOnly, onCardClick]);
 
 	const handleDoubleClick = useCallback((e: React.MouseEvent) => {
@@ -228,8 +228,20 @@ export const CanvasElement = memo(function CanvasElement({
 	// CANVAS RENDERING (Absolute positioning)
 	// ========================================================================
 
-	const dx = transform?.x ?? 0;
-	const dy = transform?.y ?? 0;
+	// Check if this card has a drag position override (for multi-select)
+	const dragPos = dragPositions.get(card.id);
+	let displayX = card.position_x;
+	let displayY = card.position_y;
+
+	if (dragPos) {
+		// Card is being dragged as part of multi-select
+		displayX = dragPos.x;
+		displayY = dragPos.y;
+	} else if (transform) {
+		// This is the active dragged card
+		displayX = card.position_x + (transform.x ?? 0);
+		displayY = card.position_y + (transform.y ?? 0);
+	}
 
 	return (
 		<div
@@ -239,8 +251,8 @@ export const CanvasElement = memo(function CanvasElement({
 			className="canvas-element select-none"
 			style={{
 				position: 'absolute',
-				top: card.position_y + dy,
-				left: card.position_x + dx,
+				top: displayY,
+				left: displayX,
 				zIndex: cssZIndex,
 				userSelect: isEditing ? 'auto' : 'none',
 				WebkitUserSelect: isEditing ? 'auto' : 'none',
@@ -261,6 +273,7 @@ export const CanvasElement = memo(function CanvasElement({
 					`}
 					{...listeners}
 					{...attributes}
+					onClick={handleClick}
 					onDoubleClick={handleDoubleClick}
 					onContextMenu={handleContextMenu}
 					style={{

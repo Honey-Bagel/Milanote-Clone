@@ -17,7 +17,6 @@ import type { DragStartEvent, DragMoveEvent, DragEndEvent } from '@dnd-kit/core'
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import { CardService } from '@/lib/services/card-service';
-import { bringCardsToFrontOnInteraction } from '@/lib/utils/order-key-manager';
 import type { CardData } from '@/lib/types';
 import { GRID_SIZE } from '../constants/defaults';
 
@@ -25,6 +24,7 @@ interface UseDndCanvasOptions {
 	boardId: string | null;
 	allCardsMap: Map<string, CardData>;
 	viewport: { x: number; y: number; zoom: number };
+	selectCard: (id: string, multi?: boolean) => void;
 }
 
 interface UseDndCanvasReturn {
@@ -52,6 +52,7 @@ export function useDndCanvas({
 	boardId,
 	allCardsMap,
 	viewport,
+	selectCard,
 }: UseDndCanvasOptions): UseDndCanvasReturn {
 
 	const {
@@ -138,36 +139,35 @@ export function useDndCanvas({
 		setActiveId(active.id as string);
 		setActiveDragType(dragData?.type || 'canvas-card');
 
-		// Bring dragged cards to front
-		const cardsToBringToFront = selectedCardIds.has(active.id as string)
+		// Determine which cards to drag BEFORE state changes
+		const isAlreadySelected = selectedCardIds.has(active.id as string);
+		const cardsToDrag = isAlreadySelected
 			? Array.from(selectedCardIds)
 			: [active.id as string];
 
-		if (boardId) {
-			bringCardsToFrontOnInteraction(cardsToBringToFront, allCardsMap);
+		// Auto-select the dragged card if not already selected
+		if (!isAlreadySelected) {
+			selectCard(active.id as string, false); // false = single select (clears others)
 		}
 
-		// Initialize drag positions for selected cards
+		// Bring dragged cards to front (immediately persist to database for instant visual feedback)
+		if (boardId) {
+			const allCardsArray = Array.from(allCardsMap.values());
+			CardService.bringCardsToFront(cardsToDrag, boardId, allCardsArray);
+		}
+
+		// Initialize drag positions for all cards being dragged
 		const positions = new Map<string, { x: number; y: number }>();
 
-		if (selectedCardIds.has(active.id as string)) {
-			// Multi-select drag
-			selectedCardIds.forEach((cardId) => {
-				const card = allCardsMap.get(cardId);
-				if (card) {
-					positions.set(cardId, { x: card.position_x, y: card.position_y });
-				}
-			});
-		} else {
-			// Single card drag
-			const card = allCardsMap.get(active.id as string);
+		cardsToDrag.forEach((cardId) => {
+			const card = allCardsMap.get(cardId);
 			if (card) {
-				positions.set(card.id, { x: card.position_x, y: card.position_y });
+				positions.set(cardId, { x: card.position_x, y: card.position_y });
 			}
-		}
+		});
 
 		setDragPositions(positions);
-	}, [selectedCardIds, allCardsMap, boardId, setDragPositions]);
+	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard]);
 
 	const handleDragMove = useCallback((event: DragMoveEvent) => {
 		const { active, delta } = event;
@@ -259,6 +259,12 @@ export function useDndCanvas({
 					});
 				}
 			}
+
+			// Update order keys to persist the "bring to front" behavior
+			if (boardId) {
+				const allCardsArray = Array.from(allCardsMap.values());
+				await CardService.bringCardsToFront(draggedCardIds, boardId, allCardsArray);
+			}
 		}
 
 		// ========================================================================
@@ -284,6 +290,10 @@ export function useDndCanvas({
 					position_y: draggedCard.position_y,
 				},
 			});
+
+			// Update order keys to persist the "bring to front" behavior
+			const allCardsArray = Array.from(allCardsMap.values());
+			await CardService.bringCardsToFront([draggedCard.id], boardId, allCardsArray);
 		}
 
 		// Clear drag state
