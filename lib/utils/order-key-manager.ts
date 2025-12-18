@@ -70,7 +70,7 @@ export function bringToFront(
 	const updates = new Map<string, string>();
 	
 	// Find current maximum order key
-	let maxOrderKey = allCards.length > 0 
+	const maxOrderKey = allCards.length > 0 
 		? allCards.reduce((max, card) => card.order_key > max ? card.order_key : max, allCards[0].order_key)
 		: null;
 

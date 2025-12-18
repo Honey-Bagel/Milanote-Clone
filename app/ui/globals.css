@@ -470,6 +470,11 @@ button:disabled,
 	background: var(--muted);
 }
 
+.drag-handle.focus,
+.drag-handle:focus-visible {
+	outline: none !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

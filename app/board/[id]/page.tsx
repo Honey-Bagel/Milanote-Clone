@@ -18,7 +18,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 	}
 
 	// Only show 404 if auth is ready AND we have an error or no board after loading
-	if (error || (!isLoading && !board)) {
+	if (error) {
 		notFound();
 	}
 

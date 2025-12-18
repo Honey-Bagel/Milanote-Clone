@@ -19,6 +19,7 @@ import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import { CardService } from '@/lib/services/card-service';
 import { bringCardsToFrontOnInteraction } from '@/lib/utils/order-key-manager';
 import type { CardData } from '@/lib/types';
+import { GRID_SIZE } from '../constants/defaults';
 
 interface UseDndCanvasOptions {
 	boardId: string | null;
@@ -96,7 +97,15 @@ export function useDndCanvas({
 		});
 	}, [viewport.zoom]);
 
-	const modifiers = [createCanvasCoordinateModifier()];
+	const createSnapToGridModifier = useCallback(() => {
+		return ({ transform }: { transform: { x: number; y: number } }) => ({
+			...transform,
+			x: snapToGrid ? Math.ceil(transform.x / GRID_SIZE) * GRID_SIZE : transform.x,
+			y: snapToGrid ? Math.ceil(transform.y / GRID_SIZE) * GRID_SIZE : transform.y,
+		});
+	}, [snapToGrid]);
+
+	const modifiers = [createCanvasCoordinateModifier(), createSnapToGridModifier()];
 
 	// ============================================================================
 	// COLLISION DETECTION
@@ -204,12 +213,6 @@ export function useDndCanvas({
 			? Array.from(selectedCardIds)
 			: [active.id as string];
 
-		// Snap to grid helper
-		const snapValue = (value: number) => {
-			const gridSize = 10;
-			return snapToGrid ? Math.round(value / gridSize) * gridSize : value;
-		};
-
 		const draggedCard = allCardsMap.get(active.id as string);
 
 		// ========================================================================
@@ -238,8 +241,8 @@ export function useDndCanvas({
 			for (const cardId of draggedCardIds) {
 				const card = allCardsMap.get(cardId);
 				if (card && boardId) {
-					const newX = snapValue(card.position_x + canvasDelta.x);
-					const newY = snapValue(card.position_y + canvasDelta.y);
+					const newX = card.position_x + canvasDelta.x;
+					const newY = card.position_y + canvasDelta.y;
 
 					await CardService.updateCardTransform({
 						cardId: card.id,
@@ -262,8 +265,8 @@ export function useDndCanvas({
 		// SCENARIO 3: Column → Canvas
 		// ========================================================================
 		if (dragData?.type === 'column-card' && draggedCard && boardId) {
-			const newX = snapValue(draggedCard.position_x + canvasDelta.x);
-			const newY = snapValue(draggedCard.position_y + canvasDelta.y);
+			const newX = draggedCard.position_x + canvasDelta.x;
+			const newY = draggedCard.position_y + canvasDelta.y;
 
 			// TODO: Remove from column
 			console.log('Removed from column:', dragData.columnId);
