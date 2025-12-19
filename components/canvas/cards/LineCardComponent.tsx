@@ -424,6 +424,7 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       }
 
       if (dragTarget === 'control') {
+		console.log("control")
         // Calculate perpendicular distance from mouse to line midpoint
         const midX = (startX + endX) / 2 + card.position_x;
         const midY = (startY + endY) / 2 + card.position_y;
@@ -460,9 +461,11 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       const relY = finalY - card.position_y;
 
       if (dragTarget === 'start') {
+		console.log("start");
         setLocalStartX(relX);
         setLocalStartY(relY);
       } else if (dragTarget === 'end') {
+		console.log("end");
         setLocalEndX(relX);
         setLocalEndY(relY);
       }

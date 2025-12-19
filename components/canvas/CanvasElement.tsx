@@ -79,6 +79,7 @@ export const CanvasElement = memo(function CanvasElement({
 		editingCardId,
 		snapToGrid,
 		dragPositions,
+		isDraggingLineEndpoint,
 	} = useCanvasStore();
 	const [cardOptions, setCardOptions] = useState<CardOptions | null>(null);
 
@@ -93,9 +94,8 @@ export const CanvasElement = memo(function CanvasElement({
 		data: {
 			type: 'canvas-card',
 		},
-		disabled: isInsideColumn || isReadOnly || isEditing,
+		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint,
 	});
-
 
 	// Event handlers
 	const handleClick = useCallback((e: React.MouseEvent) => {

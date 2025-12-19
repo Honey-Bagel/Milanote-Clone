@@ -106,6 +106,7 @@ export function Canvas({
 		handleDragStart,
 		handleDragMove,
 		handleDragEnd,
+		handleDragOver: dragOverDND,
 		customCollisionDetection,
 		modifiers,
 		activeDragCard,
@@ -383,10 +384,10 @@ export function Canvas({
 			>
 				<DndContext
 					sensors={sensors}
-					collisionDetection={customCollisionDetection}
 					onDragStart={handleDragStart}
 					onDragMove={handleDragMove}
 					onDragEnd={handleDragEnd}
+					onDragOver={dragOverDND}
 					modifiers={modifiers}
 				>
 					<div ref={canvasRef} className="canvas-scroll-area w-full h-full">

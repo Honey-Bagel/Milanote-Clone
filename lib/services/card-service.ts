@@ -659,6 +659,83 @@ export async function addCardToColumn(params: AddCardToColumnParams): Promise<vo
 	]);
 }
 
+export interface AddCardsToColumnBatchParams {
+	cardIds: string[];
+	boardId: string;
+	columnId: string;
+	startPosition?: number; // Optional: where to insert (defaults to end)
+}
+
+export async function addCardsToColumnBatch(
+	params: AddCardsToColumnBatchParams
+): Promise<void> {
+	const { cardIds, boardId, columnId, startPosition } = params;
+
+	// Early return for empty array
+	if (cardIds.length === 0) return;
+
+	// Remove duplicates
+	const uniqueCardIds = [...new Set(cardIds)];
+
+	// Single query: fetch column and all cards being added
+	const [columnResult, cardsResult] = await Promise.all([
+		db.queryOnce({
+			cards: { $: { where: { id: columnId } } },
+		}),
+		db.queryOnce({
+			cards: { $: { where: { id: { in: uniqueCardIds } } } },
+		}),
+	]);
+
+	const column = columnResult.data?.cards[0];
+	if (!column || column.card_type !== 'column') {
+		throw new Error(`Column ${columnId} not found`);
+	}
+
+	// Validate: no column cards allowed
+	const hasColumnCard = cardsResult.data?.cards.some(
+		card => card.card_type === 'column'
+	);
+	if (hasColumnCard) {
+		throw new Error("Cannot add column cards to columns");
+	}
+
+	// Calculate sequential positions
+	const startPos = startPosition ?? (column.column_items?.length || 0);
+	const newItems = uniqueCardIds.map((cardId, index) => ({
+		card_id: cardId,
+		position: startPos + index,
+	}));
+
+	// Merge and reindex all positions
+	const mergedItems = [...(column.column_items || []), ...newItems];
+	const reindexedItems = mergedItems.map((item, index) => ({
+		...item,
+		position: index,
+	}));
+
+	const now = Date.now();
+
+	// Single atomic transaction
+	await db.transact([
+		// Update column with new items
+		db.tx.cards[columnId].update({
+			column_items: reindexedItems,
+			updated_at: now,
+		}),
+		// Clear positions for all cards being added
+		...uniqueCardIds.map(cardId =>
+			db.tx.cards[cardId].update({
+				position_x: null,
+				position_y: null,
+				updated_at: now,
+			})
+		),
+		// Update board timestamp
+		db.tx.boards[boardId].update({ updated_at: now }),
+	]);
+}
+
 export interface ExtractCardFromColumnParams {
 	cardId: string;
 	boardId: string;
@@ -785,6 +862,7 @@ export const CardService = {
   alignCardsRight,
   updateCardOrderKey,
   addCardToColumn,
+  addCardsToColumnBatch,
   extractCardFromColumn,
   transferCardBetweenColumns,
 };

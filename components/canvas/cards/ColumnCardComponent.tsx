@@ -15,6 +15,7 @@ import { CanvasElement } from '../CanvasElement';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { SortableColumnItem } from './SortableColumnItem';
+import { useDroppable } from '@dnd-kit/core';
 
 // ============================================================================
 // PROPS INTERFACE (for legacy compatibility with CardRenderer)
@@ -50,6 +51,15 @@ export function ColumnCardComponent({
 		saveContent: () => {},
 		saveContentImmediate: async () => {},
 	};
+
+	const { setNodeRef } = useDroppable({
+		id: card.id,
+		data: {
+			type: 'column',
+			columnId: card.id,
+			accepts: ['canvas-card', 'column-card'],
+		},
+	});
 
 	// Canvas store
 	const {
@@ -105,6 +115,96 @@ export function ColumnCardComponent({
 	// ========================================================================
 	// RENDER
 	// ========================================================================
+
+	return (
+		<div className={`
+				column-card-container
+				flex flex-col
+				overflow-hidden
+				transition-all duration-200
+				w-full h-full
+				bg-[#1a1f2e]/95 backdrop-blur-sm shadow-lg
+			`}
+		>
+			{/* Header */}
+			<div className={`
+					column-header relative
+					flex flex-col items-center
+					px-6 py-4
+					flex-shrink-0
+				`}>
+					<div className="flex flex-col items-center w-full px-12">
+						{/* Title */}
+						{isEditing ? (
+							<input
+								type="text"
+								value={card.column_title}
+								onChange={handleTitleChange}
+								className="w-full px-3 py-1.5 text-sm font-semibold text-center bg-white/5 text-white border border-white/10 rounded-lg focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent outline-none transition-all"
+								placeholder="Column Title"
+								onClick={(e) => e.stopPropagation()}
+							/>
+						) : (
+							<h3 className="text-sm font-semibold text-white text-center truncate w-full">
+								{card.column_title}
+							</h3>
+						)}
+
+						{/* Card count badge */}
+						<div className={`
+							px-2.5 py-0.5 rounded-full text-[11px] font-medium
+							transition-all
+							${isDropTarget
+								? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/30'
+								: 'bg-white/5 text-slate-400'
+							}
+						`}>
+							{itemCount} {itemCount === 1 ? 'card' : 'cards'}
+						</div>
+					</div>
+			</div>
+
+			{/* Body */}
+			<div ref={setNodeRef} className="column-body flex-1 overflow-y-auto p-2 relative">
+				{columnItems.length === 0 ? (
+					/* Empty State */
+					<div className={`
+							flex flex-col items-center justify-center
+							min-h-[75px]
+							border-0.5 border
+							transition-all duration-300
+							bg-white/5
+						`}
+					>
+					</div>
+				) : (
+					/* Render cards inside column */
+					<SortableContext
+						id={card.id}
+						items={columnItems.map(c => c.id)}
+						strategy={verticalListSortingStrategy}
+					>
+						<div className="column-cards-list space-y-3">
+							{columnItems.map((itemCard, index) => (
+								<SortableColumnItem
+									key={itemCard.id}
+									card={itemCard as unknown as Card}
+									columnId={card.id}
+									index={index}
+									boardId={card.board_id}
+									allCards={cards}
+									onCardClick={handleCardClick}
+									onCardDoubleClick={handleCardDoubleClick}
+									onContextMenu={handleCardContextMenu}
+									onEditorReady={onEditorReady}
+								/>
+							))}
+						</div>
+					</SortableContext>
+				)}
+			</div>
+		</div>
+	)
 
 	return (
 		<div
