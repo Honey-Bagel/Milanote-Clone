@@ -40,8 +40,8 @@ const graph = i.schema({
 			card_type: i.string().indexed(),
 
 			// Position & Layout (all cards)
-			position_x: i.number(),
-			position_y: i.number(),
+			position_x: i.number().optional(),
+			position_y: i.number().optional(),
 			width: i.number(),
 			height: i.number().optional(),
 			order_key: i.string().indexed(),

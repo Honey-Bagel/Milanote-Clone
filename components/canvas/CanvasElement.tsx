@@ -93,6 +93,7 @@ export const CanvasElement = memo(function CanvasElement({
 		data: {
 			type: 'canvas-card',
 		},
+		disabled: isInsideColumn || isReadOnly || isEditing,
 	});
 
 
@@ -233,14 +234,16 @@ export const CanvasElement = memo(function CanvasElement({
 	let displayX = card.position_x;
 	let displayY = card.position_y;
 
-	if (dragPos) {
-		// Card is being dragged as part of multi-select
-		displayX = dragPos.x;
-		displayY = dragPos.y;
-	} else if (transform) {
-		// This is the active dragged card
-		displayX = card.position_x + (transform.x ?? 0);
-		displayY = card.position_y + (transform.y ?? 0);
+	if (!isInsideColumn) {
+		if (dragPos) {
+			// Card is being dragged as part of multi-select
+			displayX = dragPos.x;
+			displayY = dragPos.y;
+		} else if (transform) {
+			// This is the active dragged card
+			displayX = card.position_x + (transform.x ?? 0);
+			displayY = card.position_y + (transform.y ?? 0);
+		}
 	}
 
 	return (

@@ -596,6 +596,173 @@ export async function alignCardsRight(cards: CardData[], boardId: string): Promi
 }
 
 // ============================================================================
+// COLUMN OPERATIONS
+// ============================================================================
+
+export interface AddCardToColumnParams {
+	cardId: string;
+	boardId: string;
+	columnId: string;
+	position: number;
+};
+
+export async function addCardToColumn(params: AddCardToColumnParams): Promise<void> {
+	const { cardId, boardId, columnId, position } = params;
+
+	// Fetch current column
+	const { data } = await db.queryOnce({
+		cards: {
+			$: { where: { id: columnId } },
+		},
+	});
+
+	const column = data?.cards[0];
+	if (!column || column.card_type !== 'column') {
+		throw new Error('Column not found');
+	}
+
+	// Prevent adding column cards to columns (no nesting)
+	const cardToAdd = await db.queryOnce({
+		cards: { $: { where: { id: cardId } } },
+	});
+
+	if (cardToAdd?.data?.cards[0]?.card_type === 'column') {
+		throw new Error("Cannot add column cards to columns");
+	}
+
+	// Add card to column_items
+	const updatedItems = [
+		...(column.column_items || []),
+		{ card_id: cardId, position },
+	];
+
+	// Reindex positions
+	const reindexedItems = updatedItems.map((item, index) => ({
+		...item,
+		position: index,
+	}));
+
+	const now = Date.now();
+
+	// Transaction: update column and clear card position
+	await db.transact([
+		db.tx.cards[columnId].update({
+			column_items: reindexedItems,
+			updated_at: now,
+		}),
+		db.tx.cards[cardId].update({
+			position_x: null,
+			position_y: null,
+			updated_at: now,
+		}),
+		db.tx.boards[boardId].update({ updated_at: now }),
+	]);
+}
+
+export interface ExtractCardFromColumnParams {
+	cardId: string;
+	boardId: string;
+	columnId: string;
+	position: { x: number; y: number; };
+};
+
+export async function extractCardFromColumn(params: ExtractCardFromColumnParams): Promise<void> {
+	const { cardId, boardId, columnId, position } = params;
+
+	// Fetch current column
+	const { data } = await db.queryOnce({
+		cards: {
+			$: { where: { id: columnId } },
+		},
+	});
+
+	const column = data?.cards[0];
+	if (!column || column.card_type !== 'column') {
+		throw new Error('Column not found');
+	}
+
+	// Remove card from column_items
+	const updatedItems = (column.column_items || [])
+		.filter(item => item.card_id !== cardId)
+		.map((item, index) => ({ ...item, position: index }));
+
+	const now = Date.now();
+
+	// Transaction: update column and set card position
+	await db.transact([
+		db.tx.cards[columnId].update({
+			column_items: updatedItems,
+			updated_at: now,
+		}),
+		db.tx.cards[cardId].update({
+			position_x: position.x,
+			position_y: position.y,
+			updated_at: now,
+		}),
+		db.tx.boards[boardId].update({ updated_at: now }),
+	]);
+}
+
+export interface TransferCardBetweenColumnsParams {
+	cardId: string;
+	boardId: string;
+	fromColumnId: string;
+	toColumnId: string;
+	toIndex: number;
+};
+
+export async function transferCardBetweenColumns(params: TransferCardBetweenColumnsParams): Promise<void> {
+	const { cardId, boardId, fromColumnId, toColumnId, toIndex } = params;
+
+	// Fetch both columns
+	const { data } = await db.queryOnce({
+		cards: {
+			$: {
+				where: {
+					id: { in: [fromColumnId, toColumnId] },
+				},
+			},
+		},
+	});
+
+	const columns = data?.cards || [];
+	const fromColumn = columns.find(c => c.id === fromColumnId);
+	const toColumn = columns.find(c => c.id === toColumnId);
+
+	if (!fromColumn || !toColumn) {
+		throw new Error("Columns not found");
+	}
+
+	// Remove from source
+	const fromItems = (fromColumn.column_items || [])
+		.filter(item => item.card_id !== cardId)
+		.map((item, index) => ({ ...item, position: index }));
+
+	// Add to target at specifiedindex
+	const toItems = [...(toColumn.column_items || [])];
+	toItems.splice(toIndex, 0, { card_id: cardId, position: toIndex });
+	const reindexedItems = toItems.map((item, index) => ({
+		...item,
+		position: index,
+	}));
+
+	const now = Date.now();
+
+	// Transaction
+	await db.transact([
+		db.tx.cards[fromColumnId].update({
+			column_items: fromItems,
+			updated_at: now,
+		}),
+		db.tx.cards[toColumnId].update({
+			column_items: reindexedItems,
+			updated_at: now,
+		}),
+		db.tx.boards[boardId].update({ updated_at: now }),
+	]);
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -617,4 +784,7 @@ export const CardService = {
   alignCardsLeft,
   alignCardsRight,
   updateCardOrderKey,
+  addCardToColumn,
+  extractCardFromColumn,
+  transferCardBetweenColumns,
 };

@@ -26,6 +26,7 @@ import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { DndContext, DragOverlay } from "@dnd-kit/core";
+import { CardFrame } from './cards';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -447,6 +448,49 @@ export function Canvas({
 						</div>
 					</div>
 				</DndContext>
+
+				<DragOverlay dropAnimation={null}>
+					{activeDragCard ? (
+						<div 
+						style={{ 
+							opacity: 0.8, 
+							cursor: 'grabbing',
+							pointerEvents: 'none',
+							width: activeDragCard.width,
+							height: activeDragCard.height || 'auto',
+						}}
+						>
+						<div className="card">
+							<CardProvider
+							card={activeDragCard}
+							boardId={activeDragCard.board_id}
+							isSelected={false}
+							isReadOnly={true}
+							isInsideColumn={false}
+							allCards={allCardsMap}
+							>
+							<CardFrame
+								card={activeDragCard}
+								isSelected={false}
+								isEditing={false}
+								isInsideColumn={false}
+								isReadOnly={true}
+								cssZIndex={9999}
+							>
+								<CardRenderer
+								card={activeDragCard}
+								boardId={activeDragCard.board_id}
+								isEditing={false}
+								isSelected={false}
+								isPublicView={true}
+								allCards={allCardsMap}
+								/>
+							</CardFrame>
+							</CardProvider>
+						</div>
+						</div>
+					) : null}
+					</DragOverlay>
 
 				<SelectionBox />
 				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)} />
