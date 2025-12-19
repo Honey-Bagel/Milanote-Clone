@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { ColumnCard, Card, CardData } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useOptionalCardContext } from './CardContext';
@@ -66,24 +66,12 @@ export function ColumnCardComponent({
 		[allCardsProp, cardsArray]
 	);
 
-	const [isCollapsed, setIsCollapsed] = useState(card.column_is_collapsed || false);
-
 	const isDropTarget = potentialColumnTarget === card.id;
 
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
 		saveContent({ column_title: e.target.value });
 	}, [saveContent]);
-
-	const handleColorChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		saveContent({ column_background_color: e.target.value });
-	}, [saveContent]);
-
-	const handleToggleCollapse = useCallback(() => {
-		const newCollapsed = !isCollapsed;
-		setIsCollapsed(newCollapsed);
-		saveContent({ column_is_collapsed: newCollapsed });
-	}, [isCollapsed, saveContent]);
 
 	const handleRemoveCard = useCallback(async (cardId: string) => {
 		const updatedItems = (card.column_items || [])
@@ -94,16 +82,12 @@ export function ColumnCardComponent({
 	}, [card.column_items, saveContent]);
 
 	const handleCardClick = useCallback((cardId: string) => {
-		if (!draggedCardId) {
-			selectCard(cardId);
-		}
-	}, [draggedCardId, selectCard]);
+		selectCard(cardId);
+	}, [selectCard]);
 
 	const handleCardDoubleClick = useCallback((cardId: string) => {
-		if (!draggedCardId) {
-			setEditingCardId(cardId);
-		}
-	}, [draggedCardId, setEditingCardId]);
+		setEditingCardId(cardId);
+	}, [setEditingCardId]);
 
 	const handleCardContextMenu = useCallback((e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -151,40 +135,6 @@ export function ColumnCardComponent({
 					: 'border-white/5'
 				}
 			`}>
-				{/* Left controls - absolute positioned */}
-				<div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-					{/* Collapse Button */}
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							handleToggleCollapse();
-						}}
-						className={`
-							w-7 h-7 flex items-center justify-center
-							rounded-lg transition-all
-							${isDropTarget
-								? 'text-cyan-400 hover:bg-cyan-400/10'
-								: 'text-slate-500 hover:bg-white/5 hover:text-white'
-							}
-						`}
-						title={isCollapsed ? "Expand column" : "Collapse column"}
-					>
-						<svg
-							className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
-							<path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-						</svg>
-					</button>
-
-					{/* Color indicator dot */}
-					<div
-						className="w-2.5 h-2.5 rounded-full ring-1 ring-white/20"
-						style={{ backgroundColor: card.column_background_color }}
-					/>
-				</div>
-
 				{/* Center content */}
 				<div className="flex flex-col items-center gap-1.5 w-full px-12">
 					{/* Title */}
@@ -215,27 +165,12 @@ export function ColumnCardComponent({
 						{itemCount} {itemCount === 1 ? 'card' : 'cards'}
 					</div>
 				</div>
-
-				{/* Right controls - absolute positioned */}
-				{isEditing && (
-					<div className="absolute right-3 top-1/2 -translate-y-1/2">
-						<input
-							type="color"
-							value={card.column_background_color}
-							onChange={handleColorChange}
-							className="w-7 h-7 rounded-lg cursor-pointer border border-white/10 hover:border-white/20 transition-colors"
-							title="Change column color"
-							onClick={(e) => e.stopPropagation()}
-						/>
-					</div>
-				)}
 			</div>
 
 			{/* Body */}
-			{!isCollapsed && (
-				<div
-					className="column-body flex-1 overflow-y-auto p-4 relative"
-				>
+			<div
+				className="column-body flex-1 overflow-y-auto p-4 relative"
+			>
 					{columnItems.length === 0 ? (
 						/* Empty state */
 						<div className={`
@@ -296,16 +231,6 @@ export function ColumnCardComponent({
 						</SortableContext>
 					)}
 				</div>
-			)}
-
-			{/* Collapsed State */}
-			{isCollapsed && (
-				<div className="px-6 py-3 text-center border-t border-white/5">
-					<p className="text-xs font-medium text-slate-400">
-						{itemCount} {itemCount === 1 ? 'card' : 'cards'}
-					</p>
-				</div>
-			)}
-		</div>
+			</div>
 	);
 }

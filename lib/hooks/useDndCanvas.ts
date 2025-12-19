@@ -255,9 +255,11 @@ export function useDndCanvas({
 
 		// Convert screen delta to canvas delta
 		const canvasDelta = {
-			x: delta.x / viewport.zoom,
-			y: delta.y / viewport.zoom,
+			x: (delta.x * viewport.zoom) / viewport.zoom,
+			y: (delta.y * viewport.zoom) / viewport.zoom,
 		};
+
+		console.log(viewport.zoom, canvasDelta);
 
 		// ========================================================================
   		// CANVAS CARD LOGIC
@@ -293,10 +295,38 @@ export function useDndCanvas({
 		}
 
 		// ========================================================================
- 		// COLUMN CARD LOGIC (ADD THIS ENTIRE SECTION)
+ 		// COLUMN CARD LOGIC
   		// ========================================================================
 		if (dragType === 'column-card') {
+			const dragData = active.data.current;
+			const sourceColumnId = dragData?.columnId;
+			const sourceColumn = allCardsMap.get(sourceColumnId);
 
+			if (sourceColumn) {
+				// Track position for potential canvas extraction
+				const newPositions = new Map<string, { x: number; y: number }>();
+				newPositions.set(active.id as string, {
+					x: sourceColumn.position_x + canvasDelta.x,
+					y: sourceColumn.position_y + canvasDelta.y,
+				});
+				setDragPositions(newPositions);
+
+				// Check if dragging over a different column
+				const overlappingColumns = findOverlappingColumns(active.id as string, allCardsMap);
+
+				if (overlappingColumns.length === 0) {
+					// Card is outside all columns - preparing for extraction
+					setPotentialColumnTarget(null);
+				} else {
+					const targetColumn = overlappingColumns[0];
+					if (targetColumn && targetColumn.id !== sourceColumnId) {
+						// Hovering over different column
+						setPotentialColumnTarget(targetColumn.id);
+					} else {
+						setPotentialColumnTarget(null);
+					}
+				}
+			}
 		}
 
 	}, [viewport.zoom, selectedCardIds, allCardsMap, setDragPositions, setPotentialColumnTarget]);
@@ -314,8 +344,8 @@ export function useDndCanvas({
 
 		// Convert delta for canvas calculations
 		const canvasDelta = {
-			x: delta.x / viewport.zoom,
-			y: delta.y / viewport.zoom,
+			x: (delta.x * viewport.zoom)  / viewport.zoom,
+			y: (delta.y * viewport.zoom) / viewport.zoom,
 		};
 
 		// ========================================================================

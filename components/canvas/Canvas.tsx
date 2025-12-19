@@ -451,46 +451,55 @@ export function Canvas({
 
 				<DragOverlay dropAnimation={null}>
 					{activeDragCard ? (
-						<div 
-						style={{ 
-							opacity: 0.8, 
-							cursor: 'grabbing',
-							pointerEvents: 'none',
-							width: activeDragCard.width,
-							height: activeDragCard.height || 'auto',
-						}}
+						<div
+							style={{
+								opacity: 0.85,
+								transform: 'rotate(2deg)',
+								cursor: 'grabbing',
+								pointerEvents: 'none',
+								width: activeDragCard.width,
+								height: activeDragCard.height || 'auto',
+								position: 'relative',
+							}}
 						>
-						<div className="card">
-							<CardProvider
-							card={activeDragCard}
-							boardId={activeDragCard.board_id}
-							isSelected={false}
-							isReadOnly={true}
-							isInsideColumn={false}
-							allCards={allCardsMap}
-							>
-							<CardFrame
-								card={activeDragCard}
-								isSelected={false}
-								isEditing={false}
-								isInsideColumn={false}
-								isReadOnly={true}
-								cssZIndex={9999}
-							>
-								<CardRenderer
-								card={activeDragCard}
-								boardId={activeDragCard.board_id}
-								isEditing={false}
-								isSelected={false}
-								isPublicView={true}
-								allCards={allCardsMap}
-								/>
-							</CardFrame>
-							</CardProvider>
-						</div>
+							<div className="card">
+								<CardProvider
+									card={activeDragCard}
+									boardId={activeDragCard.board_id}
+									isSelected={false}
+									isReadOnly={true}
+									isInsideColumn={activeDragType === 'column-card'}
+									allCards={allCardsMap}
+								>
+									<CardFrame
+										card={activeDragCard}
+										isSelected={false}
+										isEditing={false}
+										isInsideColumn={activeDragType === 'column-card'}
+										isReadOnly={true}
+										cssZIndex={9999}
+									>
+										<CardRenderer
+											card={activeDragCard}
+											boardId={activeDragCard.board_id}
+											isEditing={false}
+											isSelected={false}
+											isPublicView={true}
+											allCards={allCardsMap}
+										/>
+									</CardFrame>
+								</CardProvider>
+							</div>
+
+							{/* Multi-select indicator badge */}
+							{selectedCardIds.size > 1 && (
+								<div className="absolute -top-2 -right-2 bg-cyan-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
+									{selectedCardIds.size}
+								</div>
+							)}
 						</div>
 					) : null}
-					</DragOverlay>
+				</DragOverlay>
 
 				<SelectionBox />
 				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)} />

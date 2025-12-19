@@ -43,6 +43,8 @@ export function SortableColumnItem({
 			columnId: columnId,
 			card: card,
 			index: index,
+			sortableContext: 'column',
+			parentColumnId: columnId,
 		},
 	});
 

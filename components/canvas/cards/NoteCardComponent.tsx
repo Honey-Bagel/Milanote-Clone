@@ -11,7 +11,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Highlight from "@tiptap/extension-highlight";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useLayoutEffect } from "react";
 import { TextSelection } from "prosemirror-state";
 
 interface NoteCardOptions {
@@ -31,16 +31,33 @@ export function NoteCardComponent({
 	options
 }: NoteCardComponentProps) {
 	const context = useCardContext();
-	
+
 	// Use context values if available
 	const card = (context?.card as NoteCard);
 	const isEditing = context.isEditing;
-	const { saveContent, stopEditing, dimensions, isReadOnly } = context ?? {
+	const { saveContent, stopEditing, dimensions, isReadOnly, reportContentHeight } = context ?? {
 		saveContent: () => {},
 		stopEditing: () => {},
 		dimensions: null,
 		isReadOnly: false,
 	};
+
+	const rootRef = useRef<HTMLDivElement | null>(null);
+
+	// Keep CardDimensions in sync with actual rendered height
+	useLayoutEffect(() => {
+		if (!reportContentHeight || !rootRef.current) return;
+
+		const el = rootRef.current;
+		const observer = new ResizeObserver(entries => {
+			for (const entry of entries) {
+				reportContentHeight(entry.contentRect.height);
+			}
+		});
+
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [reportContentHeight]);
 
 	// TipTap editor setup
 	const editor = useEditor({
@@ -142,6 +159,7 @@ export function NoteCardComponent({
 
 	return (
 		<div
+			ref={rootRef}
 			className="note-card flex bg-[#1e293b]/90 shadow-xl hover:border-cyan-500/50 border border-white/10"
 			onKeyDown={handleKeyDown}
 			style={{
@@ -149,7 +167,8 @@ export function NoteCardComponent({
 				WebkitUserSelect: isEditing ? 'text' : 'none',
 				MozUserSelect: isEditing ? 'text' : 'none',
 				cursor: isEditing ? 'text' : 'pointer',
-				height: '100%',
+				height: isEditing ? 'auto' : '100%',
+				minHeight: isEditing ? '100%' : undefined,
 			}}
 		>
 			<EditorContent
