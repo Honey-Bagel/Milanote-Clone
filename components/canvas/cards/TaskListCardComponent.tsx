@@ -32,8 +32,9 @@ export function TaskListCardComponent({
 
 	// Use context values if available, otherwise use props
 	const card = (context?.card as TaskListCard) ?? propCard;
-	const { saveContent } = context ?? {
+	const { saveContent, saveContentImmediate } = context ?? {
 		saveContent: () => {},
+		saveContentImmediate: async () => {},
 	};
 
 	const [editingTitle, setEditingTitle] = useState(false);
@@ -56,12 +57,12 @@ export function TaskListCardComponent({
 		saveContent({ task_list_title: newTitle });
 	}, [saveContent]);
 
-	const handleToggleTask = useCallback((taskId: string) => {
+	const handleToggleTask = useCallback(async (taskId: string) => {
 		const updatedTasks = card.tasks.map(task =>
 			task.id === taskId ? { ...task, completed: !task.completed } : task
 		);
-		saveContent({ tasks: updatedTasks });
-	}, [card.tasks, saveContent]);
+		await saveContentImmediate({ tasks: updatedTasks });
+	}, [card.tasks, saveContentImmediate]);
 
 	const handleTaskTextChange = useCallback((taskId: string, newText: string) => {
 		setLocalTasks(prev => new Map(prev).set(taskId, newText));
@@ -72,7 +73,7 @@ export function TaskListCardComponent({
 		saveContent({ tasks: updatedTasks });
 	}, [card.tasks, saveContent]);
 
-	const handleTaskKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, taskId: string, taskText: string) => {
+	const handleTaskKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLInputElement>, taskId: string, taskText: string) => {
 		const sortedTasks = [...card.tasks].sort((a, b) => a.position - b.position);
 		const currentIndex = sortedTasks.findIndex(t => t.id === taskId);
 
@@ -94,7 +95,7 @@ export function TaskListCardComponent({
 				position: index
 			}));
 
-			saveContent({ tasks: reindexedTasks });
+			saveContentImmediate({ tasks: reindexedTasks });
 
 			setTimeout(() => {
 				const input = taskInputRefs.current.get(newTask.id);
@@ -110,7 +111,7 @@ export function TaskListCardComponent({
 				.filter(task => task.id !== taskId)
 				.map((task, index) => ({ ...task, position: index }));
 
-			saveContent({ tasks: updatedTasks });
+			saveContentImmediate({ tasks: updatedTasks });
 
 			if (currentIndex > 0) {
 				const previousTask = sortedTasks[currentIndex - 1];
@@ -127,17 +128,17 @@ export function TaskListCardComponent({
 				}
 			}
 		}
-	}, [card.tasks, saveContent]);
+	}, [card.tasks, saveContentImmediate]);
 
-	const handleDeleteTask = useCallback((taskId: string) => {
+	const handleDeleteTask = useCallback(async (taskId: string) => {
 		const updatedTasks = card.tasks
 			.filter(task => task.id !== taskId)
 			.map((task, index) => ({ ...task, position: index }));
 
-		saveContent({ tasks: updatedTasks });
-	}, [card.tasks, saveContent]);
+		await saveContentImmediate({ tasks: updatedTasks });
+	}, [card.tasks, saveContentImmediate]);
 
-	const handleAddNewTask = useCallback(() => {
+	const handleAddNewTask = useCallback(async () => {
 		const newTask = {
 			id: `task-${Date.now()}`,
 			text: '',
@@ -146,7 +147,7 @@ export function TaskListCardComponent({
 		};
 
 		const updatedTasks = [...card.tasks, newTask];
-		saveContent({ tasks: updatedTasks });
+		saveContentImmediate({ tasks: updatedTasks });
 
 		setTimeout(() => {
 			const input = taskInputRefs.current.get(newTask.id);
@@ -155,7 +156,7 @@ export function TaskListCardComponent({
 				setFocusedTaskId(newTask.id);
 			}
 		}, 50);
-	}, [card.tasks, saveContent]);
+	}, [card.tasks, saveContentImmediate]);
 
 	// ========================================================================
 	// RENDER

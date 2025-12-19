@@ -46,8 +46,9 @@ export function ColumnCardComponent({
 	const card = (context?.card as ColumnCard) ?? propCard;
 	const isEditing = context?.isEditing ?? propIsEditing;
 	const isSelected = context?.isSelected ?? propIsSelected;
-	const { saveContent } = context ?? {
+	const { saveContent, saveContentImmediate } = context ?? {
 		saveContent: () => {},
+		saveContentImmediate: async () => {},
 	};
 
 	// Canvas store
@@ -78,8 +79,8 @@ export function ColumnCardComponent({
 			.filter(item => item.card_id !== cardId)
 			.map((item, index) => ({ ...item, position: index }));
 
-		saveContent({ column_items: updatedItems });
-	}, [card.column_items, saveContent]);
+		saveContentImmediate({ column_items: updatedItems });
+	}, [card.column_items, saveContentImmediate]);
 
 	const handleCardClick = useCallback((cardId: string) => {
 		selectCard(cardId);

@@ -9,6 +9,7 @@
 import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import type { ColorPaletteCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
+import { PlusIcon } from "@radix-ui/react-icons";
 
 // ============================================================================
 // PROPS INTERFACE (for legacy compatibility with CardRenderer)
@@ -33,8 +34,9 @@ export function ColorPaletteCardComponent({
 	// Use context values if available, otherwise use props
 	const card = (context?.card as ColorPaletteCard) ?? propCard;
 	const isEditing = context?.isEditing ?? propIsEditing;
-	const { saveContent, reportContentHeight } = context ?? {
+	const { saveContent, saveContentImmediate, reportContentHeight } = context ?? {
 		saveContent: () => {},
+		saveContentImmediate: async () => {},
 	};
 
 	const [newColor, setNewColor] = useState('#000000');
@@ -65,22 +67,22 @@ export function ColorPaletteCardComponent({
 		saveContent({ palette_description: e.target.value });
 	}, [saveContent]);
 
-	const handleAddColor = useCallback(() => {
+	const handleAddColor = useCallback(async () => {
 		const updatedColors = [...card.palette_colors, newColor];
-		saveContent({ palette_colors: updatedColors });
+		await saveContentImmediate({ palette_colors: updatedColors });
 		setNewColor('#000000');
-	}, [card.palette_colors, newColor, saveContent]);
+	}, [card.palette_colors, newColor, saveContentImmediate]);
 
-	const handleRemoveColor = useCallback((index: number) => {
+	const handleRemoveColor = useCallback(async (index: number) => {
 		const updatedColors = card.palette_colors.filter((_, i) => i !== index);
-		saveContent({ palette_colors: updatedColors });
-	}, [card.palette_colors, saveContent]);
+		await saveContentImmediate({ palette_colors: updatedColors });
+	}, [card.palette_colors, saveContentImmediate]);
 
-	const handleColorChange = useCallback((index: number, color: string) => {
+	const handleColorChange = useCallback(async (index: number, color: string) => {
 		const updatedColors = [...card.palette_colors];
 		updatedColors[index] = color;
-		saveContent({ palette_colors: updatedColors });
-	}, [card.palette_colors, saveContent]);
+		await saveContentImmediate({ palette_colors: updatedColors });
+	}, [card.palette_colors, saveContentImmediate]);
 
 	const handleCopyColor = useCallback(async (color: string, index: number) => {
 		try {
@@ -112,11 +114,24 @@ export function ColorPaletteCardComponent({
 							className="font-semibold text-white flex-1 bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
 							placeholder="Palette name"
 							onClick={(e) => e.stopPropagation()}
+							style={{
+								width: "100%"
+							}}
 						/>
 					) : (
-						<h3 className="font-semibold text-white">
-							{card.palette_title}
-						</h3>
+						<div className="flex items-center w-full justify-between">
+							<h3 className="font-semibold text-white">
+								{card.palette_title}
+							</h3>
+							<div className="invisible opacity-0 group-hover:visible group-hover:opacity-100">
+								<PlusIcon
+									onClick={handleAddColor}
+									className="hover:text-cyan-500/50"
+									width={20}
+									height={20}
+								/>
+							</div>
+						</div>
 					)}
 				</div>
 
