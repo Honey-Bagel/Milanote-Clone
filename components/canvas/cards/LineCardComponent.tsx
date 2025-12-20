@@ -696,6 +696,9 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
                 stroke="#f97316"
                 strokeWidth={2}
                 style={{ pointerEvents: 'auto', cursor: 'move' }}
+				onPointerDown={(e) => {
+					e.stopPropagation();
+				}}
                 onMouseDown={(e) => handleEndpointMouseDown(e, 'control')}
                 onMouseEnter={() => setHoveredEndpoint('control')}
                 onMouseLeave={() => setHoveredEndpoint(null)}
@@ -724,6 +727,9 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
             stroke={lineData.line_start_attached_card_id ? '#22c55e' : '#3b82f6'}
             strokeWidth={2}
             style={{ pointerEvents: 'auto', cursor: 'move' }}
+			onPointerDown={(e) => {
+				e.stopPropagation();
+			}}
             onMouseDown={(e) => handleEndpointMouseDown(e, 'start')}
             onMouseEnter={() => setHoveredEndpoint('start')}
             onMouseLeave={() => setHoveredEndpoint(null)}
@@ -737,6 +743,9 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
             stroke={lineData.line_end_attached_card_id ? '#22c55e' : '#3b82f6'}
             strokeWidth={2}
             style={{ pointerEvents: 'auto', cursor: 'move' }}
+			onPointerDown={(e) => {
+				e.stopPropagation();
+			}}
             onMouseDown={(e) => handleEndpointMouseDown(e, 'end')}
             onMouseEnter={() => setHoveredEndpoint('end')}
             onMouseLeave={() => setHoveredEndpoint(null)}
@@ -752,6 +761,9 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
                 key={node.id}
                 onMouseEnter={() => setHoveredReroute(index)}
                 onMouseLeave={() => setHoveredReroute(null)}
+				onPointerDown={(e) => {
+					e.stopPropagation();
+				}}
               >
                 {/* Invisible hit area to keep hover active */}
                 <rect

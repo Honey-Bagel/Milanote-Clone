@@ -95,6 +95,9 @@ const ResizeHandles = memo(function ResizeHandles({
 		return (
 			<div
 				aria-label="Resize Width"
+				onPointerDown={(e) => {
+					e.stopPropagation();
+				}}
 				onMouseDown={(e) => handleMouseDown(e, 'e')}
 				className="resize-handle resize-handle-e"
 				style={{
@@ -118,6 +121,9 @@ const ResizeHandles = memo(function ResizeHandles({
 	return (
 		<div
 			aria-label="Resize South-East"
+			onPointerDown={(e) => {
+				e.stopPropagation();
+			}}
 			onMouseDown={(e) => handleMouseDown(e, 'se')}
 			className="resize-handle resize-handle-se"
 			style={{
@@ -185,7 +191,7 @@ export const CardFrame = memo(function CardFrame({
 	}
 
 	// Calculate frame dimensions
-	const frameWidth = currentDimensions.width;
+	const frameWidth = isInsideColumn ? '100%' : currentDimensions.width;
 	const isAutoHeight = dimensions.height === 'auto';
 
 	const frameStyle: React.CSSProperties = {

@@ -122,7 +122,7 @@ export function ColumnCardComponent({
 				flex flex-col
 				overflow-hidden
 				transition-all duration-200
-				w-full h-full
+				w-auto h-auto
 				bg-[#1a1f2e]/95 backdrop-blur-sm shadow-lg
 			`}
 		>
@@ -165,7 +165,7 @@ export function ColumnCardComponent({
 			</div>
 
 			{/* Body */}
-			<div ref={setNodeRef} className="column-body flex-1 overflow-y-auto p-2 relative">
+			<div ref={setNodeRef} className="column-body flex flex-col p-2 relative justify-center">
 				{columnItems.length === 0 ? (
 					/* Empty State */
 					<div className={`
@@ -184,7 +184,7 @@ export function ColumnCardComponent({
 						items={columnItems.map(c => c.id)}
 						strategy={verticalListSortingStrategy}
 					>
-						<div className="column-cards-list space-y-3">
+						<div className="column-cards-list space-y-3 w-full">
 							{columnItems.map((itemCard, index) => (
 								<SortableColumnItem
 									key={itemCard.id}
