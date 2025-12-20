@@ -72,6 +72,7 @@ export function useDndCanvas({
 
 	const [activeId, setActiveId] = useState<string | null>(null);
 	const [activeDragType, setActiveDragType] = useState<'canvas-card' | 'column-card' | null>(null);
+	const [activeCardPosition, setActiveCardPosition] = useState<{ x: number; y: number } | null>(null);
 
 	// ============================================================================
 	// SENSORS
@@ -106,18 +107,28 @@ export function useDndCanvas({
 	}, [viewport.zoom]);
 
 	const createSnapToGridModifier = useCallback(() => {
-		const snapPosition = (value: number) => {
-			return snapToGrid ? Math.round(value / GRID_SIZE) * GRID_SIZE : value;
-		};
-		
 		return ({ transform }: { transform: { x: number; y: number } }) => {
-			return ({
+			// If snap disabled or no active position, return unchanged
+			if (!snapToGrid || !activeCardPosition) {
+				return transform;
+			}
+
+			// Calculate absolute position (original + delta)
+			const absoluteX = activeCardPosition.x + transform.x;
+			const absoluteY = activeCardPosition.y + transform.y;
+
+			// Snap absolute position to grid points
+			const snappedX = Math.round(absoluteX / GRID_SIZE) * GRID_SIZE;
+			const snappedY = Math.round(absoluteY / GRID_SIZE) * GRID_SIZE;
+
+			// Calculate corrected delta
+			return {
 				...transform,
-				x: snapPosition(transform.x),
-				y: snapPosition(transform.y),
-			})
+				x: snappedX - activeCardPosition.x,
+				y: snappedY - activeCardPosition.y,
+			};
 		};
-	}, [snapToGrid]);
+	}, [snapToGrid, activeCardPosition]);
 
 	const modifiers = [createCanvasCoordinateModifier(), createSnapToGridModifier()];
 
@@ -223,6 +234,15 @@ export function useDndCanvas({
 		setActiveId(active.id as string);
 		setActiveDragType(dragType || 'canvas-card');
 
+		// Capture active card position for grid snapping
+		const activeCard = allCardsMap.get(active.id as string);
+		if (activeCard) {
+			setActiveCardPosition({
+				x: activeCard.position_x,
+				y: activeCard.position_y,
+			});
+		}
+
 		// ========================================================================
   		// CANVAS CARD LOGIC
   		// ========================================================================
@@ -269,6 +289,12 @@ export function useDndCanvas({
 			// Initialize position based on column's position
 			const sourceColumn = allCardsMap.get(sourceColumnId);
 			if (sourceColumn) {
+				// Capture source column position for grid snapping
+				setActiveCardPosition({
+					x: sourceColumn.position_x,
+					y: sourceColumn.position_y,
+				});
+
 				const positions = new Map<string, { x: number, y: number }>();
 				positions.set(active.id as string, {
 					x: sourceColumn.position_x,
@@ -304,14 +330,31 @@ export function useDndCanvas({
 				? Array.from(selectedCardIds)
 				: [active.id as string];
 
+			const activeCard = allCardsMap.get(active.id as string);
+			if (!activeCard) return;
+
+			// Calculate active card's new position
+			let activeCardNewX = activeCard.position_x + canvasDelta.x;
+			let activeCardNewY = activeCard.position_y + canvasDelta.y;
+
+			// Apply grid snapping if enabled
+			if (snapToGrid) {
+				activeCardNewX = Math.round(activeCardNewX / GRID_SIZE) * GRID_SIZE;
+				activeCardNewY = Math.round(activeCardNewY / GRID_SIZE) * GRID_SIZE;
+			}
+
+			// Calculate snapped delta for all cards
+			const snappedDeltaX = activeCardNewX - activeCard.position_x;
+			const snappedDeltaY = activeCardNewY - activeCard.position_y;
+
 			// Update drag positions for all dragging cards
 			const newPositions = new Map<string, { x: number; y: number }>();
 			cardsToDrag.forEach((cardId) => {
 				const card = allCardsMap.get(cardId);
 				if (card) {
 					newPositions.set(cardId, {
-						x: card.position_x + canvasDelta.x,
-						y: card.position_y + canvasDelta.y,
+						x: card.position_x + snappedDeltaX,
+						y: card.position_y + snappedDeltaY,
 					});
 				}
 			});
@@ -362,7 +405,7 @@ export function useDndCanvas({
 			}
 		}
 
-	}, [viewport.zoom, selectedCardIds, allCardsMap, setDragPositions, setPotentialColumnTarget]);
+	}, [viewport.zoom, selectedCardIds, allCardsMap, setDragPositions, setPotentialColumnTarget, snapToGrid]);
 
 	const handleDragEnd = useCallback(async (event: DragEndEvent) => {
 		const { active, over, delta } = event;
@@ -421,8 +464,27 @@ export function useDndCanvas({
 			for (const cardId of draggedCardIds) {
 				const card = allCardsMap.get(cardId);
 				if (card && boardId) {
-					const newX = card.position_x + canvasDelta.x;
-					const newY = card.position_y + canvasDelta.y;
+					let newX = card.position_x + canvasDelta.x;
+					let newY = card.position_y + canvasDelta.y;
+
+					// Apply grid snapping
+					if (snapToGrid && cardId === active.id) {
+						// Active card: snap directly
+						newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+						newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+					} else if (snapToGrid) {
+						// Other cards: use delta from active card's snap
+						const activeCard = allCardsMap.get(active.id as string);
+						if (activeCard) {
+							const activeNewX = Math.round((activeCard.position_x + canvasDelta.x) / GRID_SIZE) * GRID_SIZE;
+							const activeNewY = Math.round((activeCard.position_y + canvasDelta.y) / GRID_SIZE) * GRID_SIZE;
+							const snappedDeltaX = activeNewX - activeCard.position_x;
+							const snappedDeltaY = activeNewY - activeCard.position_y;
+
+							newX = card.position_x + snappedDeltaX;
+							newY = card.position_y + snappedDeltaY;
+						}
+					}
 
 					await CardService.updateCardTransform({
 					cardId: card.id,
@@ -509,8 +571,14 @@ export function useDndCanvas({
 					return;
 				}
 
-				const newX = sourceColumn.position_x + canvasDelta.x;
-				const newY = sourceColumn.position_y + canvasDelta.y;
+				let newX = sourceColumn.position_x + canvasDelta.x;
+				let newY = sourceColumn.position_y + canvasDelta.y;
+
+				// Apply grid snapping if enabled
+				if (snapToGrid) {
+					newX = Math.round(newX / GRID_SIZE) * GRID_SIZE;
+					newY = Math.round(newY / GRID_SIZE) * GRID_SIZE;
+				}
 
 				console.log(`Extracting card to canvas at (${newX}, ${newY})`);
 
@@ -597,6 +665,7 @@ export function useDndCanvas({
 		setPotentialColumnTarget(null);
 		setActiveId(null);
 		setActiveDragType(null);
+		setActiveCardPosition(null);
 		}, [
 		viewport.zoom,
 		selectedCardIds,
@@ -605,6 +674,7 @@ export function useDndCanvas({
 		clearDragPositions,
 		setPotentialColumnTarget,
 		getColumnIdFromOver,
+		snapToGrid,
 		]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {
