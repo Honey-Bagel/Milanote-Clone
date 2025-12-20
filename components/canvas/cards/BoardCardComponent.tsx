@@ -273,7 +273,7 @@ export function BoardCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full overflow-hidden">
+		<div className="board-card group/board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full overflow-hidden">
 			<div
 				className="h-full"
 				onDoubleClick={handleNavigateToBoard}
@@ -284,7 +284,7 @@ export function BoardCardComponent({
 				>
 					<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
 					<svg
-						className="w-12 h-12 text-white/80 relative z-10 group-hover:scale-110 transition-transform"
+						className="w-12 h-12 text-white/80 relative z-10 group-hover/board-card:scale-110 transition-transform"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -298,7 +298,7 @@ export function BoardCardComponent({
 					</svg>
 				</div>
 				<div className="p-4 border-t border-white/5">
-					<h3 className="font-semibold text-white truncate mb-1 group-hover:text-cyan-400 transition-colors">
+					<h3 className="font-semibold text-white truncate mb-1 group-hover/board-card:text-cyan-400 transition-colors">
 						{card.board_title}
 					</h3>
 					<p className="text-xs text-slate-500 flex items-center gap-1">

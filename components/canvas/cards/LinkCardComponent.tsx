@@ -150,7 +150,7 @@ export function LinkCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="link-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full">
+		<div className="link-card group/link-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full">
 			<a
 				href={!isDragging ? (fullURL || '') : undefined}
 				target="_blank"
@@ -180,7 +180,7 @@ export function LinkCardComponent({
 						)}
 					</div>
 					<div className="flex-1 min-w-0">
-						<h3 className="font-semibold text-sm text-white mb-1 group-hover:text-cyan-400 transition-colors truncate">
+						<h3 className="font-semibold text-sm text-white mb-1 group-hover/link-card:text-cyan-400 transition-colors truncate">
 							{card.link_title || card.link_url}
 						</h3>
 						{fullURL && (

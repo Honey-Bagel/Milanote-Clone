@@ -99,7 +99,7 @@ export function ColorPaletteCardComponent({
 	// ========================================================================
 
 	return (
-		<div ref={rootRef} className="color-palette-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 w-full overflow-hidden">
+		<div ref={rootRef} className="color-palette-card group/palette-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 w-full overflow-hidden">
 			<div className="px-4 pt-4 pb-3">
 				{/* Header Section */}
 				<div className="flex items-center gap-2 mb-2">
@@ -123,7 +123,7 @@ export function ColorPaletteCardComponent({
 							<h3 className="font-semibold text-white">
 								{card.palette_title}
 							</h3>
-							<div className="invisible opacity-0 group-hover:visible group-hover:opacity-100">
+							<div className="invisible opacity-0 group-hover/palette-card:visible group-hover/palette-card:opacity-100">
 								<PlusIcon
 									onClick={handleAddColor}
 									className="hover:text-cyan-500/50"
@@ -195,7 +195,7 @@ export function ColorPaletteCardComponent({
 											</div>
 										)}
 									</div>
-									<div className="text-[9px] text-slate-400 font-mono opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 px-1.5 py-0.5 rounded whitespace-nowrap">
+									<div className="text-[9px] text-slate-400 font-mono opacity-0 group-hover/palette-card:opacity-100 transition-opacity bg-slate-800 px-1.5 py-0.5 rounded whitespace-nowrap">
 										{color}
 									</div>
 								</>
