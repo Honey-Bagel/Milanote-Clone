@@ -448,59 +448,59 @@ export function Canvas({
 							{/* Uploading placeholders, drag preview - same as before */}
 						</div>
 					</div>
-				</DndContext>
 
-				<DragOverlay dropAnimation={null}>
-					{activeDragCard ? (
-						<div
-							style={{
-								opacity: 0.85,
-								transform: 'rotate(2deg)',
-								cursor: 'grabbing',
-								pointerEvents: 'none',
-								width: activeDragCard.width,
-								height: activeDragCard.height || 'auto',
-								position: 'relative',
-							}}
-						>
-							<div className="card">
-								<CardProvider
-									card={activeDragCard}
-									boardId={activeDragCard.board_id}
-									isSelected={false}
-									isReadOnly={true}
-									isInsideColumn={activeDragType === 'column-card'}
-									allCards={allCardsMap}
-								>
-									<CardFrame
+					<DragOverlay dropAnimation={null}>
+						{/* Only use the drag card when dragging from a column */}
+						{activeDragCard && activeDragType === "column-card" ? (
+							<div
+								style={{
+									opacity: 0.85,
+									cursor: 'grabbing',
+									pointerEvents: 'none',
+									width: activeDragCard.width,
+									height: activeDragCard.height || 'auto',
+									position: 'relative',
+								}}
+							>
+								<div className="card">
+									<CardProvider
 										card={activeDragCard}
+										boardId={activeDragCard.board_id}
 										isSelected={false}
-										isEditing={false}
-										isInsideColumn={activeDragType === 'column-card'}
 										isReadOnly={true}
-										cssZIndex={9999}
+										isInsideColumn={activeDragType === 'column-card'}
+										allCards={allCardsMap}
 									>
-										<CardRenderer
+										<CardFrame
 											card={activeDragCard}
-											boardId={activeDragCard.board_id}
-											isEditing={false}
 											isSelected={false}
-											isPublicView={true}
-											allCards={allCardsMap}
-										/>
-									</CardFrame>
-								</CardProvider>
-							</div>
-
-							{/* Multi-select indicator badge */}
-							{selectedCardIds.size > 1 && (
-								<div className="absolute -top-2 -right-2 bg-cyan-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
-									{selectedCardIds.size}
+											isEditing={false}
+											isInsideColumn={activeDragType === 'column-card'}
+											isReadOnly={true}
+											cssZIndex={9999}
+										>
+											<CardRenderer
+												card={activeDragCard}
+												boardId={activeDragCard.board_id}
+												isEditing={false}
+												isSelected={false}
+												isPublicView={true}
+												allCards={allCardsMap}
+											/>
+										</CardFrame>
+									</CardProvider>
 								</div>
-							)}
-						</div>
-					) : null}
-				</DragOverlay>
+
+								{/* Multi-select indicator badge */}
+								{selectedCardIds.size > 1 && (
+									<div className="absolute -top-2 -right-2 bg-cyan-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
+										{selectedCardIds.size}
+									</div>
+								)}
+							</div>
+						) : null}
+					</DragOverlay>
+				</DndContext>
 
 				<SelectionBox />
 				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)} />

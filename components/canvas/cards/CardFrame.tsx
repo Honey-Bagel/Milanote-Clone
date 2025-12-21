@@ -215,7 +215,7 @@ export const CardFrame = memo(function CardFrame({
 	// - Dragging a line endpoint
 	// - AND not inside a column
 	// - AND not read-only
-	const showConnectionHandles = !isReadOnly && !isInsideColumn && (
+	const showConnectionHandles = !isReadOnly && (
 		isConnectionMode || !!pendingConnection || isDraggingLineEndpoint
 	);
 

@@ -11,7 +11,7 @@
  * - Position persistence
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useSensors, useSensor, PointerSensor, MouseSensor } from '@dnd-kit/core';
 import type { DragStartEvent, DragMoveEvent, DragEndEvent, DragOverEvent, Over } from '@dnd-kit/core';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
@@ -21,6 +21,7 @@ import type { CardData } from '@/lib/types';
 import { GRID_SIZE } from '../constants/defaults';
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { closestCenter, KeyboardSensor } from '@dnd-kit/core';
+import { PerformanceTimer } from '../utils/performance';
 
 interface UseDndCanvasOptions {
 	boardId: string | null;
@@ -73,6 +74,7 @@ export function useDndCanvas({
 	const [activeId, setActiveId] = useState<string | null>(null);
 	const [activeDragType, setActiveDragType] = useState<'canvas-card' | 'column-card' | null>(null);
 	const [activeCardPosition, setActiveCardPosition] = useState<{ x: number; y: number } | null>(null);
+	const dropTimestampRef = useRef<number | null>(null);
 
 	// ============================================================================
 	// SENSORS
@@ -424,6 +426,9 @@ export function useDndCanvas({
 		// SCENARIO 1: CANVAS CARD → COLUMN
 		// ========================================================================
 		if (dragType === 'canvas-card') {
+			const timer = new PerformanceTimer('[DND DROP] Canvas card → Column');
+			dropTimestampRef.current = performance.now();
+
 			const draggedCardIds = selectedCardIds.has(active.id as string)
 			? Array.from(selectedCardIds)
 			: [active.id as string];
@@ -443,18 +448,25 @@ export function useDndCanvas({
 					);
 
 					if (!isDraggingColumn) {
+						timer.mark('CardService.addCardsToColumnBatch start');
 						// Batch add all cards to column with optimistic update
 						await CardService.addCardsToColumnBatch({
 							cardIds: draggedCardIds,
 							boardId,
-							columnId: targetColumn.id,
+							column: targetColumn,
 							startPosition: targetColumn.column_items?.length || 0,
 						});
+
+						timer.mark('CardService.addCardsToColumnBatch complete');
+						timer.mark('Clear drag state');
 
 						clearDragPositions();
 						setPotentialColumnTarget(null);
 						setActiveId(null);
 						setActiveDragType(null);
+
+						timer.log();
+						console.log('⏱️  [REACTIVITY] Waiting for InstantDB update and React re-render...');
 						return;
 					}
 				}
@@ -513,15 +525,18 @@ export function useDndCanvas({
 		// SCENARIO 2: COLUMN CARD → CANVAS (Extract)
 		// ========================================================================
 		if (dragType === 'column-card') {
+			const timer = new PerformanceTimer('[DND DROP] Column card → Canvas');
+			dropTimestampRef.current = performance.now();
+
 			const sourceColumnId = dragData?.columnId;
 			const draggedCard = allCardsMap.get(active.id as string);
 
 			if (!draggedCard || !sourceColumnId || !boardId) {
-			clearDragPositions();
-			setPotentialColumnTarget(null);
-			setActiveId(null);
-			setActiveDragType(null);
-			return;
+				clearDragPositions();
+				setPotentialColumnTarget(null);
+				setActiveId(null);
+				setActiveDragType(null);
+				return;
 			}
 
 			if (over && over.id !== active.id && over.data?.current?.columnId === sourceColumnId) {
@@ -582,21 +597,32 @@ export function useDndCanvas({
 
 				console.log(`Extracting card to canvas at (${newX}, ${newY})`);
 
+				timer.mark('CardService.extractCardFromColumn start');
+
 				await CardService.extractCardFromColumn({
 					cardId: active.id as string,
 					boardId,
-					columnId: sourceColumnId,
+					column: sourceColumn,
 					position: { x: newX, y: newY },
 				});
+
+				timer.mark('CardService.extractCardFromColumn complete');
+				timer.mark('CardService.bringCardsToFront start');
 
 				// Bring to front
 				const allCardsArray = Array.from(allCardsMap.values());
 				await CardService.bringCardsToFront([active.id as string], boardId, allCardsArray);
 
+				timer.mark('CardService.bringCardsToFront complete');
+				timer.mark('Clear drag state');
+
 				clearDragPositions();
 				setPotentialColumnTarget(null);
 				setActiveId(null);
 				setActiveDragType(null);
+
+				timer.log();
+				console.log('⏱️  [REACTIVITY] Waiting for InstantDB update and React re-render...');
 				return;
 			}
 
@@ -604,7 +630,8 @@ export function useDndCanvas({
 			// SCENARIO 3: COLUMN CARD → DIFFERENT COLUMN (Transfer)
 			// ======================================================================
 			const targetColumn = overlappingColumns[0];
-			if (targetColumn.id !== sourceColumnId) {
+			const sourceColumn = allCardsMap.get(sourceColumnId);
+			if (sourceColumn && targetColumn.id !== sourceColumnId) {
 				console.log(`Transferring card from ${sourceColumnId} to ${targetColumn.id}`);
 
 				const insertIndex = targetColumn.column_items?.length || 0;
@@ -612,8 +639,8 @@ export function useDndCanvas({
 				await CardService.transferCardBetweenColumns({
 					cardId: active.id as string,
 					boardId,
-					fromColumnId: sourceColumnId,
-					toColumnId: targetColumn.id,
+					fromColumn: sourceColumn,
+					toColumn: targetColumn as unknown as CardData,
 					toIndex: insertIndex,
 				});
 
@@ -666,7 +693,7 @@ export function useDndCanvas({
 		setActiveId(null);
 		setActiveDragType(null);
 		setActiveCardPosition(null);
-		}, [
+	}, [
 		viewport.zoom,
 		selectedCardIds,
 		allCardsMap,
@@ -675,12 +702,10 @@ export function useDndCanvas({
 		setPotentialColumnTarget,
 		getColumnIdFromOver,
 		snapToGrid,
-		]);
+	]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {
 		const { over } = event;
-
-		console.log("over: ", over);
 
 		return;
 	}, [])

@@ -13,6 +13,7 @@ import {
   cardsToOrderKeyList,
   getOrderKeyForNewCard,
 } from '@/lib/utils/order-key-manager';
+import { PerformanceTimer } from '../utils/performance';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -662,14 +663,16 @@ export async function addCardToColumn(params: AddCardToColumnParams): Promise<vo
 export interface AddCardsToColumnBatchParams {
 	cardIds: string[];
 	boardId: string;
-	columnId: string;
+	column: CardData;
 	startPosition?: number; // Optional: where to insert (defaults to end)
 }
 
 export async function addCardsToColumnBatch(
 	params: AddCardsToColumnBatchParams
 ): Promise<void> {
-	const { cardIds, boardId, columnId, startPosition } = params;
+	const { cardIds, boardId, column, startPosition } = params;
+
+	const timer = new PerformanceTimer(`addCardsToColumnBatch(${cardIds.length} cards`);
 
 	// Early return for empty array
 	if (cardIds.length === 0) return;
@@ -677,27 +680,9 @@ export async function addCardsToColumnBatch(
 	// Remove duplicates
 	const uniqueCardIds = [...new Set(cardIds)];
 
-	// Single query: fetch column and all cards being added
-	const [columnResult, cardsResult] = await Promise.all([
-		db.queryOnce({
-			cards: { $: { where: { id: columnId } } },
-		}),
-		db.queryOnce({
-			cards: { $: { where: { id: { in: uniqueCardIds } } } },
-		}),
-	]);
-
-	const column = columnResult.data?.cards[0];
-	if (!column || column.card_type !== 'column') {
-		throw new Error(`Column ${columnId} not found`);
-	}
-
-	// Validate: no column cards allowed
-	const hasColumnCard = cardsResult.data?.cards.some(
-		card => card.card_type === 'column'
-	);
-	if (hasColumnCard) {
-		throw new Error("Cannot add column cards to columns");
+	// Validate column type
+	if (column.card_type !== 'column') {
+		throw new Error(`Card ${column.id} is not a column`);
 	}
 
 	// Calculate sequential positions
@@ -716,10 +701,12 @@ export async function addCardsToColumnBatch(
 
 	const now = Date.now();
 
+	timer.mark('Transaction start');
+
 	// Single atomic transaction
 	await db.transact([
 		// Update column with new items
-		db.tx.cards[columnId].update({
+		db.tx.cards[column.id].update({
 			column_items: reindexedItems,
 			updated_at: now,
 		}),
@@ -734,28 +721,25 @@ export async function addCardsToColumnBatch(
 		// Update board timestamp
 		db.tx.boards[boardId].update({ updated_at: now }),
 	]);
+
+	timer.mark('Transaction complete');
+	timer.log();
 }
 
 export interface ExtractCardFromColumnParams {
 	cardId: string;
 	boardId: string;
-	columnId: string;
+	column: CardData;
 	position: { x: number; y: number; };
 };
 
 export async function extractCardFromColumn(params: ExtractCardFromColumnParams): Promise<void> {
-	const { cardId, boardId, columnId, position } = params;
+	const { cardId, boardId, column, position } = params;
 
-	// Fetch current column
-	const { data } = await db.queryOnce({
-		cards: {
-			$: { where: { id: columnId } },
-		},
-	});
+	const timer = new PerformanceTimer(`extractCardFromColumn(${cardId.slice(0, 8)})`);
 
-	const column = data?.cards[0];
-	if (!column || column.card_type !== 'column') {
-		throw new Error('Column not found');
+	if (column.card_type !== 'column') {
+		throw new Error(`Not a column card`);
 	}
 
 	// Remove card from column_items
@@ -765,9 +749,11 @@ export async function extractCardFromColumn(params: ExtractCardFromColumnParams)
 
 	const now = Date.now();
 
+	timer.mark('Transaction start');
+
 	// Transaction: update column and set card position
 	await db.transact([
-		db.tx.cards[columnId].update({
+		db.tx.cards[column.id].update({
 			column_items: updatedItems,
 			updated_at: now,
 		}),
@@ -778,36 +764,27 @@ export async function extractCardFromColumn(params: ExtractCardFromColumnParams)
 		}),
 		db.tx.boards[boardId].update({ updated_at: now }),
 	]);
+
+	timer.mark('Transaction complete');
+	timer.log();
 }
 
 export interface TransferCardBetweenColumnsParams {
 	cardId: string;
 	boardId: string;
-	fromColumnId: string;
-	toColumnId: string;
+	fromColumn: CardData;
+	toColumn: CardData;
 	toIndex: number;
 };
 
 export async function transferCardBetweenColumns(params: TransferCardBetweenColumnsParams): Promise<void> {
-	const { cardId, boardId, fromColumnId, toColumnId, toIndex } = params;
+	const { cardId, boardId, fromColumn, toColumn, toIndex } = params;
 
-	// Fetch both columns
-	const { data } = await db.queryOnce({
-		cards: {
-			$: {
-				where: {
-					id: { in: [fromColumnId, toColumnId] },
-				},
-			},
-		},
-	});
+	const timer = new PerformanceTimer(`transferCardBetweenColumns(${cardId.slice(0, 8)})`);
 
-	const columns = data?.cards || [];
-	const fromColumn = columns.find(c => c.id === fromColumnId);
-	const toColumn = columns.find(c => c.id === toColumnId);
-
-	if (!fromColumn || !toColumn) {
-		throw new Error("Columns not found");
+	// Validate both are columns
+	if (fromColumn.card_type !== 'column' || toColumn.card_type !== 'column') {
+		throw new Error('Both cards must be columns');
 	}
 
 	// Remove from source
@@ -825,18 +802,23 @@ export async function transferCardBetweenColumns(params: TransferCardBetweenColu
 
 	const now = Date.now();
 
+	timer.mark('Transaction start');
+
 	// Transaction
 	await db.transact([
-		db.tx.cards[fromColumnId].update({
+		db.tx.cards[fromColumn.id].update({
 			column_items: fromItems,
 			updated_at: now,
 		}),
-		db.tx.cards[toColumnId].update({
+		db.tx.cards[toColumn.id].update({
 			column_items: reindexedItems,
 			updated_at: now,
 		}),
 		db.tx.boards[boardId].update({ updated_at: now }),
 	]);
+
+	timer.mark('Transaction complete');
+	timer.log();
 }
 
 // ============================================================================
