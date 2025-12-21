@@ -1,6 +1,6 @@
 'use client';
 
-import TopToolbar from "@/app/ui/board/top-toolbar";
+import TopToolbar from "@/app/ui/board/toolbars/top-toolbar";
 import { Canvas } from "@/components/canvas/Canvas";
 import { useBoard } from "@/lib/hooks/boards";
 import { notFound } from "next/navigation";

@@ -5,6 +5,7 @@ import { temporal, TemporalState } from 'zundo';
 import { enableMapSet } from 'immer';
 import type { Card, CardData, Connection } from '@/lib/types';
 export type { Connection } from '@/lib/types';
+import { ZOOM_STEPS } from '../constants/defaults';
 
 // Enable Immer's Map and Set support
 enableMapSet();
@@ -357,13 +358,13 @@ export const useCanvasStore = create<CanvasState>()(
 
 				zoomIn: () =>
 					set((state) => {
-						const newZoom = Math.min(1.9, state.viewport.zoom + 0.15);
+						const newZoom = Math.min(3, state.viewport.zoom + 0.15);
 						state.viewport.zoom = newZoom;
 					}),
 
 				zoomOut: () =>
 					set((state) => {
-						const newZoom = Math.max(0.1, state.viewport.zoom - 0.15);
+						const newZoom = Math.max(0.25, state.viewport.zoom - 0.15);
 						state.viewport.zoom = newZoom;
 					}),
 

@@ -22,18 +22,6 @@ interface UseCanvasInteractionsOptions {
 	enableZoom?: boolean;
 
 	/**
-	 * Minimum zoom level
-	 * @default 0.1
-	 */
-	minZoom?: boolean;
-
-	/**
-	 * Maximum zoom level
-	 * @default 3
-	 */
-	maxZoom?: number;
-
-	/**
 	 * Zoom sensitivity (higher = faster zoom)
 	 * @default 0.001
 	 */
@@ -47,8 +35,6 @@ export function useCanvasInteractions(
 	const {
 		enablePan = true,
 		enableZoom = true,
-		minZoom = 0.1,
-		maxZoom = 3,
 		zoomSensitivity = 0.001,
 	} = options;
 
@@ -129,8 +115,6 @@ export function useCanvasInteractions(
 				zoomDelta,
 				mouseX,
 				mouseY,
-				minZoom,
-				maxZoom
 			);
 
 			setViewport(newViewport);
@@ -210,8 +194,6 @@ export function useCanvasInteractions(
 		clearSelection,
 		enablePan,
 		enableZoom,
-		minZoom,
-		maxZoom,
 		zoomSensitivity,
 		canvasRef,
 		editingCardId,

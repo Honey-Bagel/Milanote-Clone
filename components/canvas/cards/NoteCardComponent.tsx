@@ -79,6 +79,7 @@ export function NoteCardComponent({
 						class: 'tiptap-list-item',
 					},
 				},
+				trailingNode: false,
 			}),
 			Underline,
 			TextAlign.configure({

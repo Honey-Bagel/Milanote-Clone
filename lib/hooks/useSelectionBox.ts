@@ -133,6 +133,7 @@ export function useSelectionBox(
 
 			cards.forEach((card, id) => {
 				let cardBounds: { x: number; y: number; width: number; height: number };
+				if (card.position_x === null || card.position_y === null) return;
 				const rect = canvas.getBoundingClientRect();
 
 				// Special handling for line cards - use their start/end points and control point

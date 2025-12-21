@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
 import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
-import AddElementModal from './add-element-modal';
+import AddElementModal from '@/app/ui/board/add-element-modal';
 import { DraggableToolbarButton } from '@/components/ui/draggable-toolbar-button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from "@/components/ui/button";

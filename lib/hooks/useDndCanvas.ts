@@ -414,8 +414,6 @@ export function useDndCanvas({
 		const dragData = active.data.current;
 		const dragType = dragData?.type;
 
-		console.log(over);
-
 		// Convert delta for canvas calculations
 		const canvasDelta = {
 			x: (delta.x * viewport.zoom)  / viewport.zoom,
@@ -499,17 +497,17 @@ export function useDndCanvas({
 					}
 
 					await CardService.updateCardTransform({
-					cardId: card.id,
-					boardId: boardId,
-					transform: {
-						position_x: newX,
-						position_y: newY,
-					},
-					withUndo: true,
-					previousTransform: {
-						position_x: card.position_x,
-						position_y: card.position_y,
-					},
+						cardId: card.id,
+						boardId: boardId,
+						transform: {
+							position_x: newX,
+							position_y: newY,
+						},
+						withUndo: true,
+						previousTransform: {
+							position_x: card.position_x,
+							position_y: card.position_y,
+						},
 					});
 				}
 			}

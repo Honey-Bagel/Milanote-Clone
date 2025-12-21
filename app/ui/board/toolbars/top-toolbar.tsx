@@ -1,9 +1,9 @@
 'use client';
 
 import { Minus, Plus, Maximize2, Share2, Settings, Home } from 'lucide-react';
-import ShareModal from './share-modal';
+import ShareModal from '@/app/ui/board/share-modal';
 import { Fragment, useState, useMemo, useRef, useEffect } from 'react';
-import SettingsModal from '../home/settings-modal';
+import SettingsModal from '@/app/ui/home/settings-modal';
 import Link from 'next/link';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { RealtimeAvatarStack } from '@/components/realtime-avatar-stack';

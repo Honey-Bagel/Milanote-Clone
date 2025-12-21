@@ -14,7 +14,7 @@ import { useDebouncedCallback } from 'use-debounce';
 import { getAnchorPosition } from '@/lib/utils/connection-path';
 import { CardService } from '@/lib/services';
 import { useBoardCards } from '@/lib/hooks/cards';
-import { useUndoStore } from '@/lib/stores/undo-store';
+
 
 const SNAP_DISTANCE = 20; // pixels
 
