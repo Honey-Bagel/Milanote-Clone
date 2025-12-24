@@ -16,8 +16,9 @@ import { memo, useCallback } from 'react';
 import type { Card, ConnectionSide } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useResizable } from '@/lib/hooks/useResizable';
+import { useDirectDimensionMeasurement, type DirectDimensions } from '@/lib/hooks/useDirectDimensionMeasurement';
 import { ConnectionHandles } from '../ConnectionHandle';
-import { type CardDimensions } from './useCardDimensions';
+import { type CardDimensions, type HeightMode } from './useCardDimensions';
 import { useCardContext } from './CardContext';
 
 // ============================================================================
@@ -35,7 +36,10 @@ interface CardFrameProps {
 }
 
 interface SelectionOutlineProps {
-	dimensions: CardDimensions;
+	dimensions: DirectDimensions;
+	viewport: { zoom: number };
+	isEditing: boolean;
+	heightMode: HeightMode;
 }
 
 interface ResizeHandlesProps {
@@ -46,15 +50,24 @@ interface ResizeHandlesProps {
 }
 
 // ============================================================================
-// SELECTION OUTLINE (Simplified - receives dimensions as props)
+// SELECTION OUTLINE (Direct DOM Measurement)
 // ============================================================================
 
-const SelectionOutline = memo(function SelectionOutline({ dimensions }: SelectionOutlineProps) {
-	// Use dimensions from the centralized hook instead of measuring
-	const width = dimensions.width;
-	const height = dimensions.height === 'auto'
-		? dimensions.measuredHeight || '100%'
-		: dimensions.effectiveHeight;
+const SelectionOutline = memo(function SelectionOutline({
+	dimensions,
+	viewport,
+	isEditing,
+	heightMode
+}: SelectionOutlineProps) {
+	// Fixed 1px border width at all zoom levels
+	const borderWidth = 1 / viewport.zoom;
+
+	// State-dependent selection behavior:
+	// - Editing mode: Always track content bounds (all height modes)
+	// - Viewing + dynamic/hybrid: Track content bounds
+	// - Viewing + fixed: Use frame bounds (handled by contentRef placement)
+	// The contentRef is attached to .card-frame-content, which naturally wraps
+	// the right boundary based on frame styling
 
 	return (
 		<div
@@ -63,10 +76,10 @@ const SelectionOutline = memo(function SelectionOutline({ dimensions }: Selectio
 				position: 'absolute',
 				top: 0,
 				left: 0,
-				width: '100%',
-				height: '100%',
+				width: dimensions.width,
+				height: dimensions.height,
 				pointerEvents: 'none',
-				border: '1px solid var(--primary)',
+				border: `${borderWidth}px solid var(--primary)`,
 				borderRadius: 'inherit',
 				boxSizing: 'border-box',
 				zIndex: 1,
@@ -155,16 +168,22 @@ export const CardFrame = memo(function CardFrame({
 	isReadOnly,
 	cssZIndex,
 }: CardFrameProps) {
-	// Get connection state from canvas store
+	// Get connection state and viewport from canvas store
 	const {
 		isConnectionMode,
 		isDraggingLineEndpoint,
 		pendingConnection,
 		startConnection,
 		completeConnection,
+		viewport,
 	} = useCanvasStore();
 
 	const { dimensions } = useCardContext();
+
+	// Direct measurement for selection outline (bypasses state lag)
+	const { ref: contentRef, dimensions: directDimensions } = useDirectDimensionMeasurement(
+		isSelected // Only measure when selected for performance
+	);
 
 	const { handleMouseDown, currentDimensions } = useResizable({
 		card,
@@ -206,7 +225,8 @@ export const CardFrame = memo(function CardFrame({
 			frameStyle.minHeight = dimensions.minHeight;
 		}
 	} else {
-		frameStyle.height = currentDimensions.height;
+		// Use effectiveHeight during editing to account for temporary expansion
+		frameStyle.height = isEditing ? dimensions.effectiveHeight : currentDimensions.height;
 	}
 
 	// Show connection handles when:
@@ -222,7 +242,6 @@ export const CardFrame = memo(function CardFrame({
 	// Show resize handles when:
 	// - Card can resize
 	// - Card is selected
-	// - Card is not being edited
 	// - Card is not inside a column
 	// - Not read-only
 	const showResizeHandles = !isReadOnly && !isInsideColumn &&
@@ -233,8 +252,9 @@ export const CardFrame = memo(function CardFrame({
 			className="card-frame"
 			style={frameStyle}
 		>
-			{/* Card content */}
+			{/* Card content with ref for direct measurement */}
 			<div
+				ref={contentRef}
 				className="card-frame-content"
 				style={{
 					width: '100%',
@@ -246,9 +266,14 @@ export const CardFrame = memo(function CardFrame({
 				{children}
 			</div>
 
-			{/* Selection outline - always rendered when selected */}
-			{isSelected && (
-				<SelectionOutline dimensions={{ ...dimensions, ...currentDimensions}} />
+			{/* Selection outline - uses direct DOM measurement */}
+			{isSelected && directDimensions && (
+				<SelectionOutline
+					dimensions={directDimensions}
+					viewport={viewport}
+					isEditing={isEditing}
+					heightMode={dimensions.heightMode}
+				/>
 			)}
 
 			{/* Connection handles */}

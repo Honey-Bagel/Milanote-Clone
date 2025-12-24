@@ -111,7 +111,7 @@ export function CardProvider({
 	});
 
 	// Initialize dimensions hook
-	const dimensions = useCardDimensions(card);
+	const dimensions = useCardDimensions(card, isEditing);
 
 	// UI Actions
 	const setEditing = useCallback((editing: boolean) => {

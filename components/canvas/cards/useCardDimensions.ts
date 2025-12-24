@@ -131,7 +131,7 @@ function getResizeMode(cardType: Card['card_type'], config: DimensionConfig): Re
 // HOOK
 // ============================================================================
 
-export function useCardDimensions(card: Card | CardData): CardDimensions {
+export function useCardDimensions(card: Card | CardData, isEditing?: boolean): CardDimensions {
 	// Get config for this card type
 	const config = getDefaultCardDimensions(card.card_type as Card['card_type']);
 	const heightMode = getHeightMode(card.card_type as Card['card_type']);
@@ -169,13 +169,17 @@ export function useCardDimensions(card: Card | CardData): CardDimensions {
 				const storedHeight = card.height ?? minH;
 				const contentHeight = measuredHeight || 0;
 
-				// If user has manually constrained the card (shrunk below content),
-				// don't auto-expand. Just use the stored height.
-				if (isManuallyConstrained) {
+				// If manually constrained AND in edit mode -> use content height (temporary expansion)
+				if (isManuallyConstrained && isEditing) {
+					return contentHeight > 0 ? contentHeight : storedHeight;
+				}
+
+				// If manually constrained AND in view mode -> use stored height (shrunk state)
+				if (isManuallyConstrained && !isEditing) {
 					return storedHeight;
 				}
 
-				// Otherwise, auto-expand if content exceeds stored height
+				// Auto-resize mode: always expand to fit content
 				return Math.max(storedHeight, contentHeight);
 
 			case 'fixed':
@@ -183,7 +187,7 @@ export function useCardDimensions(card: Card | CardData): CardDimensions {
 				// Fixed cards use stored height or default
 				return card.height ?? defaultH;
 		}
-	}, [heightMode, card.height, measuredHeight, config.minHeight, config.defaultHeight, isManuallyConstrained]);
+	}, [heightMode, card.height, measuredHeight, config.minHeight, config.defaultHeight, isManuallyConstrained, isEditing]);
 
 	// Debounced save for auto-height expansion (hybrid mode)
 	const debouncedHeightSave = useDebouncedCallback(async (newHeight: number) => {
@@ -218,32 +222,40 @@ export function useCardDimensions(card: Card | CardData): CardDimensions {
 			return height;
 		});
 
-		// For hybrid cards, auto-expand and save if content exceeds stored height
-		// BUT only if not manually constrained
+		// For hybrid cards, auto-resize (expand OR shrink) if not manually constrained
 		if (heightMode === 'hybrid' && !isManuallyConstrained) {
 			const minH = config.minHeight ?? 0;
 			const storedHeight = card.height ?? minH;
-			console.log('[reportMeasuredHeight] Checking auto-expand:', {
+			const heightDiff = height - storedHeight;
+			const absHeightDiff = Math.abs(heightDiff);
+
+			console.log('[reportMeasuredHeight] Checking auto-resize:', {
 				height,
 				storedHeight,
-				shouldExpand: height > storedHeight,
+				heightDiff,
+				shouldResize: absHeightDiff > 2,
 			});
-			if (height > storedHeight) {
-				console.log('[reportMeasuredHeight] Auto-expanding!', height);
+
+			// Increased threshold to 2px to filter out measurement drift
+			// Prevent shrinkage from tiny differences (< 2px) that could be rounding errors
+			if (absHeightDiff > 2 && height >= minH) {
+				console.log('[reportMeasuredHeight] Auto-resizing!', height);
 				isAutoExpandingRef.current = true;
 				debouncedHeightSave(height);
 			}
 		}
 	}, [heightMode, card.height, card.id, config.minHeight, debouncedHeightSave, isManuallyConstrained]);
 
-	// Request height expansion (manual trigger)
+	// Request height change (manual trigger) - allows both expansion and shrinking
 	const requestHeightExpansion = useCallback((newHeight: number) => {
 		if (card.id === 'preview-card') return;
 		if (heightMode === 'dynamic') return; // Dynamic cards don't store height
 
 		const minH = config.minHeight ?? 0;
 		const currentHeight = card.height ?? minH;
-		if (newHeight > currentHeight) {
+
+		// Allow both expansion and shrinking, but respect minimum height
+		if (newHeight >= minH && Math.abs(newHeight - currentHeight) > 1) {
 			debouncedHeightSave(newHeight);
 		}
 	}, [card.id, card.height, heightMode, config.minHeight, debouncedHeightSave]);
@@ -251,6 +263,10 @@ export function useCardDimensions(card: Card | CardData): CardDimensions {
 	// Detect manual resizing and update constraint state
 	useEffect(() => {
 		if (heightMode !== 'hybrid') return;
+
+		// Don't change constraint state while editing
+		if (isEditing) return;
+
 		if (card.height !== prevCardHeightRef.current) {
 			const prevHeight = prevCardHeightRef.current;
 			prevCardHeightRef.current = card.height;
@@ -289,7 +305,7 @@ export function useCardDimensions(card: Card | CardData): CardDimensions {
 				setIsManuallyConstrained(false);
 			}
 		}
-	}, [card.height, card.id, measuredHeight, heightMode, config.minHeight]);
+	}, [card.height, card.id, measuredHeight, heightMode, config.minHeight, isEditing]);
 
 	// Determine CSS height value
 	const cssHeight = useMemo(() => {

@@ -12,6 +12,7 @@ import { useOptionalCardContext } from './CardContext';
 import { BoardService } from '@/lib/services';
 import { db } from '@/lib/instant/db';
 import { useBoardWithCards } from '@/lib/hooks/boards';
+import { useDroppable } from '@dnd-kit/core';
 
 // ============================================================================
 // PROPS INTERFACE (for legacy compatibility with CardRenderer)
@@ -42,6 +43,17 @@ export function BoardCardComponent({
 		saveContent: () => {},
 		saveContentImmediate: async () => {},
 	};
+
+	const { setNodeRef } = useDroppable({
+		id: card.id,
+		data: {
+			type: 'board-card',
+			boardCardId: card.id,
+			linkedBoardId: card.linked_board_id,
+			accepts: ['canvas-card', 'column-card'],
+		},
+		disabled: isEditing || !card.linked_board_id
+	});
 
 	const { cards, isLoading } = useBoardWithCards(card.linked_board_id);
 
@@ -273,7 +285,7 @@ export function BoardCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="board-card group/board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full overflow-hidden">
+		<div ref={setNodeRef} className="board-card group/board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full overflow-hidden">
 			<div
 				className="h-full"
 				onDoubleClick={handleNavigateToBoard}

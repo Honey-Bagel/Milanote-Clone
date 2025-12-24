@@ -814,6 +814,96 @@ export async function transferCardBetweenColumns(params: TransferCardBetweenColu
 	timer.log();
 }
 
+export interface MoveCardsToBoardBatchParams {
+	cardIds: string[];
+	sourceBoardId: string;
+	targetBoardId: string;
+	positions: Map<string, { x: number; y: number }>;
+	sourceColumns?: Map<string, CardData>;
+};
+
+/**
+ * Move multiple cards to a different board atomically
+ * Handles cards from canvas and cards inside columns
+ */
+export async function moveCardsToBoardBatch(
+	params: MoveCardsToBoardBatchParams
+): Promise<void> {
+	const { cardIds, sourceBoardId, targetBoardId, positions, sourceColumns } = params;
+
+	const timer = new PerformanceTimer(`moveCardsToBoardBatch(${cardIds.length} cards)`);
+
+	if (cardIds.length === 0) return;
+
+	// Remove duplicates
+	const uniqueCardIds = [...new Set(cardIds)];
+
+	const now = Date.now();
+	const transactions = [];
+	const unLinkTransactions = [];
+
+	timer.mark('Building transactions');
+	// 1. Update each card: change board_id and position
+	uniqueCardIds.forEach(cardId => {
+		const position = positions.get(cardId);
+		if (!position) {
+			console.warn(`No position found for card ${cardId}, skipping`);
+			return;
+		}
+
+		transactions.push(
+			db.tx.cards[cardId].update({
+				board_id: targetBoardId,
+				position_x: position.x,
+				position_y: position.y,
+				updated_at: now,
+			})
+		);
+
+		// Unlink from old board, link to new board
+		unLinkTransactions.push(db.tx.cards[cardId].unlink({ board: sourceBoardId }));
+		transactions.push(db.tx.cards[cardId].link({ board: targetBoardId }));
+	});
+
+	// 2. If cards were in columns, reove them from column_items
+	if (sourceColumns) {
+		const columnsToUpdate = new Map<string, CardData>();
+
+		sourceColumns.forEach((column, cardId) => {
+			if (column.card_type === 'column') {
+				columnsToUpdate.set(column.id, column);
+			}
+		});
+
+		// Update each affected column
+		columnsToUpdate.forEach((column) => {
+			const updatedItems = (column.column_items || [])
+				.filter(item => !uniqueCardIds.includes(item.card_id))
+				.map((item, index) => ({ ...item, position: index }));
+
+			transactions.push(
+				db.tx.cards[column.id].update({
+					column_items: updatedItems,
+					updated_at: now,
+				})
+			);
+		});
+	}
+
+	// 3. Update both board timestamps
+	transactions.push(db.tx.boards[sourceBoardId].update({ updated_at: now }));
+	transactions.push(db.tx.boards[targetBoardId].update({ updated_at: now }));
+
+	timer.mark('Executing transaction');
+
+	// Execute atomic transaction
+	//await db.transact(unLinkTransactions);
+	await db.transact(transactions);
+
+	timer.mark('Transaction complete');
+	timer.log();
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -840,4 +930,5 @@ export const CardService = {
 	addCardsToColumnBatch,
 	extractCardFromColumn,
 	transferCardBetweenColumns,
+	moveCardsToBoardBatch,
 };

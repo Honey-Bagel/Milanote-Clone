@@ -45,14 +45,15 @@ export function NoteCardComponent({
 	const rootRef = useRef<HTMLDivElement | null>(null);
 
 	// Keep CardDimensions in sync with actual rendered height
+	// Use scrollHeight instead of contentRect.height to measure actual content
+	// regardless of CSS height constraints (fixes circular dependency when height: '100%')
 	useLayoutEffect(() => {
 		if (!reportContentHeight || !rootRef.current) return;
 
 		const el = rootRef.current;
-		const observer = new ResizeObserver(entries => {
-			for (const entry of entries) {
-				reportContentHeight(entry.contentRect.height);
-			}
+		const observer = new ResizeObserver(() => {
+			// Use scrollHeight to get actual content height, not constrained height
+			reportContentHeight(el.scrollHeight);
 		});
 
 		observer.observe(el);
@@ -170,6 +171,7 @@ export function NoteCardComponent({
 				cursor: isEditing ? 'text' : 'pointer',
 				height: isEditing ? 'auto' : '100%',
 				minHeight: isEditing ? '100%' : undefined,
+				transition: isEditing ? 'none' : 'height 0.2s ease-out',
 			}}
 		>
 			<EditorContent

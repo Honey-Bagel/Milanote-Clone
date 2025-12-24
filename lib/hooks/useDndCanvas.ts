@@ -65,6 +65,7 @@ export function useDndCanvas({
 		clearDragPositions,
 		snapToGrid,
 		setPotentialColumnTarget,
+		setPotentialBoardTarget,
 	} = useCanvasStore();
 
 	// ============================================================================
@@ -223,6 +224,25 @@ export function useDndCanvas({
 		return null;
 	}, [allCardsMap]);
 
+	const getBoardCardIdFromOver = useCallback((over: Over | null): string | null => {
+		if (!over) return null;
+
+		const meta = over.data?.current;
+
+		// Case 1: Directly over board card droppable
+		if (meta?.type === 'board-card') {
+			return meta.boardCardId || over.id as string;
+		}
+
+		// Case 2: Fallback - check if over.id is a board card
+		const card = allCardsMap.get(over.id as string);
+		if (card?.card_type === 'board') {
+			return card.id;
+		}
+
+		return null;
+	}, [allCardsMap]);
+
 	// ============================================================================
 	// EVENT HANDLERS
 	// ============================================================================
@@ -315,10 +335,10 @@ export function useDndCanvas({
 		const { active, delta, over } = event;
 		const dragType = active.data.current?.type;
 
-		// Convert screen delta to canvas delta
+		// Delta is already in screen coordinates; canvas coordinate modifier handles zoom
 		const canvasDelta = {
-			x: (delta.x * viewport.zoom) / viewport.zoom,
-			y: (delta.y * viewport.zoom) / viewport.zoom,
+			x: delta.x,
+			y: delta.y,
 		};
 
 
@@ -414,10 +434,10 @@ export function useDndCanvas({
 		const dragData = active.data.current;
 		const dragType = dragData?.type;
 
-		// Convert delta for canvas calculations
+		// Delta is already in screen coordinates; canvas coordinate modifier handles zoom
 		const canvasDelta = {
-			x: (delta.x * viewport.zoom)  / viewport.zoom,
-			y: (delta.y * viewport.zoom) / viewport.zoom,
+			x: delta.x,
+			y: delta.y,
 		};
 
 		// ========================================================================
@@ -465,6 +485,62 @@ export function useDndCanvas({
 
 						timer.log();
 						console.log('⏱️  [REACTIVITY] Waiting for InstantDB update and React re-render...');
+						return;
+					}
+				}
+			}
+
+			const targetBoardCardId = getBoardCardIdFromOver(over);
+
+			if (targetBoardCardId && boardId && targetBoardCardId !== active.id) {
+				const targetBoardCard = allCardsMap.get(targetBoardCardId);
+
+				if (targetBoardCard?.card_type === 'board') {
+					const linkedBoardId = (targetBoardCard as any).linked_board_id;
+
+					if (linkedBoardId) {
+						const firstCardId = draggedCardIds[0];
+						const firstCard = allCardsMap.get(firstCardId);
+
+						if (!firstCard) {
+							clearDragPositions();
+							setPotentialColumnTarget(null);
+							setPotentialBoardTarget(null);
+							setActiveId(null);
+							setActiveDragType(null);
+							return;
+						}
+
+						const positions = new Map<string, { x: number; y: number }>();
+
+						draggedCardIds.forEach(cardId => {
+							const card = allCardsMap.get(cardId);
+							if (card) {
+								const offsetX = card.position_x - firstCard.position_x;
+								const offsetY = card.position_y - firstCard.position_y;
+
+								positions.set(cardId, {
+									x: 0 + offsetX,
+									y: 0 + offsetY,
+								});
+							}
+						});
+
+						// Move cards to target board
+						// await CardService.moveCardsToBoardBatch({
+						// 	cardIds: draggedCardIds,
+						// 	sourceBoardId: boardId,
+						// 	targetBoardId: linkedBoardId,
+						// 	positions,
+						// 	sourceColumns: undefined,
+						// });
+
+						clearDragPositions();
+						setPotentialColumnTarget(null);
+						setPotentialBoardTarget(null);
+						setActiveId(null);
+						setActiveDragType(null);
+
 						return;
 					}
 				}
@@ -698,15 +774,22 @@ export function useDndCanvas({
 		boardId,
 		clearDragPositions,
 		setPotentialColumnTarget,
+		setPotentialBoardTarget,
 		getColumnIdFromOver,
+		getBoardCardIdFromOver,
 		snapToGrid,
 	]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {
-		const { over } = event;
+		const { over, active } = event;
 
-		return;
-	}, [])
+		if (over?.data?.current?.type === 'board-card') {
+			const boardCardId = over.data.current.boardCardId || over.id as string;
+			setPotentialBoardTarget(boardCardId);
+		} else {
+			setPotentialBoardTarget(null);
+		}
+	}, [setPotentialBoardTarget]);
 
 	// ============================================================================
 	// RETURN

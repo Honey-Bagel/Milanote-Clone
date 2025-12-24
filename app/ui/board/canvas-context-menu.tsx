@@ -3,16 +3,21 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { StickyNote, CheckSquare } from 'lucide-react';
+import { getDefaultCardData, getDefaultCardDimensions } from '@/lib/utils';
+import { cardsToOrderKeyList, getOrderKeyForNewCard } from '@/lib/utils/order-key-manager';
+import { CardData } from '@/lib/types';
 
 interface CanvasContextMenuProps {
+	cards: Map<string, CardData>;
 	isOpen: boolean;
 	position: { x: number, y: number },
 	onClose: () => void;
 };
 
-export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasContextMenuProps) {
+export default function CanvasContextMenu({ cards, isOpen, position, onClose }: CanvasContextMenuProps) {
 	// const { selectAll } = useCanvasStore(); // TODO: Implement selectAll
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
+	const { selectAll } = useCanvasStore();
 
 	useLayoutEffect(() => {
 		if (isOpen && contextMenuRef.current) {
@@ -53,7 +58,9 @@ export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasC
 
 	const onSelectAll = (e: React.MouseEvent) => {
 		e.preventDefault();
-		// selectAll(); // TODO: Implement selectAll
+		const allCards = new Set(cards.keys());
+		selectAll(allCards);
+		console.log(allCards);
 		onClose();
 	}
 

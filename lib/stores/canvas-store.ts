@@ -82,6 +82,7 @@ interface CanvasState {
 
 	// Column interaction state
 	potentialColumnTarget: string | null;
+	potentialBoardTarget: string | null;
 
 	// Connection mode
 	isConnectionMode: boolean;
@@ -151,13 +152,15 @@ interface CanvasState {
 	setIsResizing: (isResizing: boolean) => void;
 	setEditingCardId: (id: string | null) => void;
 	setSnapToGrid: (snapToGrid: boolean) => void;
+	selectAll: (allCards: Set<string>) => void;
 
 	// Drag positions
 	setDragPositions: (positions: Map<string, Position>) => void;
 	clearDragPositions: () => void;
 
-	// Column
+	// Potential targets
 	setPotentialColumnTarget: (columnId: string | null) => void;
+	setPotentialBoardTarget: (boardCardId: string | null) => void;
 
 	// ============================================================================
 	// VISUAL STATE ACTIONS
@@ -191,6 +194,7 @@ export const useCanvasStore = create<CanvasState>()(
 				editingCardId: null,
 				dragPositions: new Map(),
 				potentialColumnTarget: null,
+				potentialBoardTarget: null,
 				isConnectionMode: false,
 				pendingConnection: null,
 				isDraggingLineEndpoint: false,
@@ -438,9 +442,19 @@ export const useCanvasStore = create<CanvasState>()(
 						state.snapToGrid = snapToGrid;
 					}),
 
+				selectAll: (allCards: Set<string>) =>
+					set((state) => {
+						state.selectedCardIds = allCards
+					}),
+
 				setPotentialColumnTarget: (columnId) =>
 					set((state) => {
 						state.potentialColumnTarget = columnId;
+					}),
+
+				setPotentialBoardTarget: (boardCardId) =>
+					set((state) => {
+						state.potentialBoardTarget = boardCardId;
 					}),
 
 				setDragPositions: (positions) =>

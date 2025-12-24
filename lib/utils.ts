@@ -75,3 +75,45 @@ export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 			return { canResize: true, minWidth: 100, minHeight: 60, defaultWidth: 250, defaultHeight: 70 };
 	}
 }
+
+export const getDefaultCardData = (cardType: Card["card_type"]) => {
+	switch (cardType) {
+		case 'note':
+			return { note_content: '', note_color: 'default' as const };
+		case 'image':
+			return { image_url: '', image_caption: '' };
+		case 'task_list':
+			return { task_list_title: 'Task List', tasks: [{ id: `task-${Date.now()}`, text: 'test', completed: false, position: 0 }] };
+		case 'link':
+			return { link_title: 'New Link', link_url: 'https://example.com' };
+		case 'file':
+			return { file_name: 'file.pdf', file_url: '', file_type: 'pdf', file_size: 0 };
+		case 'color_palette':
+			return { palette_title: 'Palette', palette_colors: ['#FF0000', '#00FF00', '#0000FF'] };
+		case 'column':
+			return { column_title: 'Column', column_background_color: '#f3f4f6', column_is_collapsed: false, column_items: [] };
+		case 'board':
+			return { linked_board_id: "", board_title: 'New Board', board_color: '#3B82F6', board_card_count: '0' };
+		case 'line':
+			return {
+				line_start_x: 0,
+				line_start_y: 50,
+				line_end_x: 200,
+				line_end_y: 50,
+				line_color: '#6b7280',
+				line_stroke_width: 2,
+				line_style: 'solid' as const,
+				line_start_cap: 'none' as const,
+				line_end_cap: 'arrow' as const,
+				line_curvature: 0,
+				line_control_point_offset: 0,
+				line_reroute_nodes: null,
+				line_start_attached_card_id: null,
+				line_start_attached_side: null,
+				line_end_attached_card_id: null,
+				line_end_attached_side: null,
+			};
+		default:
+			return {};
+	}
+}

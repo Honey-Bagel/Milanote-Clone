@@ -36,7 +36,7 @@ export function useResizable({
 	onResize,
 	onResizeEnd,
 }: UseResizableOptions) {
-	const { viewport, setIsResizing } = useCanvasStore();
+	const { viewport, setIsResizing, setEditingCardId } = useCanvasStore();
 	const cardId = card.id;
 
 	// Get cards from InstantDB
@@ -162,6 +162,8 @@ export function useResizable({
 				startDimensions: startDimensionsRef.current,
 			});
 
+			setEditingCardId(null);
+
 			document.removeEventListener('mousemove', handleMouseMove);
 			document.removeEventListener('mouseup', handleMouseUp);
 
@@ -240,12 +242,11 @@ export function useResizable({
 		viewport,
 		maxWidth,
 		maxHeight,
-		maintainAspectRatio,
 		setIsResizing,
 		onResizeStart,
 		onResize,
 		onResizeEnd,
-		card.card_type,
+		setEditingCardId,
 	]);
 
 	// Return the current dimensions (either local during resize or from DB)
