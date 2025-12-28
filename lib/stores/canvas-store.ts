@@ -2,7 +2,7 @@ import { create, useStore } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { devtools } from 'zustand/middleware';
 import { temporal, TemporalState } from 'zundo';
-import { enableMapSet } from 'immer';
+import { enableMapSet, WritableDraft } from 'immer';
 import type { Card, CardData, Connection } from '@/lib/types';
 export type { Connection } from '@/lib/types';
 import { ZOOM_STEPS } from '../constants/defaults';
@@ -257,18 +257,18 @@ export const useCanvasStore = create<CanvasState>()(
 		temporal(
 			immer((set) => ({
 				// Initial state
-				boardId: null,
+				boardId: null as string | null,
 				connections: new Map(),
 				viewport: { x: 0, y: 0, zoom: 1 },
 				selectedCardIds: new Set(),
-				selectionBox: null,
+				selectionBox: null as SelectionBox | null,
 
 				// NEW: Centralized interaction mode
 				interactionMode: { mode: 'idle' } as InteractionMode,
 
 				// NEW: Ephemeral card state
 				ephemeralCardState: {
-					hoveredCardId: null,
+					hoveredCardId: null as string | null,
 					noteHeights: {},
 					dragPositions: {},
 					resizeDimensions: {},
@@ -280,15 +280,19 @@ export const useCanvasStore = create<CanvasState>()(
 				isDrawingSelection: false,
 				isResizing: false,
 				showGrid: true,
-				editingCardId: null,
+				editingCardId: null as string | null,
 				dragPositions: new Map(),
-				potentialColumnTarget: null,
-				potentialBoardTarget: null,
+				potentialColumnTarget: null as string | null,
+				potentialBoardTarget: null as string | null,
 				isConnectionMode: false,
-				pendingConnection: null,
+				pendingConnection: null as {
+					fromCardId: string;
+					fromSide: 'top' | 'right' | 'bottom' | 'left';
+					fromOffset: number;
+				} | null,
 				isDraggingLineEndpoint: false,
 				snapToGrid: false,
-				dragPreview: null,
+				dragPreview: null as DragPreviewState | null,
 				uploadingCards: new Map(),
 
 				setBoardId: (boardId: string) => {
@@ -548,12 +552,12 @@ export const useCanvasStore = create<CanvasState>()(
 					return state.ephemeralCardState.noteHeights[cardId];
 				},
 
-				initializeNoteCardHeight: (cardId, initialState) =>
+				initializeNoteCardHeight: (cardId: string, initialState: WritableDraft<NoteCardHeightState>) =>
 					set((state) => {
 						state.ephemeralCardState.noteHeights[cardId] = initialState;
 					}),
 
-				setHoveredCard: (cardId) =>
+				setHoveredCard: (cardId: string | null) =>
 					set((state) => {
 						state.ephemeralCardState.hoveredCardId = cardId;
 					}),

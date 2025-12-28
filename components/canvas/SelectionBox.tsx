@@ -13,7 +13,9 @@ export function SelectionBox() {
   const { selectionBox, viewport, isDrawingSelection } = useCanvasStore();
 
   // Only show if we're actively drawing a selection
-  if (!selectionBox || !isDrawingSelection) return null;
+  if (!selectionBox || !isDrawingSelection) {
+	return null;
+  };
 
   // Convert canvas coordinates to screen coordinates
   const start = canvasToScreen(selectionBox.startX, selectionBox.startY, viewport);

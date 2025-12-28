@@ -220,7 +220,12 @@ function placeCursorAtClick(editor: TipTapEditor, point: Point) {
   if (!view) return;
 
   const result = view.posAtCoords(point);
-  if (!result) return;
+
+  // If we can't find a position at the click coordinates, place cursor at end
+  if (!result) {
+    editor.commands.focus('end');
+    return;
+  }
 
   const { pos } = result;
 

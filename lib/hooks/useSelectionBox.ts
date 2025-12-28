@@ -27,7 +27,8 @@ export function useSelectionBox(
 	const {
 		viewport,
 		boardId,
-		setIsDrawingSelection,
+		setInteractionMode,
+		resetInteractionMode,
 		setSelectionBox,
 		selectCards,
 		clearSelection,
@@ -91,7 +92,7 @@ export function useSelectionBox(
 			const canvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
 			startPosRef.current = canvasPos;
 			isDrawingRef.current = true;
-			setIsDrawingSelection(true);
+			setInteractionMode({ mode: 'selecting' });
 
 			// Clear existing selection
 			clearSelection();
@@ -211,7 +212,7 @@ export function useSelectionBox(
 		const handleMouseUp = () => {
 			if (isDrawingRef.current) {
 				isDrawingRef.current = false;
-				setIsDrawingSelection(false);
+				resetInteractionMode();
 				setSelectionBox(null);
 			}
 		};
@@ -233,7 +234,8 @@ export function useSelectionBox(
 		isPanning,
 		isDragging,
 		editingCardId,
-		setIsDrawingSelection,
+		setInteractionMode,
+		resetInteractionMode,
 		setSelectionBox,
 		selectCards,
 		clearSelection,
