@@ -11,12 +11,15 @@ import { CardService } from "@/lib/services";
 import { getDefaultCardDimensions } from "../utils";
 import type { Card } from "@/lib/types";
 import { useBoardCards } from "@/lib/hooks/cards";
+import { getCardBehavior, type CardBehaviorConfig } from "@/lib/types/card-behaviors";
 
 interface UseResizableOptions {
 	card: Card;
 	maxWidth?: number;
 	maxHeight?: number;
 	maintainAspectRatio?: boolean;
+	behavior?: CardBehaviorConfig; // Optional: If not provided, will look up from card type
+	measuredHeight?: number | null; // For note cards: content height for snap-to-content
 	onResizeStart?: () => void;
 	onResize?: (width: number, height: number) => void;
 	onResizeEnd?: (width: number, height: number) => void;
@@ -29,15 +32,25 @@ interface Dimensions {
 
 export function useResizable({
 	card,
-	maxWidth = 1200,
-	maxHeight = 1200,
-	maintainAspectRatio = false,
+	maxWidth,
+	maxHeight,
+	maintainAspectRatio,
+	behavior,
+	measuredHeight,
 	onResizeStart,
 	onResize,
 	onResizeEnd,
 }: UseResizableOptions) {
-	const { viewport, setIsResizing, setEditingCardId } = useCanvasStore();
+	const { viewport, setIsResizing, setEditingCardId, setInteractionMode } = useCanvasStore();
 	const cardId = card.id;
+
+	// Get behavior config (use provided or look up from card type)
+	const cardBehavior = behavior || getCardBehavior(card.card_type);
+
+	// Use behavior config for constraints, with fallback to provided options
+	const finalMaxWidth = maxWidth ?? cardBehavior.maxWidth ?? 1200;
+	const finalMaxHeight = maxHeight ?? cardBehavior.maxHeight ?? 1200;
+	const finalMaintainAspectRatio = maintainAspectRatio ?? cardBehavior.maintainAspectRatio;
 
 	// Get cards from InstantDB
 	const { cards: cardsArray } = useBoardCards(card.board_id);
@@ -67,7 +80,10 @@ export function useResizable({
 		const cardData = cardsMap.get(cardId);
 		if (!cardData) return;
 
-		const { minWidth, minHeight, defaultHeight, canResize, keepAspectRatio: maintainAspectRatio } = getDefaultCardDimensions(cardData.card_type);
+		const { minWidth, minHeight, defaultHeight, canResize } = getDefaultCardDimensions(cardData.card_type);
+
+		// Use behavior config for aspect ratio and constraints
+		const shouldMaintainAspectRatio = finalMaintainAspectRatio;
 
 		const startCanvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
 		startPosRef.current = startCanvasPos;
@@ -78,12 +94,14 @@ export function useResizable({
 			position_y: cardData.position_y,
 		};
 
-		if (maintainAspectRatio) {
+		if (shouldMaintainAspectRatio) {
 			aspectRatioRef.current = cardData.width / (cardData.height || minHeight);
 		}
 
 		setLocalIsResizing(true);
 		setIsResizing(true);
+		// Set interaction mode to resizing
+		setInteractionMode({ mode: 'resizing', cardId, handle });
 		onResizeStart?.();
 
 		const handleMouseMove = (e: MouseEvent) => {
@@ -112,15 +130,46 @@ export function useResizable({
 				deltaY = startPosRef.current.y - currentCanvasPos.y;
 			}
 
-			let newWidth = Math.max(minWidth, Math.min(maxWidth, startDimensionsRef.current.width + deltaX));
+			let newWidth = Math.max(minWidth, Math.min(finalMaxWidth, startDimensionsRef.current.width + deltaX));
 			let newHeight = defaultHeight ?
-				Math.max(minHeight, Math.min(maxHeight, startDimensionsRef.current.height + deltaY)) : null;
+				Math.max(minHeight, Math.min(finalMaxHeight, startDimensionsRef.current.height + deltaY)) : null;
 
-			if (maintainAspectRatio) {
+			if (shouldMaintainAspectRatio) {
 				if (Math.abs(deltaX) > Math.abs(deltaY)) {
 					newHeight = newWidth / aspectRatioRef.current;
 				} else {
 					newWidth = newHeight ? newHeight * aspectRatioRef.current : newWidth;
+				}
+			}
+
+			// Snap-to-content for note cards (hybrid height mode)
+			// When resizing height and within snap range of content height, snap to it
+			const SNAP_RANGE = 20;
+			const isNoteCard = currentCardData.card_type === 'note';
+			const isResizingHeight = handle.includes('s') || handle.includes('n');
+
+			if (isNoteCard && isResizingHeight && newHeight !== null) {
+				console.log('[useResizable] Resize info:', {
+					newHeight,
+					measuredHeight,
+					storedHeight: currentCardData.height,
+					cardId: currentCardData.id,
+				});
+
+				if (measuredHeight && measuredHeight > 0) {
+					const distanceFromContent = Math.abs(newHeight - measuredHeight);
+
+					if (distanceFromContent <= SNAP_RANGE) {
+						// Snap to content height!
+						console.log('[useResizable] ✨ SNAPPING to content height during resize:', {
+							from: newHeight,
+							to: measuredHeight,
+							distanceFromContent,
+						});
+						newHeight = measuredHeight;
+					}
+				} else {
+					console.log('[useResizable] ⚠️ No measuredHeight available for snap');
 				}
 			}
 
@@ -170,6 +219,8 @@ export function useResizable({
 			// Clear resize state immediately
 			setLocalIsResizing(false);
 			setIsResizing(false);
+			// Reset interaction mode to idle
+			setInteractionMode({ mode: 'idle' });
 
 			// Check if size actually changed using local dimensions
 			const sizeChanged = finalDimensions && currentCard && (
@@ -212,14 +263,12 @@ export function useResizable({
 						},
 					});
 
-					console.log('[useResizable] DB update successful, waiting 100ms before clearing local state');
+					console.log('[useResizable] DB update successful, clearing local state immediately');
 
-					// Wait a bit for the DB update to propagate before clearing local dimensions
-					setTimeout(() => {
-						console.log('[useResizable] Clearing local dimensions after timeout');
-						currentDimensionsRef.current = null;
-						setLocalDimensions(null);
-					}, 100);
+					// Clear local dimensions immediately - no setTimeout to avoid visual jump
+					// The DB will propagate the update and the card will use the DB value
+					currentDimensionsRef.current = null;
+					setLocalDimensions(null);
 				} catch (error) {
 					console.error('[useResizable] Failed to sync card dimensions:', error);
 					// Clear local dimensions even on error
@@ -240,9 +289,12 @@ export function useResizable({
 		cardId,
 		cardsMap,
 		viewport,
-		maxWidth,
-		maxHeight,
+		finalMaxWidth,
+		finalMaxHeight,
+		finalMaintainAspectRatio,
+		measuredHeight,
 		setIsResizing,
+		setInteractionMode,
 		onResizeStart,
 		onResize,
 		onResizeEnd,

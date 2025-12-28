@@ -45,18 +45,35 @@ export function NoteCardComponent({
 	const rootRef = useRef<HTMLDivElement | null>(null);
 
 	// Keep CardDimensions in sync with actual rendered height
-	// Use scrollHeight instead of contentRect.height to measure actual content
-	// regardless of CSS height constraints (fixes circular dependency when height: '100%')
+	// Measure the EditorContent's scrollHeight to get the natural content height
+	// This works even when the card container is constrained (height: '100%')
 	useLayoutEffect(() => {
 		if (!reportContentHeight || !rootRef.current) return;
 
-		const el = rootRef.current;
+		const rootEl = rootRef.current;
+
 		const observer = new ResizeObserver(() => {
-			// Use scrollHeight to get actual content height, not constrained height
-			reportContentHeight(el.scrollHeight);
+			// Find the .tiptap editor element within EditorContent
+			const tiptapEl = rootEl.querySelector('.tiptap') as HTMLElement;
+			if (tiptapEl) {
+				// scrollHeight of the editor gives us the natural content height
+				const contentHeight = tiptapEl.scrollHeight;
+				console.log('[NoteCard] Reporting content height:', contentHeight);
+				reportContentHeight(contentHeight);
+			} else {
+				// Fallback to root scrollHeight if tiptap element not found
+				reportContentHeight(rootEl.scrollHeight);
+			}
 		});
 
-		observer.observe(el);
+		observer.observe(rootEl);
+
+		// Also observe the tiptap element directly if it exists
+		const tiptapEl = rootEl.querySelector('.tiptap') as HTMLElement;
+		if (tiptapEl) {
+			observer.observe(tiptapEl);
+		}
+
 		return () => observer.disconnect();
 	}, [reportContentHeight]);
 
@@ -159,6 +176,13 @@ export function NoteCardComponent({
 		e.stopPropagation();
 	}, [isEditing, stopEditing, editor]);
 
+	const handleEditorMouseDown = useCallback((e: React.MouseEvent) => {
+		if (!isEditing) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
+	}, [isEditing]);
+
 	return (
 		<div
 			ref={rootRef}
@@ -176,11 +200,13 @@ export function NoteCardComponent({
 		>
 			<EditorContent
 				editor={editor}
+				onMouseDown={handleEditorMouseDown}
 				style={{
 					userSelect: isEditing ? 'text' : 'none',
 					WebkitUserSelect: isEditing ? 'text' : 'none',
 					flex: 1,
 					overflow: isEditing ? 'visible' : 'hidden',
+					pointerEvents: isEditing ? 'auto' : 'none',
 				}}
 			/>
 		</div>

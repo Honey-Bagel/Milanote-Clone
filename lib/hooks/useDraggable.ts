@@ -10,7 +10,7 @@
 import { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import { useCanvasStore, type Position } from '@/lib/stores/canvas-store';
 import { screenToCanvas } from '@/lib/utils/transform';
-import { CardService } from '@/lib/services';
+import { CardService, CardTransaction } from '@/lib/services';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import type { Card } from '@/lib/types';
 import { useAutoPan } from '@/lib/hooks/useAutoPan';
@@ -46,7 +46,9 @@ export function useDraggable({
 		setPotentialColumnTarget,
 		setDragPreview,
 		setDragPositions,
-		clearDragPositions
+		clearDragPositions,
+		setInteractionMode,
+		resetInteractionMode,
 	} = useCanvasStore();
 
 	// Get cards from InstantDB
@@ -175,6 +177,10 @@ export function useDraggable({
 					isDraggingRef.current = true;
 					setIsDragging(true);
 					setGlobalDragging(true);
+
+					// Set interaction mode to dragging
+					setInteractionMode({ mode: 'dragging', cardIds: cardsToMoveRef.current });
+
 					onDragStart?.();
 
 					// Bring cards to front when drag starts
@@ -291,6 +297,9 @@ export function useDraggable({
 				setLocalPosition(null); // Clear local position
 				clearDragPositions(); // Clear drag positions from canvas store
 
+				// Reset interaction mode to idle
+				resetInteractionMode();
+
 				// Stop auto-pan when drag ends
 				stopAutoPan();
 
@@ -360,7 +369,7 @@ export function useDraggable({
 				}
 
 				// ============================================================================
-				// SYNC TO DATABASE
+				// SYNC TO DATABASE USING CARDTRANSACTION (BATCHED UPDATE)
 				// ============================================================================
 				if (wasDragging) {
 					// Calculate final position delta from initial
@@ -371,8 +380,11 @@ export function useDraggable({
 
 					onDragEnd?.(finalDelta);
 
-					// Sync moved cards to InstantDB using current positions
-					cardsToMoveRef.current.forEach(async (id) => {
+					// Use CardTransaction for batched update with single undo entry
+					const tx = new CardTransaction();
+					let hasAnyMoved = false;
+
+					cardsToMoveRef.current.forEach((id) => {
 						const oldPosition = initialPositionsRef.current.get(id);
 						const newPosition = currentPositionsRef.current.get(id);
 
@@ -382,34 +394,39 @@ export function useDraggable({
 								Math.abs(newPosition.x - oldPosition.x) > 0.1 ||
 								Math.abs(newPosition.y - oldPosition.y) > 0.1;
 
-							if (!hasMoved) {
-								return;
-							}
-
-							try {
-								const movedCard = cardsMap.get(id);
-								if (movedCard) {
-									const boardId = movedCard.board_id;
-
-									await CardService.updateCardTransform({
-										cardId: id,
-										boardId: boardId,
-										transform: {
-											position_x: newPosition.x,
-											position_y: newPosition.y,
-										},
-										withUndo: true,
-										previousTransform: {
-											position_x: oldPosition.x,
-											position_y: oldPosition.y,
-										},
-									});
-								}
-							} catch (error) {
-								console.error('Failed to sync card position:', error);
+							if (hasMoved) {
+								hasAnyMoved = true;
+								tx.updateCard(
+									id,
+									{
+										position_x: newPosition.x,
+										position_y: newPosition.y,
+									},
+									{
+										position_x: oldPosition.x,
+										position_y: oldPosition.y,
+									}
+								);
 							}
 						}
 					});
+
+					// Commit all updates in a single transaction
+					if (hasAnyMoved) {
+						try {
+							const firstMovedCard = cardsMap.get(cardsToMoveRef.current[0]);
+							if (firstMovedCard) {
+								const boardId = firstMovedCard.board_id;
+								const cardCount = tx.size;
+								await tx.commit(boardId, {
+									withUndo: true,
+									description: `Move ${cardCount} card${cardCount > 1 ? 's' : ''}`,
+								});
+							}
+						} catch (error) {
+							console.error('Failed to sync card positions:', error);
+						}
+					}
 				}
 
 				setDragPreview(null);
@@ -445,7 +462,9 @@ export function useDraggable({
 			card,
 			cardsArray,
 			clearDragPositions,
-			setDragPositions
+			setDragPositions,
+			setInteractionMode,
+			resetInteractionMode,
 		]
 	);
 

@@ -37,6 +37,21 @@ export interface SelectionBox {
 	currentY: number;
 }
 
+// ============================================================================
+// INTERACTION MODE STATE MACHINE
+// ============================================================================
+
+export type ResizeHandle = 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw';
+
+export type InteractionMode =
+	| { mode: 'idle' }
+	| { mode: 'selecting'; startPos: Position }
+	| { mode: 'dragging'; cardIds: string[] }
+	| { mode: 'resizing'; cardId: string; handle: ResizeHandle }
+	| { mode: 'editing'; cardId: string }
+	| { mode: 'connecting'; fromCardId: string }
+	| { mode: 'panning' };
+
 export interface DragPreviewState {
 	cardType?: Card['card_type'];
 	card?: Card;
@@ -50,6 +65,33 @@ export interface UploadingCard {
 	x: number;
 	y: number;
 	type: 'image' | 'file';
+}
+
+// ============================================================================
+// EPHEMERAL STATE (UI-only, not persisted)
+// ============================================================================
+
+export interface NoteCardHeightState {
+	heightMode: 'normal' | 'shrunk';
+	editMode: 'view' | 'editing';
+	currentHeight: number;
+	naturalContentHeight: number;
+	userSetHeight: number | null;
+	heightBeforeEdit: number | null;
+}
+
+export interface EphemeralCardState {
+	// Hover state
+	hoveredCardId: string | null;
+
+	// Note card height calculations (complex state machine)
+	noteHeights: Record<string, NoteCardHeightState>;
+
+	// Temporary overrides during drag (60fps updates, not committed to DB)
+	dragPositions: Record<string, Position>;
+
+	// Temporary overrides during resize
+	resizeDimensions: Record<string, { width: number; height?: number }>;
 }
 
 // ============================================================================
@@ -69,7 +111,14 @@ interface CanvasState {
 	selectedCardIds: Set<string>;
 	selectionBox: SelectionBox | null;
 
-	// Interaction states
+	// NEW: Centralized interaction mode state machine
+	interactionMode: InteractionMode;
+
+	// NEW: Ephemeral card state (UI-only, not persisted)
+	ephemeralCardState: EphemeralCardState;
+
+	// DEPRECATED: Legacy interaction states (keep for backward compatibility during migration)
+	// TODO: Remove these after all components migrated to use interactionMode
 	isDragging: boolean;
 	isPanning: boolean;
 	isDrawingSelection: boolean;
@@ -143,7 +192,34 @@ interface CanvasState {
 	zoomToFit: (cards: Array<Partial<CardData>>) => void;
 
 	// ============================================================================
-	// INTERACTION STATE ACTIONS
+	// INTERACTION MODE ACTIONS (NEW)
+	// ============================================================================
+
+	setInteractionMode: (mode: InteractionMode) => void;
+	resetInteractionMode: () => void;
+
+	// ============================================================================
+	// EPHEMERAL STATE ACTIONS (NEW)
+	// ============================================================================
+
+	// Note card height state
+	setNoteCardHeight: (cardId: string, state: Partial<NoteCardHeightState>) => void;
+	getNoteCardHeight: (cardId: string) => NoteCardHeightState | undefined;
+	initializeNoteCardHeight: (cardId: string, initialState: NoteCardHeightState) => void;
+
+	// Hover state
+	setHoveredCard: (cardId: string | null) => void;
+
+	// Drag positions (60fps updates during drag)
+	setEphemeralDragPosition: (cardId: string, position: Position) => void;
+	clearEphemeralDragPositions: () => void;
+
+	// Resize dimensions (60fps updates during resize)
+	setEphemeralResizeDimensions: (cardId: string, dimensions: { width: number; height?: number }) => void;
+	clearEphemeralResizeDimensions: () => void;
+
+	// ============================================================================
+	// INTERACTION STATE ACTIONS (DEPRECATED - use setInteractionMode instead)
 	// ============================================================================
 
 	setIsDragging: (isDragging: boolean) => void;
@@ -186,6 +262,19 @@ export const useCanvasStore = create<CanvasState>()(
 				viewport: { x: 0, y: 0, zoom: 1 },
 				selectedCardIds: new Set(),
 				selectionBox: null,
+
+				// NEW: Centralized interaction mode
+				interactionMode: { mode: 'idle' } as InteractionMode,
+
+				// NEW: Ephemeral card state
+				ephemeralCardState: {
+					hoveredCardId: null,
+					noteHeights: {},
+					dragPositions: {},
+					resizeDimensions: {},
+				},
+
+				// DEPRECATED: Legacy states (kept for backward compatibility)
 				isDragging: false,
 				isPanning: false,
 				isDrawingSelection: false,
@@ -409,7 +498,88 @@ export const useCanvasStore = create<CanvasState>()(
 					}),
 
 				// ============================================================================
-				// INTERACTION STATE ACTIONS
+				// INTERACTION MODE ACTIONS (NEW)
+				// ============================================================================
+
+				setInteractionMode: (mode) =>
+					set((state) => {
+						state.interactionMode = mode;
+
+						// BACKWARD COMPATIBILITY: Also update legacy boolean flags
+						// TODO: Remove this after all components migrated to interactionMode
+						state.isDragging = mode.mode === 'dragging';
+						state.isPanning = mode.mode === 'panning';
+						state.isDrawingSelection = mode.mode === 'selecting';
+						state.isResizing = mode.mode === 'resizing';
+						state.editingCardId = mode.mode === 'editing' ? mode.cardId : null;
+						state.isConnectionMode = mode.mode === 'connecting';
+					}),
+
+				resetInteractionMode: () =>
+					set((state) => {
+						state.interactionMode = { mode: 'idle' };
+
+						// BACKWARD COMPATIBILITY: Clear legacy flags
+						state.isDragging = false;
+						state.isPanning = false;
+						state.isDrawingSelection = false;
+						state.isResizing = false;
+						state.editingCardId = null;
+					}),
+
+				// ============================================================================
+				// EPHEMERAL STATE ACTIONS (NEW)
+				// ============================================================================
+
+				setNoteCardHeight: (cardId, partialState) =>
+					set((state) => {
+						if (!state.ephemeralCardState.noteHeights[cardId]) {
+							console.warn(`[setNoteCardHeight] Note card ${cardId} not initialized`);
+							return;
+						}
+						state.ephemeralCardState.noteHeights[cardId] = {
+							...state.ephemeralCardState.noteHeights[cardId],
+							...partialState,
+						};
+					}),
+
+				getNoteCardHeight: (cardId) => {
+					const state = useCanvasStore.getState();
+					return state.ephemeralCardState.noteHeights[cardId];
+				},
+
+				initializeNoteCardHeight: (cardId, initialState) =>
+					set((state) => {
+						state.ephemeralCardState.noteHeights[cardId] = initialState;
+					}),
+
+				setHoveredCard: (cardId) =>
+					set((state) => {
+						state.ephemeralCardState.hoveredCardId = cardId;
+					}),
+
+				setEphemeralDragPosition: (cardId, position) =>
+					set((state) => {
+						state.ephemeralCardState.dragPositions[cardId] = position;
+					}),
+
+				clearEphemeralDragPositions: () =>
+					set((state) => {
+						state.ephemeralCardState.dragPositions = {};
+					}),
+
+				setEphemeralResizeDimensions: (cardId, dimensions) =>
+					set((state) => {
+						state.ephemeralCardState.resizeDimensions[cardId] = dimensions;
+					}),
+
+				clearEphemeralResizeDimensions: () =>
+					set((state) => {
+						state.ephemeralCardState.resizeDimensions = {};
+					}),
+
+				// ============================================================================
+				// INTERACTION STATE ACTIONS (DEPRECATED)
 				// ============================================================================
 
 				setIsDragging: (isDragging) =>
@@ -495,9 +665,11 @@ export const useCanvasStore = create<CanvasState>()(
 				// ZUNDO TEMPORAL OPTIONS
 				// ============================================================================
 
-				// Only track viewport changes (card operations will use custom undo store in Phase 2)
+				// Only track viewport changes (card operations will use custom undo store in Phase 3)
 				partialize: (state) => {
 					const {
+						interactionMode,
+						ephemeralCardState,
 						isDragging,
 						isPanning,
 						isDrawingSelection,

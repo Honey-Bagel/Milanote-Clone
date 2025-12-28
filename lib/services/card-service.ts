@@ -53,6 +53,127 @@ export interface UpdateCardContentOptions {
 }
 
 // ============================================================================
+// CARD TRANSACTION BUILDER
+// ============================================================================
+
+/**
+ * CardTransaction Builder - Enables batched card updates with single undo entry
+ *
+ * @example
+ * // Drag multiple cards
+ * const tx = new CardTransaction()
+ *   .updateCard(id1, { position_x: 100, position_y: 200 })
+ *   .updateCard(id2, { position_x: 300, position_y: 400 })
+ *   .commit(boardId, { withUndo: true, description: 'Move cards' });
+ *
+ * @example
+ * // Resize with width + height
+ * await new CardTransaction()
+ *   .updateCard(cardId, { width: 400, height: 300 })
+ *   .commit(boardId);
+ */
+export class CardTransaction {
+	private updates = new Map<string, Partial<CardData>>();
+	private previousStates = new Map<string, Partial<CardData>>();
+
+	/**
+	 * Add a card update to the transaction
+	 */
+	updateCard(cardId: string, updates: Partial<CardData>, previousState?: Partial<CardData>): this {
+		// Merge with existing updates for this card
+		const existing = this.updates.get(cardId) || {};
+		this.updates.set(cardId, { ...existing, ...updates });
+
+		// Store previous state for undo
+		if (previousState) {
+			const existingPrev = this.previousStates.get(cardId) || {};
+			this.previousStates.set(cardId, { ...existingPrev, ...previousState });
+		}
+
+		return this;
+	}
+
+	/**
+	 * Update multiple cards with the same changes
+	 *
+	 * @example
+	 * tx.updateCards([id1, id2, id3], { position_y: 100 });
+	 */
+	updateCards(
+		cardIds: string[],
+		updates: Partial<CardData>,
+		previousStates?: Map<string, Partial<CardData>>
+	): this {
+		cardIds.forEach(cardId => {
+			this.updateCard(cardId, updates, previousStates?.get(cardId));
+		});
+		return this;
+	}
+
+	/**
+	 * Commit the transaction to the database
+	 */
+	async commit(
+		boardId: string,
+		options?: { withUndo?: boolean; description?: string }
+	): Promise<void> {
+		if (this.updates.size === 0) return;
+
+		const now = Date.now();
+		const transactions = Array.from(this.updates.entries()).map(([cardId, updates]) =>
+			db.tx.cards[cardId].update({ ...updates, updated_at: now })
+		);
+
+		// Add board update
+		transactions.push(db.tx.boards[boardId].update({ updated_at: now }));
+
+		// Execute atomic transaction
+		await db.transact(transactions);
+
+		// Add single undo entry for entire batch
+		if (options?.withUndo && this.previousStates.size > 0) {
+			const currentUpdates = new Map(this.updates);
+			const previousStates = new Map(this.previousStates);
+
+			useUndoStore.getState().addAction({
+				type: 'card_move',
+				timestamp: now,
+				description: options.description || `Update ${this.updates.size} card(s)`,
+				do: async () => {
+					const redoTx = new CardTransaction();
+					currentUpdates.forEach((updates, cardId) => {
+						redoTx.updateCard(cardId, updates);
+					});
+					await redoTx.commit(boardId, { withUndo: false });
+				},
+				undo: async () => {
+					const undoTx = new CardTransaction();
+					previousStates.forEach((prevState, cardId) => {
+						undoTx.updateCard(cardId, prevState);
+					});
+					await undoTx.commit(boardId, { withUndo: false });
+				},
+			});
+		}
+	}
+
+	/**
+	 * Get the number of cards in this transaction
+	 */
+	get size(): number {
+		return this.updates.size;
+	}
+
+	/**
+	 * Clear all updates
+	 */
+	clear(): void {
+		this.updates.clear();
+		this.previousStates.clear();
+	}
+}
+
+// ============================================================================
 // CARD CREATION
 // ============================================================================
 
@@ -909,6 +1030,7 @@ export async function moveCardsToBoardBatch(
 // ============================================================================
 
 export const CardService = {
+	CardTransaction,
 	createCard,
 	updateCardTransform,
 	updateCardContent,

@@ -213,6 +213,7 @@ export function useCardDimensions(card: Card | CardData, isEditing?: boolean): C
 			measuredHeight: height,
 			currentStoredHeight: card.height,
 			isManuallyConstrained,
+			isEditing,
 			heightMode,
 		});
 
@@ -222,29 +223,31 @@ export function useCardDimensions(card: Card | CardData, isEditing?: boolean): C
 			return height;
 		});
 
-		// For hybrid cards, auto-resize (expand OR shrink) if not manually constrained
-		if (heightMode === 'hybrid' && !isManuallyConstrained) {
+		// For hybrid (note) cards: auto-resize if not manually constrained
+		// IMPORTANT: Don't save to DB when transitioning out of edit mode in constrained state
+		// IMPORTANT: Only auto-expand, never auto-shrink (user may have set explicit height > content)
+		if (heightMode === 'hybrid' && !isManuallyConstrained && !isEditing) {
 			const minH = config.minHeight ?? 0;
 			const storedHeight = card.height ?? minH;
-			const heightDiff = height - storedHeight;
-			const absHeightDiff = Math.abs(heightDiff);
+			const heightDiff = Math.abs(height - storedHeight);
 
-			console.log('[reportMeasuredHeight] Checking auto-resize:', {
+			console.log('[reportMeasuredHeight] Auto-resize check:', {
 				height,
 				storedHeight,
 				heightDiff,
-				shouldResize: absHeightDiff > 2,
+				contentGrowing: height > storedHeight,
 			});
 
-			// Increased threshold to 2px to filter out measurement drift
-			// Prevent shrinkage from tiny differences (< 2px) that could be rounding errors
-			if (absHeightDiff > 2 && height >= minH) {
-				console.log('[reportMeasuredHeight] Auto-resizing!', height);
+			// Threshold of 2px to filter out measurement drift
+			// In auto mode (not manually constrained), only expand when content grows
+			// Never auto-shrink - user may have manually set height > content
+			if (heightDiff > 2 && height >= minH && height > storedHeight) {
+				console.log('[reportMeasuredHeight] Auto-expanding to match growing content:', height);
 				isAutoExpandingRef.current = true;
 				debouncedHeightSave(height);
 			}
 		}
-	}, [heightMode, card.height, card.id, config.minHeight, debouncedHeightSave, isManuallyConstrained]);
+	}, [heightMode, card.height, card.id, config.minHeight, debouncedHeightSave, isManuallyConstrained, isEditing]);
 
 	// Request height change (manual trigger) - allows both expansion and shrinking
 	const requestHeightExpansion = useCallback((newHeight: number) => {
@@ -280,24 +283,39 @@ export function useCardDimensions(card: Card | CardData, isEditing?: boolean): C
 			const minH = config.minHeight ?? 0;
 			const currentHeight = card.height ?? minH;
 			const contentHeight = measuredHeight || 0;
+			const SNAP_RANGE = 20; // Pixels within content height to snap back to auto mode
 
 			// User manually resized the card
 			lastManualHeightRef.current = currentHeight;
 
+			// Check if user resized within snap range of content height
+			const isNearContentHeight = contentHeight > 0 &&
+				Math.abs(currentHeight - contentHeight) <= SNAP_RANGE;
+
+			if (isNearContentHeight) {
+				// Snap to content height and return to auto mode
+				console.log('[useCardDimensions] Snapping to content height, enabling auto-resize', {
+					cardId: card.id,
+					currentHeight,
+					contentHeight,
+				});
+				setIsManuallyConstrained(false);
+			}
 			// Check if user shrunk the card below content height (enters constrained mode)
-			if (contentHeight > 0 && currentHeight < contentHeight - 5) {
+			else if (contentHeight > 0 && currentHeight < contentHeight - SNAP_RANGE) {
 				// User has manually constrained the card
-				console.log('[useCardDimensions] Card manually constrained', {
+				console.log('[useCardDimensions] Card manually shrunk below content', {
 					cardId: card.id,
 					currentHeight,
 					contentHeight,
 				});
 				setIsManuallyConstrained(true);
 			}
-			// Check if user expanded the card to or above content height (exits constrained mode)
-			else if (currentHeight >= contentHeight - 5) {
-				// User has expanded card to content height or beyond - re-enable auto-resize
-				console.log('[useCardDimensions] Card expanded above content, enabling auto-resize', {
+			// User expanded above content (stays in auto mode if already there)
+			else if (currentHeight > contentHeight + SNAP_RANGE) {
+				// Card is larger than content, but not in constrained mode
+				// Keep auto-resize enabled (will shrink back when content shrinks)
+				console.log('[useCardDimensions] Card expanded above content, keeping auto-resize', {
 					cardId: card.id,
 					currentHeight,
 					contentHeight,

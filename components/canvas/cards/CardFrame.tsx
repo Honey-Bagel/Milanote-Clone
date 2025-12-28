@@ -20,6 +20,7 @@ import { useDirectDimensionMeasurement, type DirectDimensions } from '@/lib/hook
 import { ConnectionHandles } from '../ConnectionHandle';
 import { type CardDimensions, type HeightMode } from './useCardDimensions';
 import { useCardContext } from './CardContext';
+import { useCardBehavior } from '@/lib/hooks/useCardBehavior';
 
 // ============================================================================
 // TYPES
@@ -180,6 +181,9 @@ export const CardFrame = memo(function CardFrame({
 
 	const { dimensions } = useCardContext();
 
+	// Get behavior configuration for this card type
+	const behavior = useCardBehavior(card.card_type, card.id);
+
 	// Direct measurement for selection outline (bypasses state lag)
 	const { ref: contentRef, dimensions: directDimensions } = useDirectDimensionMeasurement(
 		isSelected // Only measure when selected for performance
@@ -189,6 +193,7 @@ export const CardFrame = memo(function CardFrame({
 		card,
 		maxWidth: 1200,
 		maxHeight: 1200,
+		measuredHeight: dimensions.measuredHeight, // For snap-to-content during resize
 	});
 
 	// Connection handling
@@ -230,22 +235,23 @@ export const CardFrame = memo(function CardFrame({
 	}
 
 	// Show connection handles when:
-	// - In connection mode OR
-	// - There's a pending connection OR
-	// - Dragging a line endpoint
-	// - AND not inside a column
-	// - AND not read-only
-	const showConnectionHandles = !isReadOnly && (
-		isConnectionMode || !!pendingConnection || isDraggingLineEndpoint
-	);
+	// - Card supports connections (from behavior config)
+	// - In connection mode OR pending connection OR dragging line endpoint
+	// - Not read-only
+	const showConnectionHandles = !isReadOnly &&
+		behavior.canConnectFrom &&
+		(isConnectionMode || !!pendingConnection || isDraggingLineEndpoint);
 
 	// Show resize handles when:
-	// - Card can resize
+	// - Card supports resizing (from behavior config)
 	// - Card is selected
 	// - Card is not inside a column
 	// - Not read-only
-	const showResizeHandles = !isReadOnly && !isInsideColumn &&
-		dimensions.canResize && isSelected;
+	// - In idle mode OR currently resizing this card (from behavior permissions)
+	const showResizeHandles = !isReadOnly &&
+		!isInsideColumn &&
+		isSelected &&
+		behavior.canResizeNow;
 
 	return (
 		<div

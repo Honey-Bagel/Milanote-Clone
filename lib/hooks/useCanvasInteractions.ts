@@ -38,7 +38,18 @@ export function useCanvasInteractions(
 		zoomSensitivity = 0.001,
 	} = options;
 
-	const { viewport, setViewport, isPanning, setIsPanning, clearSelection, setEditingCardId, editingCardId } = useCanvasStore();
+	const {
+		viewport,
+		setViewport,
+		isPanning,
+		setIsPanning,
+		clearSelection,
+		setEditingCardId,
+		editingCardId,
+		interactionMode,
+		setInteractionMode,
+		resetInteractionMode,
+	} = useCanvasStore();
 
 	const panStartRef = useRef({ x: 0, y: 0 });
 	const spaceKeyPressedRef = useRef(false);
@@ -60,6 +71,7 @@ export function useCanvasInteractions(
 			if (shouldPan) {
 				e.preventDefault();
 				setIsPanning(true);
+				setInteractionMode({ mode: 'panning' });
 				panStartRef.current = {
 					x: e.clientX - viewport.x,
 					y: e.clientY - viewport.y,
@@ -72,6 +84,8 @@ export function useCanvasInteractions(
 			if (e.button === 0 && e.target === canvas && !e.shiftKey) {
 				clearSelection();
 				setEditingCardId(null);
+				// Reset interaction mode to idle when clicking empty canvas
+				resetInteractionMode();
 			}
 		};
 
@@ -87,6 +101,7 @@ export function useCanvasInteractions(
 		const handleMouseUp = (e: MouseEvent) => {
 			if (isPanning) {
 				setIsPanning(false);
+				resetInteractionMode();
 				canvas.style.cursor = spaceKeyPressedRef.current ? 'grab' : 'default';
 			}
 		};
@@ -131,6 +146,14 @@ export function useCanvasInteractions(
 				target.tagName === 'INPUT' ||
 				target.tagName === 'TEXTAREA' ||
 				target.isContentEditable;
+
+			// Escape key: Reset interaction mode to idle
+			if (e.key === 'Escape' && !isEditing) {
+				resetInteractionMode();
+				clearSelection();
+				setEditingCardId(null);
+				return;
+			}
 
 			if (e.code === 'Space' && !e.repeat && enablePan && editingCardId === null && !isEditing) {
 				e.preventDefault();
@@ -197,6 +220,9 @@ export function useCanvasInteractions(
 		zoomSensitivity,
 		canvasRef,
 		editingCardId,
-		setEditingCardId
+		setEditingCardId,
+		interactionMode,
+		setInteractionMode,
+		resetInteractionMode,
 	]);
 }
