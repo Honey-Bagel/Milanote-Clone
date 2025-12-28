@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { Card } from "./types";
+import { useEffect, useState } from 'react';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -49,6 +50,48 @@ export function getTimeAgo(timestamp: string): string {
 	const diffInYears = Math.floor(diffInDays / 365);
 	return `${diffInYears} ${diffInYears === 1 ? 'year' : 'years'} ago`;
 };
+
+// Debounce hook for search input
+export function useDebounce<T>(value: T, delay: number): T {
+	const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+	useEffect(() => {
+		const handler = setTimeout(() => {
+			setDebouncedValue(value);
+		}, delay);
+
+		return () => clearTimeout(handler);
+	}, [value, delay]);
+
+	return debouncedValue;
+}
+
+// Date filter utilities
+export type DateFilterType = 'all' | 'today' | 'week' | 'month' | 'year';
+
+export function getDateRangeTimestamp(type: DateFilterType): { start: number; end: number } {
+	const now = Date.now();
+	const oneDayMs = 24 * 60 * 60 * 1000;
+
+	switch (type) {
+		case 'today':
+			const todayStart = new Date().setHours(0, 0, 0, 0);
+			return { start: todayStart, end: now };
+		case 'week':
+			return { start: now - (7 * oneDayMs), end: now };
+		case 'month':
+			return { start: now - (30 * oneDayMs), end: now };
+		case 'year':
+			return { start: now - (365 * oneDayMs), end: now };
+		case 'all':
+		default:
+			return { start: 0, end: now };
+	}
+}
+
+export function isWithinDateRange(timestamp: number, range: { start: number; end: number }): boolean {
+	return timestamp >= range.start && timestamp <= range.end;
+}
 
 export const getDefaultCardDimensions = (cardType: Card["card_type"]) => {
 	switch (cardType) {

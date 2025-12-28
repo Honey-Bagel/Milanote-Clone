@@ -1,7 +1,7 @@
 'use client';
 
 import { BoardCard } from '../ui/dashboard/board-card';
-import { Bell, Grid, Layers, Search, Users, LucideIcon, Star, Clock, Filter, List } from 'lucide-react';
+import { Bell, Grid, Layers, Search, Users, LucideIcon, Star, Clock, List, X } from 'lucide-react';
 import { QuickActionCardWrapper } from '../ui/dashboard/quick-action-card-wrapper';
 import { CreateBoardQuickAction } from '../ui/dashboard/create-board-quick-action';
 import UserMenu from '../ui/dashboard/profile-dropdown';
@@ -9,9 +9,11 @@ import { DashboardCreateBoardButton } from '../ui/dashboard/dashboard-create-boa
 import { useBoardsWithCollaborators } from '@/lib/hooks/boards';
 import { db } from '@/lib/instant/db';
 import { DashboardLoadingSkeleton } from '../ui/dashboard/dashboard-loading-skeleton';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { BoardListRow } from '../ui/dashboard/board-list-row';
 import { Separator } from "radix-ui";
+import { DateFilterDropdown, DateFilterField } from '../ui/dashboard/date-filter-dropdown';
+import { useDebounce, DateFilterType, getDateRangeTimestamp, isWithinDateRange } from '@/lib/utils';
 
 type Tabtype = 'my-boards' | 'shared' | 'favorites';
 
@@ -21,23 +23,81 @@ export default function Dashboard() {
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [activeTab, setActiveTab] = useState<Tabtype>('my-boards');
 
-	// Filter boards based on active tab
+	// Search state
+	const [searchQuery, setSearchQuery] = useState<string>('');
+	const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+	// Date filter state
+	const [dateFilterType, setDateFilterType] = useState<DateFilterType>('all');
+	const [dateFilterField, setDateFilterField] = useState<DateFilterField>('updated_at');
+
+	// Keyboard shortcuts
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			// Ctrl+K or Cmd+K to focus search
+			if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+				e.preventDefault();
+				const searchInput = document.querySelector<HTMLInputElement>('input[type="text"][placeholder="Search boards"]');
+				searchInput?.focus();
+			}
+
+			// ESC to clear search
+			if (e.key === 'Escape') {
+				setSearchQuery('');
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, []);
+
+	// Filter boards based on active tab, search, and date filters
 	const filteredBoards = useMemo(() => {
 		if (!boards || !user) return [];
 
+		let result = boards;
+
+		// First: Tab filtering
 		switch(activeTab) {
 			case 'my-boards':
-				return boards.filter(board => board.owner.id === user.id);
+				result = boards.filter(board => board.owner.id === user.id);
+				break;
 			case 'shared':
-				// Boards NOT owner by the owner (shared with them)
-				return boards.filter(board => board.owner.id !== user.id);
+				// Boards NOT owned by the user (shared with them)
+				result = boards.filter(board => board.owner.id !== user.id);
+				break;
 			case 'favorites':
 				// Filter boards that are in the user's favorite_boards array
-				return boards.filter(board => board.is_favorite);
+				result = boards.filter(board => board.is_favorite);
+				break;
 			default:
-				return boards;
+				result = boards;
 		}
-	}, [boards, activeTab, user]);
+
+		// Second: Search filtering
+		if (debouncedSearchQuery.trim()) {
+			const query = debouncedSearchQuery.toLowerCase();
+			result = result.filter(board =>
+				board.title.toLowerCase().includes(query)
+				// Future: Add more searchable fields here
+				// || board.owner.email.toLowerCase().includes(query)
+				// || board.collaborators.some(c => c.user.display_name?.toLowerCase().includes(query))
+			);
+		}
+
+		// Third: Date filtering
+		if (dateFilterType !== 'all') {
+			const dateRange = getDateRangeTimestamp(dateFilterType);
+			result = result.filter(board => {
+				const timestamp = dateFilterField === 'created_at'
+					? board.created_at
+					: board.updated_at;
+				return isWithinDateRange(timestamp, dateRange);
+			});
+		}
+
+		return result;
+	}, [boards, activeTab, user, debouncedSearchQuery, dateFilterType, dateFilterField]);
 
 	// Show loading skeleton while data is being fetched
 	if (isLoading) {
@@ -62,14 +122,26 @@ export default function Dashboard() {
 								</div>
 								<span className="font-bold text-white text-lg">Milanote Clone</span>
 							</div>
-							<div className="hidden md:flex items-center gap-2 bg-[#0f172a] border border-white/10 rounded-lg px-4 py-2 min-w-[320px]">
+							<div className="hidden md:flex items-center gap-2 bg-[#0f172a] border border-white/10 rounded-lg px-4 py-2 min-w-[320px] relative">
 								<Search size={16} className="text-slate-500"/>
 								<input
 									type="text"
 									placeholder="Search boards"
+									value={searchQuery}
+									onChange={(e) => setSearchQuery(e.target.value)}
 									className="bg-transparent border-none outline-none text-sm text-white placeholder-slate-500 w-full"
 								/>
-								<kbd className="px-2 py-0.5 bg-white/5 rounded text-[10px] text-slate-500 font-mono">CtrlK</kbd>
+								{searchQuery && (
+									<button
+										onClick={() => setSearchQuery('')}
+										className="p-1 hover:bg-white/5 rounded transition-colors"
+									>
+										<X size={14} className="text-slate-400" />
+									</button>
+								)}
+								{!searchQuery && (
+									<kbd className="px-2 py-0.5 bg-white/5 rounded text-[10px] text-slate-500 font-mono">CtrlK</kbd>
+								)}
 							</div>
 						</div>
 						<div className="flex items-center gap-3">
@@ -97,7 +169,7 @@ export default function Dashboard() {
 							active={activeTab === 'favorites'}
 							icon={Star}
 							onClick={() => setActiveTab('favorites')}
-						>Favorites</TabButton>
+						>Favortes</TabButton>
 					</div>
 				</div>
 
@@ -121,11 +193,49 @@ export default function Dashboard() {
 
 					{/* Boards Section */}
 					<div className="mb-6 flex items-center justify-between">
-						<div></div>
 						<div className="flex items-center gap-2">
-							<button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-								<Filter size={16} className="text-slate-400"/>
-							</button>
+							<div className="text-sm text-slate-400">
+								{filteredBoards.length} {filteredBoards.length === 1 ? 'board' : 'boards'}
+								{(debouncedSearchQuery || dateFilterType !== 'all') && boards && ` (filtered from ${boards.length})`}
+							</div>
+							{/* Active Filter Indicators */}
+							{debouncedSearchQuery && (
+								<span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded flex items-center gap-1 text-xs">
+									Search: &quot;{debouncedSearchQuery}&quot;
+									<button
+										onClick={() => setSearchQuery('')}
+										className="ml-1 hover:bg-indigo-500/30 rounded p-0.5"
+									>
+										<X size={12} />
+									</button>
+								</span>
+							)}
+							{dateFilterType !== 'all' && (
+								<span className="px-2 py-1 bg-indigo-500/20 text-indigo-300 rounded flex items-center gap-1 text-xs">
+									{dateFilterField === 'created_at' ? 'Created' : 'Updated'}: {
+										dateFilterType === 'today' ? 'Today' :
+										dateFilterType === 'week' ? 'Last 7 Days' :
+										dateFilterType === 'month' ? 'Last 30 Days' :
+										'Last Year'
+									}
+									<button
+										onClick={() => setDateFilterType('all')}
+										className="ml-1 hover:bg-indigo-500/30 rounded p-0.5"
+									>
+										<X size={12} />
+									</button>
+								</span>
+							)}
+						</div>
+						<div className="flex items-center gap-2">
+							<DateFilterDropdown
+								filterType={dateFilterType}
+								filterField={dateFilterField}
+								onFilterChange={(type, field) => {
+									setDateFilterType(type);
+									setDateFilterField(field);
+								}}
+							/>
 							<button
 								onClick={() => setViewMode('grid')}
 								className={`p-2 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-500/20 text-indigo-400' : 'hover:bg-white/5 text-slate-400 hover:text-white'}`}>
@@ -164,7 +274,25 @@ export default function Dashboard() {
 						</>
 					) : (
 						<>
-							{activeTab === 'shared' ? (
+							{/* Check if empty due to filters */}
+							{(debouncedSearchQuery || dateFilterType !== 'all') && boards && boards.length > 0 ? (
+								<div className="flex flex-col items-center justify-center py-24 px-4">
+									<Search size={48} className="text-slate-600 mb-4" />
+									<h3 className="text-xl font-semibold text-white mb-2">No boards found</h3>
+									<p className="text-slate-400 text-center mb-8 max-w-md">
+										Try adjusting your search or filters
+									</p>
+									<button
+										onClick={() => {
+											setSearchQuery('');
+											setDateFilterType('all');
+										}}
+										className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+									>
+										Clear all filters
+									</button>
+								</div>
+							) : activeTab === 'shared' ? (
 								<div className="flex flex-col items-center justify-center py-24 px-4">
 									<h3 className="text-xl font-semibold text-white mb-2">No boards have been shared with you yet</h3>
 								</div>
