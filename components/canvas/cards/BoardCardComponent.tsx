@@ -11,6 +11,7 @@ import type { BoardCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import { BoardService } from '@/lib/services';
 import { db } from '@/lib/instant/db';
+import { syncBoardTitle } from '@/lib/instant/board-title-sync';
 import { useBoardWithCards } from '@/lib/hooks/boards';
 import { useDroppable } from '@dnd-kit/core';
 
@@ -130,13 +131,24 @@ export function BoardCardComponent({
 		});
 	}, [saveContentImmediate]);
 
-	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleTitleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 		setLocalTitle(newTitle);
+
+		// Update the card's board_title field locally (optimistic update)
 		saveContent({
 			board_title: newTitle,
 		});
-	}, [saveContent]);
+
+		// Sync the title to both boards table and all related board cards
+		if (card.linked_board_id) {
+			try {
+				await syncBoardTitle(card.linked_board_id, newTitle);
+			} catch (error) {
+				console.error('Failed to sync board title:', error);
+			}
+		}
+	}, [saveContent, card.linked_board_id]);
 
 	const handleNavigateToBoard = useCallback(async (e: React.MouseEvent) => {
 		if (!isEditing && card.linked_board_id) {

@@ -6,6 +6,7 @@
 
 import { db, generateId, updateEntity } from '@/lib/db/client';
 import { BOARD_DEFAULTS } from '@/lib/constants/defaults';
+import { syncBoardTitle } from '@/lib/instant/board-title-sync';
 
 // ============================================================================
 // BOARD CREATION
@@ -91,7 +92,19 @@ export async function updateBoard(
     share_token: string | null;
   }>
 ): Promise<void> {
-  await db.transact([updateEntity('boards', boardId, updates)]);
+  // If title is being updated, use the sync function to update both boards and cards
+  if (updates.title !== undefined) {
+    await syncBoardTitle(boardId, updates.title);
+
+    // If there are other updates besides title, apply them
+    const { title, ...otherUpdates } = updates;
+    if (Object.keys(otherUpdates).length > 0) {
+      await db.transact([updateEntity('boards', boardId, otherUpdates)]);
+    }
+  } else {
+    // No title update, just apply other updates normally
+    await db.transact([updateEntity('boards', boardId, updates)]);
+  }
 }
 
 // ============================================================================
