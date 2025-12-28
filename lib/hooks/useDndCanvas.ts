@@ -22,6 +22,8 @@ import { GRID_SIZE } from '../constants/defaults';
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { closestCenter, KeyboardSensor } from '@dnd-kit/core';
 import { PerformanceTimer } from '../utils/performance';
+import { findCollisionFreePosition } from '@/lib/utils/collision-free-position';
+import { db } from '@/lib/instant/db';
 
 interface UseDndCanvasOptions {
 	boardId: string | null;
@@ -242,6 +244,19 @@ export function useDndCanvas({
 
 		return null;
 	}, [allCardsMap]);
+
+	const getBreadcrumbIdFromOver = useCallback((over: Over | null): string | null => {
+		if (!over) return null;
+
+		const meta = over.data?.current;
+
+		// Check if dropped on breadcrumb
+		if (meta?.type === 'breadcrumb') {
+			return meta.boardId;
+		}
+
+		return null;
+	}, []);
 
 	// ============================================================================
 	// EVENT HANDLERS
@@ -593,6 +608,51 @@ export function useDndCanvas({
 				}
 			}
 
+			// Handle drop on breadcrumb
+			const breadcrumbId = getBreadcrumbIdFromOver(over);
+			if (breadcrumbId && boardId && breadcrumbId !== boardId) {
+				// Fetch target board cards to check for collisions
+				const targetBoardCardsQuery = await db.queryOnce({
+					cards: {
+						$: {
+							where: {
+								board_id: breadcrumbId,
+							},
+						},
+					},
+				});
+
+				const targetBoardCards = (targetBoardCardsQuery?.data?.cards || []) as CardData[];
+
+				// Get the cards being dragged
+				const draggedCards: CardData[] = draggedCardIds
+					.map(id => allCardsMap.get(id))
+					.filter((card): card is CardData => card !== undefined);
+
+				// Find collision-free positions
+				const positions = findCollisionFreePosition(
+					draggedCards,
+					targetBoardCards,
+					{ x: 100, y: 100 }
+				);
+
+				await CardService.moveCardsToBoardBatch({
+					cardIds: draggedCardIds,
+					sourceBoardId: boardId,
+					targetBoardId: breadcrumbId,
+					positions,
+					sourceColumns: undefined,
+				});
+
+				clearDragPositions();
+				setPotentialColumnTarget(null);
+				setPotentialBoardTarget(null);
+				setActiveId(null);
+				setActiveDragType(null);
+
+				return;
+			}
+
 			// No column overlap → Free canvas movement (existing logic)
 			for (const cardId of draggedCardIds) {
 				const card = allCardsMap.get(cardId);
@@ -824,6 +884,7 @@ export function useDndCanvas({
 		setPotentialBoardTarget,
 		getColumnIdFromOver,
 		getBoardCardIdFromOver,
+		getBreadcrumbIdFromOver,
 		snapToGrid,
 	]);
 

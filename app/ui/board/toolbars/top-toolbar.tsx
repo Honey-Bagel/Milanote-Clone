@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { BoardService } from '@/lib/services/board-service';
 import { useBoardCards } from '@/lib/hooks/cards';
+import { useDroppable } from '@dnd-kit/core';
+import { cn } from '@/lib/utils';
 
 type TopToolbarProps = {
 	boardId: string;
@@ -27,6 +29,116 @@ type TopToolbarProps = {
 	isPublicView?: boolean;
 	isViewerOnly?: boolean;
 };
+
+type DroppableBreadcrumbItemProps = {
+	crumb: BreadcrumbItemType;
+	isLast: boolean;
+	isViewerOnly: boolean;
+	isPublicView: boolean;
+	isEditingTitle: boolean;
+	editedTitle: string;
+	inputRef: React.RefObject<HTMLInputElement>;
+	handleDoubleClick: () => void;
+	setEditedTitle: (title: string) => void;
+	handleSaveTitle: () => void;
+	handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+	index: number;
+	isBreadcrumbsCondensed: boolean;
+};
+
+function DroppableBreadcrumbItem({
+	crumb,
+	isLast,
+	isViewerOnly,
+	isPublicView,
+	isEditingTitle,
+	editedTitle,
+	inputRef,
+	handleDoubleClick,
+	setEditedTitle,
+	handleSaveTitle,
+	handleKeyDown,
+	index,
+	isBreadcrumbsCondensed,
+}: DroppableBreadcrumbItemProps) {
+	// Make parent breadcrumbs droppable (but not the current board)
+	const { setNodeRef, isOver } = useDroppable({
+		id: `breadcrumb-${crumb.id}`,
+		data: {
+			type: 'breadcrumb',
+			boardId: crumb.id,
+			accepts: ['canvas-card', 'column-card'],
+		},
+		disabled: isLast || isViewerOnly, // Can't drop on current board or in viewer mode
+	});
+
+	return (
+		<Fragment key={`bc-${crumb.id}`}>
+			<BreadcrumbSeparator className="text-slate-600" />
+			<BreadcrumbItem ref={!isLast ? setNodeRef : undefined}>
+				{isLast ? (
+					// Current board - editable on double click
+					<BreadcrumbPage className="flex items-center space-x-2" onDoubleClick={handleDoubleClick}>
+						{crumb.color && (
+							<div
+								className="w-4 h-4 rounded shadow-[0_0_8px_rgba(255,255,255,0.2)]"
+								style={{ backgroundColor: crumb.color }}
+							/>
+						)}
+						{isEditingTitle ? (
+							<input
+								ref={inputRef}
+								type="text"
+								value={editedTitle}
+								onChange={(e) => setEditedTitle(e.target.value)}
+								onBlur={handleSaveTitle}
+								onKeyDown={handleKeyDown}
+								className="text-white font-semibold bg-white/10 px-2 py-1 rounded outline-none focus:ring-2 focus:ring-indigo-500 max-w-[200px]"
+							/>
+						) : (
+							<span
+								className="text-white font-semibold truncate max-w-[200px] cursor-text hover:bg-white/5 px-2 py-1 rounded transition-colors"
+								title="Double-click to edit board name"
+							>
+								{crumb.title}
+							</span>
+						)}
+					</BreadcrumbPage>
+				) : (
+					// Parent boards - clickable AND droppable
+					<div
+						className={cn(
+							'transition-all duration-150 rounded-lg',
+							isOver && 'bg-indigo-500/20 ring-2 ring-indigo-500 scale-105'
+						)}
+					>
+						<BreadcrumbLink asChild>
+							<Link
+								href={
+									isPublicView && crumb.shareToken
+										? `/board/public/${crumb.shareToken}`
+										: `/board/${crumb.id}`
+								}
+								className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors px-2 py-1"
+							>
+								{crumb.color && (
+									<div className="w-4 h-4 rounded opacity-70" style={{ backgroundColor: crumb.color }} />
+								)}
+								<span className="truncate max-w-[150px]">{crumb.title}</span>
+							</Link>
+						</BreadcrumbLink>
+					</div>
+				)}
+			</BreadcrumbItem>
+			{isBreadcrumbsCondensed && index === 0 && (
+				<>
+					<BreadcrumbSeparator className="text-slate-600" />
+					<BreadcrumbEllipsis className="text-slate-500" />
+				</>
+			)}
+		</Fragment>
+	);
+}
 
 export default function TopToolbar({
 	boardId,
@@ -244,71 +356,22 @@ export default function TopToolbar({
 									const isLast = index === displayBreadcrumbs.length - 1;
 
 									return (
-										<Fragment key={`bc-${crumb.id}`}>
-											<BreadcrumbSeparator className="text-slate-600"/>
-											<BreadcrumbItem key={crumb.id}>
-												{isLast ? (
-													// Current board - editable on double click
-													<BreadcrumbPage
-														className="flex items-center space-x-2"
-														onDoubleClick={handleDoubleClick}
-													>
-														{crumb.color && (
-															<div
-																className="w-4 h-4 rounded shadow-[0_0_8px_rgba(255,255,255,0.2)]"
-																style={{ backgroundColor: crumb.color }}
-															/>
-														)}
-														{isEditingTitle ? (
-															<input
-																ref={inputRef}
-																type="text"
-																value={editedTitle}
-																onChange={(e) => setEditedTitle(e.target.value)}
-																onBlur={handleSaveTitle}
-																onKeyDown={handleKeyDown}
-																className="text-white font-semibold bg-white/10 px-2 py-1 rounded outline-none focus:ring-2 focus:ring-indigo-500 max-w-[200px]"
-															/>
-														) : (
-															<span
-																className="text-white font-semibold truncate max-w-[200px] cursor-text hover:bg-white/5 px-2 py-1 rounded transition-colors"
-																title="Double-click to edit board name"
-															>
-																{crumb.title}
-															</span>
-														)}
-													</BreadcrumbPage>
-												) : (
-													// Parent boards - clickable
-													<BreadcrumbLink asChild>
-														<Link
-															href={
-																isPublicView && crumb.shareToken
-																	? `/board/public/${crumb.shareToken}`
-																	: `/board/${crumb.id}`
-															}
-															className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-														>
-															{crumb.color && (
-																<div
-																	className="w-4 h-4 rounded opacity-70"
-																	style={{ backgroundColor: crumb.color }}
-																/>
-															)}
-															<span className="truncate max-w-[150px]">
-																{crumb.title}
-															</span>
-														</Link>
-													</BreadcrumbLink>
-												)}
-											</BreadcrumbItem>
-											{isBreadcrumbsCondensed && index === 0 && (
-												<>
-													<BreadcrumbSeparator className="text-slate-600" />
-													<BreadcrumbEllipsis className="text-slate-500" />
-												</>
-											)}
-										</Fragment>
+										<DroppableBreadcrumbItem
+											key={`bc-${crumb.id}`}
+											crumb={crumb}
+											isLast={isLast}
+											isViewerOnly={isViewerOnly}
+											isPublicView={isPublicView}
+											isEditingTitle={isEditingTitle}
+											editedTitle={editedTitle}
+											inputRef={inputRef}
+											handleDoubleClick={handleDoubleClick}
+											setEditedTitle={setEditedTitle}
+											handleSaveTitle={handleSaveTitle}
+											handleKeyDown={handleKeyDown}
+											index={index}
+											isBreadcrumbsCondensed={isBreadcrumbsCondensed}
+										/>
 									);
 								})}
 							</BreadcrumbList>

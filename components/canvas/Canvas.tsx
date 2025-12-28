@@ -6,7 +6,6 @@ import { createViewportMatrix, screenToCanvas } from '@/lib/utils/transform';
 import { useCanvasInteractions } from '@/lib/hooks/useCanvasInteractions';
 import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
 import { useSelectionBox } from '@/lib/hooks/useSelectionBox';
-import { useDndCanvas } from '@/lib/hooks/useDndCanvas';
 import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
@@ -20,13 +19,9 @@ import ContextMenu from '@/app/ui/board/context-menu';
 import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
 import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
 import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
-import { CardRenderer } from './cards/CardRenderer';
-import { CardProvider } from './cards/CardContext';
 import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
 import { useBoardCards } from '@/lib/hooks/cards';
-import { DndContext, DragOverlay } from "@dnd-kit/core";
-import { CardFrame } from './cards';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -98,28 +93,7 @@ export function Canvas({
 	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop(boardId || '');
 
 	// ============================================================================
-	// DND-KIT HOOK - All drag logic encapsulated here! 🎉
-	// ============================================================================
-
-	const {
-		sensors,
-		handleDragStart,
-		handleDragMove,
-		handleDragEnd,
-		handleDragOver: dragOverDND,
-		customCollisionDetection,
-		modifiers,
-		activeDragCard,
-		activeDragType
-	} = useDndCanvas({
-		boardId,
-		allCardsMap,
-		viewport,
-		selectCard,
-	});
-
-	// ============================================================================
-	// EXISTING EVENT HANDLERS (unchanged)
+	// EXISTING EVENT HANDLERS
 	// ============================================================================
 
 	const mouseDownHandler = (e: React.MouseEvent) => {
@@ -382,15 +356,7 @@ export function Canvas({
 				onContextMenu={handleCanvasContextMenu}
 				onMouseMove={handleCanvasMouseMove}
 			>
-				<DndContext
-					sensors={sensors}
-					onDragStart={handleDragStart}
-					onDragMove={handleDragMove}
-					onDragEnd={handleDragEnd}
-					onDragOver={dragOverDND}
-					modifiers={modifiers}
-				>
-					<div ref={canvasRef} className="canvas-scroll-area w-full h-full">
+				<div ref={canvasRef} className="canvas-scroll-area w-full h-full">
 						<div
 							className="canvas-document"
 							id="canvas-root"
@@ -448,59 +414,6 @@ export function Canvas({
 							{/* Uploading placeholders, drag preview - same as before */}
 						</div>
 					</div>
-
-					<DragOverlay dropAnimation={null}>
-						{/* Only use the drag card when dragging from a column */}
-						{activeDragCard && activeDragType === "column-card" ? (
-							<div
-								style={{
-									opacity: 0.85,
-									cursor: 'grabbing',
-									pointerEvents: 'none',
-									width: activeDragCard.width,
-									height: activeDragCard.height || 'auto',
-									position: 'relative',
-								}}
-							>
-								<div className="card">
-									<CardProvider
-										card={activeDragCard}
-										boardId={activeDragCard.board_id}
-										isSelected={false}
-										isReadOnly={true}
-										isInsideColumn={activeDragType === 'column-card'}
-										allCards={allCardsMap}
-									>
-										<CardFrame
-											card={activeDragCard}
-											isSelected={false}
-											isEditing={false}
-											isInsideColumn={activeDragType === 'column-card'}
-											isReadOnly={true}
-											cssZIndex={9999}
-										>
-											<CardRenderer
-												card={activeDragCard}
-												boardId={activeDragCard.board_id}
-												isEditing={false}
-												isSelected={false}
-												isPublicView={true}
-												allCards={allCardsMap}
-											/>
-										</CardFrame>
-									</CardProvider>
-								</div>
-
-								{/* Multi-select indicator badge */}
-								{selectedCardIds.size > 1 && (
-									<div className="absolute -top-2 -right-2 bg-cyan-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
-										{selectedCardIds.size}
-									</div>
-								)}
-							</div>
-						) : null}
-					</DragOverlay>
-				</DndContext>
 
 				<SelectionBox />
 				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)} />
