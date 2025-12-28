@@ -574,13 +574,13 @@ export function useDndCanvas({
 						});
 
 						// Move cards to target board
-						// await CardService.moveCardsToBoardBatch({
-						// 	cardIds: draggedCardIds,
-						// 	sourceBoardId: boardId,
-						// 	targetBoardId: linkedBoardId,
-						// 	positions,
-						// 	sourceColumns: undefined,
-						// });
+						await CardService.moveCardsToBoardBatch({
+							cardIds: draggedCardIds,
+							sourceBoardId: boardId,
+							targetBoardId: linkedBoardId,
+							positions,
+							sourceColumns: undefined,
+						});
 
 						clearDragPositions();
 						setPotentialColumnTarget(null);

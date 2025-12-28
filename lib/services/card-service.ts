@@ -1034,9 +1034,16 @@ export async function moveCardsToBoardBatch(
 
 	timer.mark('Executing transaction');
 
-	// Execute atomic transaction
-	//await db.transact(unLinkTransactions);
-	await db.transact(transactions);
+	// Execute atomic transaction with unlink + link operations
+	try {
+		await db.transact([
+			...unLinkTransactions,
+			...transactions
+		]);
+	} catch (error) {
+		console.error('Failed to move cards between boards:', error);
+		throw error;
+	}
 
 	timer.mark('Transaction complete');
 	timer.log();
