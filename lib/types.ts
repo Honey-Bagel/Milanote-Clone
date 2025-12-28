@@ -154,6 +154,7 @@ export type BaseCard = {
 	width: number;
 	height: number | null;
 	order_key: string;
+	is_position_locked?: boolean;
 	created_by: string | null;
 	created_at: string;
 	updated_at: string;
@@ -484,8 +485,9 @@ export type CardData = {
 	width: number;
 	height?: number;
 	order_key: string;
+	is_position_locked?: boolean;
 	created_by?: string;
-	
+
 	// All type-specific fields as optional
 	note_content?: string;
 	note_color?: string;

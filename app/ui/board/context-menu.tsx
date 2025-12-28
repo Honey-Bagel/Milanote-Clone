@@ -1,12 +1,13 @@
 'use client';
 
 import { ContextMenuProps } from '@/lib/types';
-import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2, Lock, Unlock } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { GetCardTypeContextMenu } from '@/components/canvas/cards/CardComponentContextMenus';
 import { deleteCard as deleteCardDB, duplicateCard } from '@/lib/instant/card-mutations';
 import { useUndoStore } from '@/lib/stores/undo-store';
+import { CardService } from '@/lib/services/card-service';
 
 export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
@@ -106,6 +107,23 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 		onClose();
 	};
 
+	const handleToggleLock = async () => {
+		const card = data?.card;
+		const boardId = data?.card?.board_id;
+
+		if (!card || !boardId) return;
+
+		const newLockedState = !card.is_position_locked;
+
+		CardService.toggleCardPositionLock(
+			card.id,
+			boardId,
+			newLockedState
+		);
+
+		onClose();
+	};
+
 	if (!isOpen) return null;
 
 	return (
@@ -140,6 +158,20 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 			<button onClick={handleSendToBack} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
 				<ArrowDown className="w-4 h-4 text-slate-400" />
 				<span>Send Backward</span>
+			</button>
+			<div className="h-px bg-white/10 my-1.5"></div>
+			<button onClick={handleToggleLock} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				{data.card?.is_position_locked ? (
+					<>
+						<Unlock className="w-4 h-4 text-slate-400" />
+						<span>Unlock Position</span>
+					</>
+				) : (
+					<>
+						<Lock className="w-4 h-4 text-slate-400" />
+						<span>Lock Position</span>
+					</>
+				)}
 			</button>
 			<div className="h-px bg-white/10 my-1.5"></div>
 			<button onClick={handleDeleteButton} className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors">

@@ -45,6 +45,7 @@ const graph = i.schema({
 			width: i.number(),
 			height: i.number().optional(),
 			order_key: i.string().indexed(),
+			is_position_locked: i.boolean().optional(),
 
 			// Note card fields
 			note_content: i.string().optional(),

@@ -409,33 +409,36 @@ export function useKeyboardShortcuts(
 			// Only trigger alignment if multiple cards are selected and not editing
 			if (!isEditing && selectedCardIds.size >= 2 && boardId) {
 				const selectedCards = cards.filter(c => selectedCardIds.has(c.id));
+				const movableCards = selectedCards.filter(c => !c.is_position_locked);
 
-				// Align Top: Up Arrow
-				if (e.key === 'ArrowUp' && !isMod) {
-					e.preventDefault();
-					alignCardsTop(selectedCards, boardId);
-					return;
-				}
+				if (movableCards.length >= 2) {
+					// Align Top: Up Arrow
+					if (e.key === 'ArrowUp' && !isMod) {
+						e.preventDefault();
+						alignCardsTop(movableCards, boardId);
+						return;
+					}
 
-				// Align Bottom: Down Arrow
-				if (e.key === 'ArrowDown' && !isMod) {
-					e.preventDefault();
-					alignCardsBottom(selectedCards, boardId);
-					return;
-				}
+					// Align Bottom: Down Arrow
+					if (e.key === 'ArrowDown' && !isMod) {
+						e.preventDefault();
+						alignCardsBottom(movableCards, boardId);
+						return;
+					}
 
-				// Align Left: Left Arrow
-				if (e.key === 'ArrowLeft' && !isMod) {
-					e.preventDefault();
-					alignCardsLeft(selectedCards, boardId);
-					return;
-				}
+					// Align Left: Left Arrow
+					if (e.key === 'ArrowLeft' && !isMod) {
+						e.preventDefault();
+						alignCardsLeft(movableCards, boardId);
+						return;
+					}
 
-				// Align Right: Right Arrow
-				if (e.key === 'ArrowRight' && !isMod) {
-					e.preventDefault();
-					alignCardsRight(selectedCards, boardId);
-					return;
+					// Align Right: Right Arrow
+					if (e.key === 'ArrowRight' && !isMod) {
+						e.preventDefault();
+						alignCardsRight(movableCards, boardId);
+						return;
+					}
 				}
 			}
 

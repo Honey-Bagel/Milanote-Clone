@@ -21,6 +21,7 @@ import { ConnectionHandles } from '../ConnectionHandle';
 import { type CardDimensions, type HeightMode } from './useCardDimensions';
 import { useCardContext } from './CardContext';
 import { useCardBehavior } from '@/lib/hooks/useCardBehavior';
+import { Lock } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -49,6 +50,37 @@ interface ResizeHandlesProps {
 	cssZIndex: number;
 	handleMouseDown: () => void;
 }
+
+// ============================================================================
+// LOCK INDICATOR
+// ============================================================================
+
+interface LockIndicatorProps {
+	viewport: { zoom: number };
+}
+
+const LockIndicator = memo(function LockIndicator({ viewport }: LockIndicatorProps) {
+	const iconSize = Math.max(12, 14 / viewport.zoom);
+
+	return (
+		<div
+			className="lock-indicator"
+			style={{
+				position: 'absolute',
+				top: 6,
+				right: 6,
+				pointerEvents: 'none',
+				zIndex: 10,
+			}}
+		>
+			<Lock
+				size={iconSize}
+				className="text-slate-400/60"
+				strokeWidth={2}
+			/>
+		</div>
+	);
+});
 
 // ============================================================================
 // SELECTION OUTLINE (Direct DOM Measurement)
@@ -271,6 +303,11 @@ export const CardFrame = memo(function CardFrame({
 			>
 				{children}
 			</div>
+
+			{/* Lock indicator */}
+			{card.is_position_locked && (
+				<LockIndicator viewport={viewport} />
+			)}
 
 			{/* Selection outline - uses direct DOM measurement */}
 			{isSelected && directDimensions && (

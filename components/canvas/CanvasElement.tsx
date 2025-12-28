@@ -94,7 +94,7 @@ export const CanvasElement = memo(function CanvasElement({
 		data: {
 			type: 'canvas-card',
 		},
-		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint,
+		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint || card.is_position_locked,
 	});
 
 	// Event handlers
@@ -217,6 +217,8 @@ export const CanvasElement = memo(function CanvasElement({
 								isPublicView={isReadOnly}
 								allCards={allCards}
 								onEditorReady={handleEditorReady}
+								onContextMenu={onContextMenu}
+								options={{}}
 							/>
 						</CardFrame>
 					</CardProvider>
@@ -311,6 +313,7 @@ export const CanvasElement = memo(function CanvasElement({
 								isPublicView={isReadOnly}
 								allCards={allCards}
 								onEditorReady={handleEditorReady}
+								onContextMenu={onContextMenu}
 								options={cardOptions}
 							/>
 						</CardFrame>

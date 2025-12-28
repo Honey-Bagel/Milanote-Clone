@@ -46,6 +46,7 @@ export function SortableColumnItem({
 			sortableContext: 'column',
 			parentColumnId: columnId,
 		},
+		disabled: card.is_position_locked,
 	});
 
 	const style = {

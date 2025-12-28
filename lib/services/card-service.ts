@@ -363,6 +363,22 @@ export async function updateCardOrderKey(
 }
 
 /**
+ * Toggle position lock for a card
+ *
+ * @example
+ * await CardService.toggleCardPositionLock('card-123', 'board-123', true);
+ */
+export async function toggleCardPositionLock(
+	cardId: string,
+	boardId: string,
+	isLocked: boolean
+): Promise<void> {
+	await withBoardUpdate(boardId, [
+		updateEntity('cards', cardId, { is_position_locked: isLocked }),
+	]);
+}
+
+/**
  * Update card position and/or size
  *
  * @example
@@ -576,6 +592,7 @@ export async function duplicateCard(
 			...cardData,
 			position_x: sourceCard.position_x + offset.x,
 			position_y: sourceCard.position_y + offset.y,
+			is_position_locked: false,
 			created_at: now,
 			updated_at: now,
 			order_key: orderKey,
@@ -1048,6 +1065,7 @@ export const CardService = {
 	alignCardsLeft,
 	alignCardsRight,
 	updateCardOrderKey,
+	toggleCardPositionLock,
 	addCardToColumn,
 	addCardsToColumnBatch,
 	extractCardFromColumn,

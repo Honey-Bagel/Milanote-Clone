@@ -109,14 +109,40 @@ export function useDraggable({
 			// Update selection
 			if (!selectedCardIds.has(cardId)) {
 				selectCard(cardId, isMultiSelect);
-				cardsToMoveRef.current = [cardId];
+				const singleCard = cardsMap.get(cardId);
+				cardsToMoveRef.current = singleCard?.is_position_locked ? [] : [cardId];
 			} else {
-				cardsToMoveRef.current = Array.from(selectedCardIds);
+				// Multi-select - filter out locked cards
+				const unlocked = Array.from(selectedCardIds).filter(id => {
+					const c = cardsMap.get(id);
+					return !c?.is_position_locked;
+				});
+				cardsToMoveRef.current = unlocked;
+			}
+
+			// Special case: locked card in column → drag entire column
+			if (cardsToMoveRef.current.length === 0 && selectedCardIds.has(cardId)) {
+				const draggedCard = cardsMap.get(cardId);
+				if (draggedCard?.is_position_locked) {
+					const columnId = findCardColumn(cardId);
+					if (columnId) {
+						const columnCard = cardsMap.get(columnId);
+						if (columnCard && !columnCard.is_position_locked) {
+							cardsToMoveRef.current = [columnId];
+							selectCard(columnId, false);
+						}
+					}
+				}
 			}
 
 			// Track starting column
 			if (cardsToMoveRef.current.length === 1) {
 				startingColumnRef.current = findCardColumn(cardsToMoveRef.current[0]);
+			}
+
+			// Don't proceed if no cards to move (all locked)
+			if (cardsToMoveRef.current.length === 0) {
+				return;
 			}
 
 			isDraggingRef.current = false;

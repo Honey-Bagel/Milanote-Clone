@@ -270,13 +270,41 @@ export function useDndCanvas({
   		// ========================================================================
 		if (dragType === 'canvas-card') {
 			// Determine which cards to drag BEFORE state changes
+			const activeCard = allCardsMap.get(active.id as string);
 			const isAlreadySelected = selectedCardIds.has(active.id as string);
-			const cardsToDrag = isAlreadySelected
-				? Array.from(selectedCardIds)
-				: [active.id as string];
+
+			// Filter out locked cards
+			let cardsToDrag: string[];
+			if (isAlreadySelected) {
+				cardsToDrag = Array.from(selectedCardIds).filter(id => {
+					const card = allCardsMap.get(id);
+					return !card?.is_position_locked;
+				});
+			} else {
+				cardsToDrag = activeCard?.is_position_locked ? [] : [active.id as string];
+			}
+
+			// Special case: locked card in column → drag column instead
+			if (cardsToDrag.length === 0 && activeCard?.is_position_locked) {
+				const parentColumn = Array.from(allCardsMap.values()).find(c =>
+					c.card_type === 'column' &&
+					(c as any).column_items?.some((item: any) => item.card_id === active.id)
+				);
+
+				if (parentColumn && !parentColumn.is_position_locked) {
+					cardsToDrag = [parentColumn.id];
+					selectCard(parentColumn.id, false);
+				} else {
+					return; // Early exit - nothing to drag
+				}
+			}
+
+			if (cardsToDrag.length === 0) {
+				return; // Early exit
+			}
 
 			// Auto-select the dragged card if not already selected
-			if (!isAlreadySelected) {
+			if (!isAlreadySelected && !activeCard?.is_position_locked) {
 				selectCard(active.id as string, false); // false = single select (clears others)
 			}
 
@@ -347,10 +375,17 @@ export function useDndCanvas({
   		// ========================================================================
 
 		if (dragType === 'canvas-card') {
-			// Determine which cards are being dragged
+			// Determine which cards are being dragged - filter out locked cards
 			const cardsToDrag = selectedCardIds.has(active.id as string)
-				? Array.from(selectedCardIds)
+				? Array.from(selectedCardIds).filter(id => {
+					const card = allCardsMap.get(id);
+					return !card?.is_position_locked;
+				  })
 				: [active.id as string];
+
+			if (cardsToDrag.length === 0) {
+				return; // Early exit if all cards are locked
+			}
 
 			const activeCard = allCardsMap.get(active.id as string);
 			if (!activeCard) return;
@@ -448,8 +483,20 @@ export function useDndCanvas({
 			dropTimestampRef.current = performance.now();
 
 			const draggedCardIds = selectedCardIds.has(active.id as string)
-			? Array.from(selectedCardIds)
+			? Array.from(selectedCardIds).filter(id => {
+				const card = allCardsMap.get(id);
+				return !card?.is_position_locked;
+			  })
 			: [active.id as string];
+
+			if (draggedCardIds.length === 0) {
+				// All cards are locked, clear drag state
+				clearDragPositions();
+				setPotentialColumnTarget(null);
+				setActiveId(null);
+				setActiveDragType(null);
+				return;
+			}
 
 			const targetColumnId = getColumnIdFromOver(over);
 

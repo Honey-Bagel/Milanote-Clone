@@ -27,6 +27,7 @@ interface ColumnCardComponentProps {
 	isSelected?: boolean;
 	allCards?: Map<string, Card | CardData>;
 	onEditorReady?: (cardId: string, editor: any) => void;
+	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 }
 
 // ============================================================================
@@ -38,7 +39,8 @@ export function ColumnCardComponent({
 	isEditing: propIsEditing,
 	isSelected: propIsSelected,
 	allCards: allCardsProp,
-	onEditorReady
+	onEditorReady,
+	onContextMenu: onContextMenuProp
 }: ColumnCardComponentProps) {
 	// Try to use context, fall back to props for backwards compatibility
 	const context = useOptionalCardContext();
@@ -100,9 +102,10 @@ export function ColumnCardComponent({
 		setEditingCardId(cardId);
 	}, [setEditingCardId]);
 
-	const handleCardContextMenu = useCallback((e: React.MouseEvent) => {
+	const handleCardContextMenu = useCallback((e: React.MouseEvent, card: Card) => {
 		e.stopPropagation();
-	}, []);
+		onContextMenuProp?.(e, card);
+	}, [onContextMenuProp]);
 
 	// Get cards that belong to this column
 	const columnItems = ([...card.column_items || []])
