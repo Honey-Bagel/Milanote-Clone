@@ -218,7 +218,8 @@ export const CardFrame = memo(function CardFrame({
 
 	// Direct measurement for selection outline (bypasses state lag)
 	const { ref: contentRef, dimensions: directDimensions } = useDirectDimensionMeasurement(
-		isSelected // Only measure when selected for performance
+		isSelected, // Only measure when selected for performance
+		viewport.zoom
 	);
 
 	const { handleMouseDown, currentDimensions } = useResizable({

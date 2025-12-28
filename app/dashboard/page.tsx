@@ -169,7 +169,7 @@ export default function Dashboard() {
 							active={activeTab === 'favorites'}
 							icon={Star}
 							onClick={() => setActiveTab('favorites')}
-						>Favortes</TabButton>
+						>Favorites</TabButton>
 					</div>
 				</div>
 

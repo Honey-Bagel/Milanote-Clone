@@ -38,7 +38,8 @@ export interface DirectDimensions {
  * @returns Object containing ref to attach to element and current dimensions
  */
 export function useDirectDimensionMeasurement(
-	enabled: boolean = true
+	enabled: boolean = true,
+	zoom: number = 1
 ): {
 	ref: React.RefObject<HTMLDivElement>;
 	dimensions: DirectDimensions | null;
@@ -59,8 +60,8 @@ export function useDirectDimensionMeasurement(
 			const parentRect = element.offsetParent?.getBoundingClientRect();
 
 			const newDimensions = {
-				width: rect.width,
-				height: rect.height,
+				width: rect.width / zoom,
+				height: rect.height / zoom,
 				x: parentRect ? rect.left - parentRect.left : 0,
 				y: parentRect ? rect.top - parentRect.top : 0,
 			};
@@ -95,7 +96,7 @@ export function useDirectDimensionMeasurement(
 		return () => {
 			observer.disconnect();
 		};
-	}, [enabled]);
+	}, [enabled, zoom]);
 
 	// Clear dimensions when disabled
 	useLayoutEffect(() => {

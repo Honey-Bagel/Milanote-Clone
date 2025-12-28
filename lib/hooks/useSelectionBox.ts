@@ -92,7 +92,7 @@ export function useSelectionBox(
 			const canvasPos = screenToCanvas(e.clientX, e.clientY, viewport);
 			startPosRef.current = canvasPos;
 			isDrawingRef.current = true;
-			setInteractionMode({ mode: 'selecting' });
+			setInteractionMode({ mode: 'selecting', startPos: canvasPos });
 
 			// Clear existing selection
 			clearSelection();
@@ -173,8 +173,8 @@ export function useSelectionBox(
 					const maxY = Math.max(...allY);
 
 					cardBounds = {
-						x: minX + rect.left,
-						y: minY + rect.top,
+						x: minX + rect.left / viewport.zoom,
+						y: minY + rect.top / viewport.zoom,
 						width: Math.max(maxX - minX, 10), // Minimum width for selection
 						height: Math.max(maxY - minY, 10), // Minimum height for selection
 					};
@@ -193,8 +193,8 @@ export function useSelectionBox(
 					}
 
 					cardBounds = {
-						x: card.position_x + rect.left,
-						y: card.position_y + rect.top,
+						x: card.position_x + rect.left / viewport.zoom,
+						y: card.position_y + rect.top / viewport.zoom,
 						width: card.width,
 						height: cardHeight
 					};
