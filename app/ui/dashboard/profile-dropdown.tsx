@@ -1,13 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronRightIcon, Settings, HelpCircle, Keyboard, LogOut, User } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth, useUser } from "@clerk/nextjs";
+import SettingsModal from '../home/settings-modal';
 
 export default function UserMenu() {
 	const { user, isLoaded } = useUser();
 	const { signOut } = useAuth();
+	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 	
 	if (!isLoaded || !user) {
 		return <div></div>
@@ -16,6 +19,7 @@ export default function UserMenu() {
 	const avatarUrl = user.imageUrl;
 
 	return (
+		<>
 		<DropdownMenu.Root>
 			{/* Trigger Button (Avatar) */}
 			<DropdownMenu.Trigger asChild>
@@ -75,7 +79,9 @@ export default function UserMenu() {
 					<DropdownMenu.Separator className="h-px bg-white/10 my-2" />
 
 					{/* Settings */}
-					<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
+					<DropdownMenu.Item
+						onClick={() => setIsSettingsModalOpen(true)}
+						className="relative flex cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
 						<Settings size={16} className="text-slate-400" />
 						<span className="text-slate-300">Settings</span>
 					</DropdownMenu.Item>
@@ -134,5 +140,12 @@ export default function UserMenu() {
 				</DropdownMenu.Content>
 			</DropdownMenu.Portal>
 		</DropdownMenu.Root>
+
+		{/* Settings Modal */}
+		<SettingsModal
+			isOpen={isSettingsModalOpen}
+			onClose={() => setIsSettingsModalOpen(false)}
+		/>
+	</>
 	)
 }

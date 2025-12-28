@@ -17,6 +17,28 @@ const graph = i.schema({
 			last_active: i.number().optional(),
 		}),
 
+		// User preferences table
+		user_preferences: i.entity({
+			// General Preferences
+			defaultBoardColor: i.string(),
+			autoSaveEnabled: i.boolean(),
+			gridSnapEnabled: i.boolean(),
+
+			// Notification Preferences
+			emailNotifications: i.boolean(),
+			boardActivityNotifications: i.boolean(),
+			shareNotifications: i.boolean(),
+			weeklyDigest: i.boolean(),
+
+			// Collaboration Preferences
+			allowCommenting: i.boolean(),
+			showPresenceIndicators: i.boolean(),
+
+			// Metadata
+			created_at: i.number(),
+			updated_at: i.number(),
+		}),
+
 		// Boards table
 		boards: i.entity({
 			title: i.string().indexed(),
@@ -121,6 +143,20 @@ const graph = i.schema({
 			},
 			reverse: {
 				on: "profiles",
+				has: "one",
+				label: "user",
+			}
+		},
+
+		// Links $users to preferences (1-1)
+		userPreferences: {
+			forward: {
+				on: "$users",
+				has: "one",
+				label: "preferences",
+			},
+			reverse: {
+				on: "user_preferences",
 				has: "one",
 				label: "user",
 			}
