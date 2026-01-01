@@ -151,8 +151,11 @@ export default function TopToolbar({
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
 	const [editedTitle, setEditedTitle] = useState(boardTitle);
+	const [isEditingZoom, setIsEditingZoom] = useState(false);
+	const [editedZoom, setEditedZoom] = useState('100');
 	const inputRef = useRef<HTMLInputElement>(null);
-	const { viewport, zoomIn, zoomOut, zoomToFit } = useCanvasStore();
+	const zoomInputRef = useRef<HTMLInputElement>(null);
+	const { viewport, zoomIn, zoomOut, zoomToFit, setViewport } = useCanvasStore();
 	const { cards } = useBoardCards(boardId);
 
 	const { breadcrumbs } = useBreadcrumbs(boardId, isPublicView);
@@ -168,6 +171,14 @@ export default function TopToolbar({
 			inputRef.current.select();
 		}
 	}, [isEditingTitle]);
+
+	// Focus zoom input when entering edit mode
+	useEffect(() => {
+		if (isEditingZoom && zoomInputRef.current) {
+			zoomInputRef.current.focus();
+			zoomInputRef.current.select();
+		}
+	}, [isEditingZoom]);
 
 	const handleDoubleClick = () => {
 		if (!isPublicView && !isViewerOnly) {
@@ -198,6 +209,29 @@ export default function TopToolbar({
 		} else if (e.key === 'Escape') {
 			setEditedTitle(boardTitle);
 			setIsEditingTitle(false);
+		}
+	};
+
+	const handleZoomDoubleClick = () => {
+		setIsEditingZoom(true);
+		setEditedZoom(Math.round(viewport.zoom * 100).toString());
+	};
+
+	const handleSaveZoom = () => {
+		const zoomValue = parseFloat(editedZoom);
+		if (!isNaN(zoomValue)) {
+			// Clamp between 25% and 300%
+			const clampedZoom = Math.max(25, Math.min(300, zoomValue)) / 100;
+			setViewport({ zoom: clampedZoom });
+		}
+		setIsEditingZoom(false);
+	};
+
+	const handleZoomKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+		if (e.key === 'Enter') {
+			handleSaveZoom();
+		} else if (e.key === 'Escape') {
+			setIsEditingZoom(false);
 		}
 	};
 
@@ -385,7 +419,27 @@ export default function TopToolbar({
 								<button onClick={zoomOut} className="p-1.5 hover:bg-white/10 rounded text-slate-400 transition-colors">
 									<Minus size={16} />
 								</button>
-								<span className="px-2 text-xs text-slate-300 font-mono min-w-[3rem] text-center">{(viewport.zoom * 100).toPrecision(4)}%</span>
+								{isEditingZoom ? (
+									<input
+										ref={zoomInputRef}
+										type="number"
+										value={editedZoom}
+										onChange={(e) => setEditedZoom(e.target.value)}
+										onBlur={handleSaveZoom}
+										onKeyDown={handleZoomKeyDown}
+										className="px-2 text-xs text-slate-300 font-mono min-w-[3rem] text-center bg-white/10 rounded outline-none focus:ring-2 focus:ring-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+										min="25"
+										max="300"
+									/>
+								) : (
+									<span
+										onDoubleClick={handleZoomDoubleClick}
+										className="px-2 text-xs text-slate-300 font-mono min-w-[3rem] text-center cursor-text hover:bg-white/5 rounded transition-colors"
+										title="Double-click to edit zoom level"
+									>
+										{(viewport.zoom * 100).toPrecision(4)}%
+									</span>
+								)}
 								<button onClick={zoomIn} className="p-1.5 hover:bg-white/10 rounded text-slate-400 transition-colors">
 									<Plus size={16} />
 								</button>

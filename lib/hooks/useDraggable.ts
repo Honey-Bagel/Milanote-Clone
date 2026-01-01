@@ -16,6 +16,7 @@ import type { Card } from '@/lib/types';
 import { useAutoPan } from '@/lib/hooks/useAutoPan';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { bringCardsToFrontOnInteraction, cardsToOrderKeyList } from '@/lib/utils/order-key-manager';
+import { updateEntity, withBoardUpdate } from '@/lib/db/client';
 
 interface UseDraggableOptions {
 	card: Card;
@@ -344,6 +345,7 @@ export function useDraggable({
 							if (targetColumn) {
 								try {
 									const boardId = draggedCard.board_id;
+									const transactions = [];
 
 									// Remove from starting column if it was in one
 									if (startingColumn && startingColumn !== potentialTarget) {
@@ -353,7 +355,7 @@ export function useDraggable({
 												.filter((item: any) => item.card_id !== draggedCardId)
 												.map((item: any, index: number) => ({ ...item, position: index }));
 
-											await CardService.updateColumnItems(startingColumn, boardId, updatedItems);
+											transactions.push(updateEntity('cards', startingColumn, { column_items: updatedItems }));
 										}
 									}
 
@@ -366,7 +368,12 @@ export function useDraggable({
 											{ card_id: draggedCardId, position: newPosition }
 										];
 
-										await CardService.updateColumnItems(potentialTarget, boardId, updatedColumnItems);
+										transactions.push(updateEntity('cards', potentialTarget, { column_items: updatedColumnItems }));
+									}
+
+									// Execute all column updates in a single transaction
+									if (transactions.length > 0) {
+										await withBoardUpdate(boardId, transactions);
 									}
 								} catch (error) {
 									console.error('Failed to move card between columns:', error);
@@ -385,7 +392,9 @@ export function useDraggable({
 										.filter((item: any) => item.card_id !== draggedCardId)
 										.map((item: any, index: number) => ({ ...item, position: index }));
 
-									await CardService.updateColumnItems(startingColumn, boardId, updatedItems);
+									await withBoardUpdate(boardId, [
+										updateEntity('cards', startingColumn, { column_items: updatedItems })
+									]);
 								}
 							} catch (error) {
 								console.error('Failed to remove card from column:', error);

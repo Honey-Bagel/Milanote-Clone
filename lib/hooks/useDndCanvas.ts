@@ -16,7 +16,7 @@ import { useSensors, useSensor, PointerSensor, MouseSensor } from '@dnd-kit/core
 import type { DragStartEvent, DragMoveEvent, DragEndEvent, DragOverEvent, Over } from '@dnd-kit/core';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
-import { CardService } from '@/lib/services/card-service';
+import { CardService, CardTransaction } from '@/lib/services/card-service';
 import type { CardData } from '@/lib/types';
 import { GRID_SIZE } from '../constants/defaults';
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
@@ -653,7 +653,10 @@ export function useDndCanvas({
 				return;
 			}
 
-			// No column overlap → Free canvas movement (existing logic)
+			// No column overlap → Free canvas movement (batch update)
+			const tx = new CardTransaction();
+			let hasAnyMoved = false;
+
 			for (const cardId of draggedCardIds) {
 				const card = allCardsMap.get(cardId);
 				if (card && boardId) {
@@ -679,20 +682,34 @@ export function useDndCanvas({
 						}
 					}
 
-					await CardService.updateCardTransform({
-						cardId: card.id,
-						boardId: boardId,
-						transform: {
-							position_x: newX,
-							position_y: newY,
-						},
-						withUndo: true,
-						previousTransform: {
-							position_x: card.position_x,
-							position_y: card.position_y,
-						},
-					});
+					// Check if card actually moved
+					const hasMoved =
+						Math.abs(newX - card.position_x) > 0.1 ||
+						Math.abs(newY - card.position_y) > 0.1;
+
+					if (hasMoved) {
+						hasAnyMoved = true;
+						tx.updateCard(
+							cardId,
+							{
+								position_x: newX,
+								position_y: newY,
+							},
+							{
+								position_x: card.position_x,
+								position_y: card.position_y,
+							}
+						);
+					}
 				}
+			}
+
+			// Commit all updates in a single transaction
+			if (hasAnyMoved && boardId) {
+				await tx.commit(boardId, {
+					withUndo: true,
+					description: `Move ${tx.size} card${tx.size > 1 ? 's' : ''}`,
+				});
 			}
 
 			// Persist z-index

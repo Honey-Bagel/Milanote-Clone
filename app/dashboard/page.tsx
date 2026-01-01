@@ -154,7 +154,7 @@ export default function Dashboard() {
 					</div>
 
 					{/* Sub-Navigation tools */}
-					<div className="flex gap-1 px-6 pb-0">
+					<div className="flex gap-1 px-6">
 						<TabButton
 							active={activeTab === 'my-boards'}
 							icon={Grid}
