@@ -327,7 +327,7 @@ export function Canvas({
 		: null;
 
 	return (
-		<div className="flex flex-col h-screen bg-[#020617] text-slate-300">
+		<div className="flex flex-col h-screen bg-[#020617] text-foreground">
 			{/* Toolbar */}
 			<div className="h-[56px] flex-shrink-0 z-40">
 				{selectedEditor ? (

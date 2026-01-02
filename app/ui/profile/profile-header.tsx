@@ -57,7 +57,7 @@ export function ProfileHeader({
 
   return (
     <>
-      <div className="bg-card rounded-xl border border-border p-8 shadow-lg">
+      <div className="bg-card rounded-xl border border-white/10 p-8 shadow-lg">
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
           {/* Avatar */}
           <div className="relative">

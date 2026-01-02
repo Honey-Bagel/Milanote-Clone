@@ -57,7 +57,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 				<div className="w-64 border-r border-white/10 p-6 flex flex-col">
 					<div className="mb-8">
 						<h2 className="text-2xl font-bold text-white">Settings</h2>
-						<p className="text-sm text-slate-400 mt-1">Manage your account</p>
+						<p className="text-sm text-secondary-foreground mt-1">Manage your account</p>
 					</div>
 
 					<nav className="space-y-1 flex-1">
@@ -69,8 +69,8 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 									onClick={() => setActiveSection(section.id)}
 									className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-150 ${
 										activeSection === section.id
-											? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-											: 'text-slate-400 hover:bg-white/5 hover:text-white'
+											? 'bg-primary text-white shadow-lg shadow-primary/20'
+											: 'text-secondary-foreground hover:bg-white/5 hover:text-white'
 									}`}
 								>
 									<Icon size={18} />
@@ -81,10 +81,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 					</nav>
 
 					<div className="pt-4 border-t border-white/10 mt-4">
-						<div className="text-xs text-slate-500">
+						<div className="text-xs text-muted-foreground">
 							<div className="flex items-center justify-between mb-1">
 								<span>Version</span>
-								<span className="text-slate-400 font-mono">1.0.0</span>
+								<span className="text-secondary-foreground font-mono">1.0.0</span>
 							</div>
 						</div>
 					</div>
@@ -101,7 +101,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 						</div>
 						<button
 							onClick={onClose}
-							className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors duration-150"
+							className="p-2 rounded-lg text-secondary-foreground hover:text-white hover:bg-white/5 transition-colors duration-150"
 						>
 							<X size={20} />
 						</button>

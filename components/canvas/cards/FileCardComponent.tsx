@@ -45,7 +45,7 @@ export function FileCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="file-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 rounded-lg w-full h-full">
+		<div className="file-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 rounded-lg w-full h-full">
 			<a
 				href={card.file_url}
 				target="_blank"
@@ -54,14 +54,14 @@ export function FileCardComponent({
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-center gap-3">
-					<div className="w-10 h-10 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400 font-semibold text-xs border border-cyan-500/30">
+					<div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center text-accent font-semibold text-xs border border-accent/30">
 						{card.file_type?.toUpperCase() || 'FILE'}
 					</div>
 					<div className="flex-1 min-w-0">
 						<h3 className="font-medium text-sm text-white truncate">
 							{card.file_name}
 						</h3>
-						<p className="text-xs text-slate-500">
+						<p className="text-xs text-muted-foreground">
 							{formatFileSize(card.file_size)}
 						</p>
 					</div>

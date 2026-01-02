@@ -93,7 +93,7 @@ function DroppableBreadcrumbItem({
 								onChange={(e) => setEditedTitle(e.target.value)}
 								onBlur={handleSaveTitle}
 								onKeyDown={handleKeyDown}
-								className="text-white font-semibold bg-white/10 px-2 py-1 rounded outline-none focus:ring-2 focus:ring-indigo-500 max-w-[200px]"
+								className="text-white font-semibold bg-white/10 px-2 py-1 rounded outline-none focus:ring-2 focus:ring-primary max-w-[200px]"
 							/>
 						) : (
 							<span
@@ -109,7 +109,7 @@ function DroppableBreadcrumbItem({
 					<div
 						className={cn(
 							'transition-all duration-150 rounded-lg',
-							isOver && 'bg-indigo-500/20 ring-2 ring-indigo-500 scale-105'
+							isOver && 'bg-primary/20 ring-2 ring-primary scale-105'
 						)}
 					>
 						<BreadcrumbLink asChild>
@@ -119,7 +119,7 @@ function DroppableBreadcrumbItem({
 										? `/board/public/${crumb.shareToken}`
 										: `/board/${crumb.id}`
 								}
-								className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors px-2 py-1"
+								className="flex items-center space-x-2 text-secondary-foreground hover:text-white transition-colors px-2 py-1"
 							>
 								{crumb.color && (
 									<div className="w-4 h-4 rounded opacity-70" style={{ backgroundColor: crumb.color }} />
@@ -133,7 +133,7 @@ function DroppableBreadcrumbItem({
 			{isBreadcrumbsCondensed && index === 0 && (
 				<>
 					<BreadcrumbSeparator className="text-slate-600" />
-					<BreadcrumbEllipsis className="text-slate-500" />
+					<BreadcrumbEllipsis className="text-muted-foreground" />
 				</>
 			)}
 		</Fragment>
@@ -378,7 +378,7 @@ export default function TopToolbar({
 									<BreadcrumbLink	asChild>
 										<Link
 											href="/dashboard"
-											className="flex items-center rounded-lg hover:bg-white/5 text-slate-400 transition-colors"
+											className="flex items-center rounded-lg hover:bg-white/5 text-secondary-foreground transition-colors"
 										>
 											<Home className="w-5 h-5" />
 										</Link>
@@ -416,7 +416,7 @@ export default function TopToolbar({
 					<div className="flex items-center space-x-3">
 						{/* Zoom Controls */}
 							<div className="flex items-center space-x-1 bg-[#020617] border border-white/10 rounded-lg px-1 py-1">
-								<button onClick={zoomOut} className="p-1.5 hover:bg-white/10 rounded text-slate-400 transition-colors">
+								<button onClick={zoomOut} className="p-1.5 hover:bg-white/10 rounded text-secondary-foreground transition-colors">
 									<Minus size={16} />
 								</button>
 								{isEditingZoom ? (
@@ -427,20 +427,20 @@ export default function TopToolbar({
 										onChange={(e) => setEditedZoom(e.target.value)}
 										onBlur={handleSaveZoom}
 										onKeyDown={handleZoomKeyDown}
-										className="px-2 text-xs text-slate-300 font-mono min-w-[3rem] text-center bg-white/10 rounded outline-none focus:ring-2 focus:ring-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+										className="px-2 text-xs text-foreground font-mono min-w-[3rem] text-center bg-white/10 rounded outline-none focus:ring-2 focus:ring-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
 										min="25"
 										max="300"
 									/>
 								) : (
 									<span
 										onDoubleClick={handleZoomDoubleClick}
-										className="px-2 text-xs text-slate-300 font-mono min-w-[3rem] text-center cursor-text hover:bg-white/5 rounded transition-colors"
+										className="px-2 text-xs text-foreground font-mono min-w-[3rem] text-center cursor-text hover:bg-white/5 rounded transition-colors"
 										title="Double-click to edit zoom level"
 									>
 										{(viewport.zoom * 100).toPrecision(4)}%
 									</span>
 								)}
-								<button onClick={zoomIn} className="p-1.5 hover:bg-white/10 rounded text-slate-400 transition-colors">
+								<button onClick={zoomIn} className="p-1.5 hover:bg-white/10 rounded text-secondary-foreground transition-colors">
 									<Plus size={16} />
 								</button>
 							</div>
@@ -448,7 +448,7 @@ export default function TopToolbar({
 							{/* View Mode */}
 							<button
 								onClick={handleZoomToFit}
-								className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors"
+								className="p-2 hover:bg-white/5 rounded-lg text-secondary-foreground transition-colors"
 								title="Zoom to fit all cards"
 							>
 								<Maximize2 size={16} />
@@ -462,13 +462,13 @@ export default function TopToolbar({
 							{/* Share Button */}
 							<button 
 								onClick={() => setIsShareModalOpen(true)} 
-								className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-indigo-500/20 border border-indigo-500/50"
+								className="px-4 py-2 bg-primary hover:bg-primary rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-primary/20 border border-primary/50"
 							>
 								<Share2 size={14}/>
 								Share
 							</button>
 
-							<button onClick={() => setIsSettingsModalOpen(true)} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 transition-colors"><Settings size={20} /></button>
+							<button onClick={() => setIsSettingsModalOpen(true)} className="p-2 hover:bg-white/5 rounded-lg text-secondary-foreground transition-colors"><Settings size={20} /></button>
 					</div>
 				</div>
 			<SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />

@@ -138,37 +138,37 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 			{data.card && (
 				GetCardTypeContextMenu(data.card, onClose)
 			)}
-			<button onClick={handleDuplicateButton} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<Copy className="w-4 h-4 text-slate-400" />
+			<button onClick={handleDuplicateButton} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Copy className="w-4 h-4 text-secondary-foreground" />
 				<span>Duplicate</span>
 			</button>
-			<button onClick={handleEditButton} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<Edit className="w-4 h-4 text-slate-400" />
+			<button onClick={handleEditButton} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Edit className="w-4 h-4 text-secondary-foreground" />
 				<span>Edit</span>
 			</button>
-			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<Palette className="w-4 h-4 text-slate-400" />
+			<button className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Palette className="w-4 h-4 text-secondary-foreground" />
 				<span>Change Color</span>
 			</button>
 			<div className="h-px bg-white/10 my-1.5"></div>
-			<button onClick={handleBringToFront} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<ArrowUp className="w-4 h-4 text-slate-400" />
+			<button onClick={handleBringToFront} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<ArrowUp className="w-4 h-4 text-secondary-foreground" />
 				<span>Bring Forward</span>
 			</button>
-			<button onClick={handleSendToBack} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<ArrowDown className="w-4 h-4 text-slate-400" />
+			<button onClick={handleSendToBack} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<ArrowDown className="w-4 h-4 text-secondary-foreground" />
 				<span>Send Backward</span>
 			</button>
 			<div className="h-px bg-white/10 my-1.5"></div>
-			<button onClick={handleToggleLock} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+			<button onClick={handleToggleLock} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
 				{data.card?.is_position_locked ? (
 					<>
-						<Unlock className="w-4 h-4 text-slate-400" />
+						<Unlock className="w-4 h-4 text-secondary-foreground" />
 						<span>Unlock Position</span>
 					</>
 				) : (
 					<>
-						<Lock className="w-4 h-4 text-slate-400" />
+						<Lock className="w-4 h-4 text-secondary-foreground" />
 						<span>Lock Position</span>
 					</>
 				)}

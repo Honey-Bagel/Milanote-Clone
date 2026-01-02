@@ -190,34 +190,34 @@ export function BoardCardComponent({
 
 	if (isEditing) {
 		return (
-			<div className="board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 w-full h-full">
+			<div className="board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 w-full h-full">
 				<div className="p-4 space-y-3">
 					<div>
-						<label className="text-xs text-slate-400 block mb-1">Board Title</label>
+						<label className="text-xs text-secondary-foreground block mb-1">Board Title</label>
 						<input
 							type="text"
 							value={localTitle}
 							onChange={handleTitleChange}
-							className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
+							className="w-full px-2 py-1 text-sm bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
 							placeholder="Board name"
 							onClick={(e) => e.stopPropagation()}
 						/>
 					</div>
 
 					{isCreatingNew ? (
-						<div className="space-y-3 p-3 bg-slate-800/50 rounded border border-white/10">
+						<div className="space-y-3 p-3 bg-secondary/50 rounded border border-white/10">
 							<div>
-								<label className="text-xs text-slate-400 block mb-1">New Board Name</label>
+								<label className="text-xs text-secondary-foreground block mb-1">New Board Name</label>
 								<input
 									type="text"
 									value={newBoardTitle}
 									onChange={(e) => setNewBoardTitle(e.target.value)}
-									className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
+									className="w-full px-2 py-1 text-sm bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
 									onClick={(e) => e.stopPropagation()}
 								/>
 							</div>
 							<div>
-								<label className="text-xs text-slate-400 block mb-1">Color</label>
+								<label className="text-xs text-secondary-foreground block mb-1">Color</label>
 								<input
 									type="color"
 									value={newBoardColor}
@@ -232,7 +232,7 @@ export function BoardCardComponent({
 										e.stopPropagation();
 										handleCreateNewBoard();
 									}}
-									className="px-3 py-1 text-sm bg-cyan-600 text-white rounded hover:bg-cyan-700"
+									className="px-3 py-1 text-sm bg-accent text-white rounded hover:bg-cyan-700"
 									style={{ cursor: 'pointer' }}
 								>
 									Create
@@ -242,7 +242,7 @@ export function BoardCardComponent({
 										e.stopPropagation();
 										setIsCreatingNew(false);
 									}}
-									className="px-3 py-1 text-sm border border-white/10 text-slate-300 rounded hover:bg-white/5"
+									className="px-3 py-1 text-sm border border-white/10 text-foreground rounded hover:bg-white/5"
 									style={{ cursor: 'pointer' }}
 								>
 									Cancel
@@ -256,7 +256,7 @@ export function BoardCardComponent({
 									e.stopPropagation();
 									setIsCreatingNew(true);
 								}}
-								className="w-full px-3 py-2 text-sm text-cyan-400 border border-cyan-500/30 rounded hover:bg-cyan-500/10"
+								className="w-full px-3 py-2 text-sm text-accent border border-accent/30 rounded hover:bg-accent/10"
 								style={{ cursor: 'pointer' }}
 							>
 								+ Create New Board
@@ -264,7 +264,7 @@ export function BoardCardComponent({
 
 							{availableBoards.length > 0 && (
 								<div>
-									<label className="text-xs text-slate-400 block mb-1">Or Link to Existing</label>
+									<label className="text-xs text-secondary-foreground block mb-1">Or Link to Existing</label>
 									<select
 										value={card.linked_board_id || ''}
 										onChange={(e) => {
@@ -273,7 +273,7 @@ export function BoardCardComponent({
 												handleSelectBoard(selectedBoard.id, selectedBoard.title, selectedBoard.color);
 											}
 										}}
-										className="w-full px-2 py-1 text-sm bg-slate-700/50 text-slate-300 border border-white/10 rounded focus:ring-1 focus:ring-cyan-500 outline-none"
+										className="w-full px-2 py-1 text-sm bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
 										onClick={(e) => e.stopPropagation()}
 									>
 										<option value="">Select a board...</option>
@@ -297,13 +297,13 @@ export function BoardCardComponent({
 	// ========================================================================
 
 	return (
-		<div ref={setNodeRef} className="board-card group/board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 cursor-pointer group w-full h-full overflow-hidden">
+		<div ref={setNodeRef} className="board-card group/board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 cursor-pointer group w-full h-full overflow-hidden">
 			<div
 				className="h-full"
 				onDoubleClick={handleNavigateToBoard}
 			>
 				<div
-					className="h-32 flex items-center justify-center relative bg-gradient-to-br from-indigo-600 to-indigo-800"
+					className="h-32 flex items-center justify-center relative bg-gradient-to-br from-primary to-indigo-800"
 					style={{ background: `linear-gradient(to bottom right, ${card.board_color}, ${card.board_color}dd)` }}
 				>
 					<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
@@ -322,10 +322,10 @@ export function BoardCardComponent({
 					</svg>
 				</div>
 				<div className="p-4 border-t border-white/5">
-					<h3 className="font-semibold text-white truncate mb-1 group-hover/board-card:text-cyan-400 transition-colors">
+					<h3 className="font-semibold text-white truncate mb-1 group-hover/board-card:text-accent transition-colors">
 						{card.board_title}
 					</h3>
-					<p className="text-xs text-slate-500 flex items-center gap-1">
+					<p className="text-xs text-muted-foreground flex items-center gap-1">
 						<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
 							<path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
 						</svg>

@@ -30,8 +30,8 @@ export function DateFilterDropdown({ filterType, filterField, onFilterChange }: 
 				<button
 					className={`p-2 rounded-lg transition-colors ${
 						isActive
-							? 'bg-indigo-500/20 text-indigo-400'
-							: 'hover:bg-white/5 text-slate-400'
+							? 'bg-primary/20 text-primary'
+							: 'hover:bg-white/5 text-secondary-foreground'
 					}`}
 				>
 					<Filter size={16} />
@@ -39,9 +39,9 @@ export function DateFilterDropdown({ filterType, filterField, onFilterChange }: 
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="end"
-				className="w-56 bg-[#0f172a] border-white/10 text-slate-300"
+				className="w-56 bg-[#0f172a] border-white/10 text-foreground"
 			>
-				<DropdownMenuLabel className="text-slate-400">Filter by Date</DropdownMenuLabel>
+				<DropdownMenuLabel className="text-secondary-foreground">Filter by Date</DropdownMenuLabel>
 				<DropdownMenuSeparator className="bg-white/10" />
 
 				<DropdownMenuRadioGroup
@@ -81,7 +81,7 @@ export function DateFilterDropdown({ filterType, filterField, onFilterChange }: 
 				</DropdownMenuRadioGroup>
 
 				<DropdownMenuSeparator className="bg-white/10" />
-				<DropdownMenuLabel className="text-slate-400">Filter Field</DropdownMenuLabel>
+				<DropdownMenuLabel className="text-secondary-foreground">Filter Field</DropdownMenuLabel>
 
 				<DropdownMenuRadioGroup
 					value={filterField}

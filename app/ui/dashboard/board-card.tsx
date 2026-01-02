@@ -77,7 +77,7 @@ export function BoardCard({
 				onMouseEnter={() => setIsHovered(true)}
 				onMouseLeave={() => setIsHovered(false)}
 			>
-				<div className="bg-[#0f172a]/40 border border-white/10 rounded-2xl overflow-hidden hover:border-indigo-500/50 transition-all duration-300 group cursor-pointer hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
+				<div className="bg-[#0f172a]/40 border border-white/10 rounded-2xl overflow-hidden hover:border-primary/50 transition-all duration-300 group cursor-pointer hover:shadow-2xl hover:shadow-indigo-500/10 hover:-translate-y-1">
 					<div className={`h-48 relative`} style={gradientStyle}>
 						<div className="absolute inset-0 flex items-center justify-center text-slate-600/50 group-hover:text-white/20 transition-colors">
 							<Layers size={48} />
@@ -100,17 +100,17 @@ export function BoardCard({
 						</div>
 					</div>
 					<div className="p-5">
-						<h4 className="font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors text-lg">{board.title}</h4>
+						<h4 className="font-bold text-white mb-2 group-hover:text-primary transition-colors text-lg">{board.title}</h4>
 						<div className="flex items-center justify-between">
-							<div className="text-xs text-slate-500 font-medium flex items-center gap-1">
+							<div className="text-xs text-muted-foreground font-medium flex items-center gap-1">
 								<Clock size={12}/>
 								{getTimeAgo(board.updated_at)}
 							</div>
 							<div>
-								<button onClick={handleFavoriteClick} className={`p-1.5 rounded-lg text-slate-500 hover:text-white transition-colors`}>
+								<button onClick={handleFavoriteClick} className={`p-1.5 rounded-lg text-muted-foreground hover:text-white transition-colors`}>
 									<Star className={`${isFavorited ? 'fill-slate-500' : ''}`} size={20}/>
 								</button>
-								<button onClick={handleSettingsClick} className="p-1.5 hover:bg-white/5 rounded-lg text-slate-500 hover:text-white transition-colors">
+								<button onClick={handleSettingsClick} className="p-1.5 hover:bg-white/5 rounded-lg text-muted-foreground hover:text-white transition-colors">
 									<MoreVertical size={20}/>
 								</button>
 							</div>

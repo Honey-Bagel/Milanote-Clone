@@ -39,34 +39,34 @@ export default function LandingPage() {
 	});
 
 	return (
-		<div ref={containerRef} className="min-h-screen bg-[#020617] text-slate-300 font-sans overflow-x-hidden relative selection:bg-cyan-500/30 selection:text-cyan-50">
+		<div ref={containerRef} className="min-h-screen bg-background text-foreground font-sans overflow-x-hidden relative selection:bg-accent/30 selection:text-cyan-50">
 			{/* Background */}
 			<div className="fixed inset-0 pointer-events-none z-0">
-				<div className="absolute w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[100px] mix-blend-screen transition-transform duration-75 ease-out" style={{ left: -400, top: -400, transform: `translate(${mousePos.x}px, ${mousePos.y}px)` }} />
+				<div className="absolute w-[800px] h-[800px] bg-primary/10 rounded-full blur-[100px] mix-blend-screen transition-transform duration-75 ease-out" style={{ left: -400, top: -400, transform: `translate(${mousePos.x}px, ${mousePos.y}px)` }} />
 				<div className="absolute inset-0 opacity-[0.03]" style={{filter: 'contrast(120%)', backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
 				<div className="absolute inset-0 opacity-[0.25]" style={{ backgroundImage: `linear-gradient(to right, #475569 1px, transparent 1px), linear-gradient(to bottom, #475569 1px, transparent 1px)`, backgroundSize: '60px 60px', transform: `perspective(1000px) rotateX(20deg) translate(${mousePos.parallaxX}px, ${mousePos.parallaxY}px)`, maskImage: 'radial-gradient(circle at center, black 0%, transparent 85%)' }} />
 			</div>
 
 			{/* Navigation */}
-			<nav className={`fixed top-0 w-full z-50 h-20 transition-all duration-700 ease-in-out ${scrolled ? 'bg-[#020617]/90 backdrop-blur-md border-b border-white/10 shadow-2xl' : 'bg-transparent border-transparent'}`}>
+			<nav className={`fixed top-0 w-full z-50 h-20 transition-all duration-700 ease-in-out ${scrolled ? 'bg-background/90 backdrop-blur-md border-b border-white/10 shadow-2xl' : 'bg-transparent border-transparent'}`}>
 				<div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
 					<div className="flex items-center gap-3">
-						<div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+						<div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
 							<Layers size={16} className="text-white" />
 						</div>
 						<span className="font-bold text-lg tracking-tight text-white">Note App</span>
 					</div>
-					<div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+					<div className="hidden md:flex items-center gap-8 text-sm font-medium text-secondary-foreground">
 						<a href="#use-cases" className="hover:text-white transition-colors">Use Cases</a>
 						<a href="#visual-engine" className="hover:text-white transition-colors">Visual Engine</a>
 						<Link href="/pricing" className="hover:text-white tarnsition-colors">Pricing</Link>
-						<div className={`h-4 w-px bg-slate-800 transition-opacity duration-700 ${scrolled ? 'opacity-100' : 'opacity-0'}`}></div>
+						<div className={`h-4 w-px bg-secondary transition-opacity duration-700 ${scrolled ? 'opacity-100' : 'opacity-0'}`}></div>
 						{/* Auth buttons */}
 						{!isSignedIn ? (
 							<>
 								<Link
 									href="/auth"
-									className="text-white hover:text-cyan-400 transition-colors"
+									className="text-white hover:text-accent transition-colors"
 								>
 									Log In
 								</Link>
@@ -88,7 +88,7 @@ export default function LandingPage() {
 							)
 						}
 					</div>
-					<div className="md:hidden text-slate-400">
+					<div className="md:hidden text-secondary-foreground">
 						<Menu size={24} onClick={() => setIsMenuOpen(!isMenuOpen)} />
 					</div>
 				</div>
@@ -99,19 +99,19 @@ export default function LandingPage() {
 				{/* Hero section */}
 				<div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 items-center mb-32">
 					<div className="text-left relative z-20">
-						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-950/30 text-[10px] font-bold text-indigo-300 mb-8 tracking-widest uppercase">
+						<div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-indigo-950/30 text-[10px] font-bold text-primary mb-8 tracking-widest uppercase">
 							<Sparkles size={10} />
 							<span>Spatial Workspace v1.0</span>
 						</div>
 						<h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight leading-[1.1]">
 							The infinite <br /> paper for your <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300">digital mind.</span>
 						</h1>
-						<p className="text-lg text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
+						<p className="text-lg text-secondary-foreground max-w-xl mb-10 leading-relaxed font-light">
 							Linear docs are for finishing ideas. Milanote Clone is for finding them. Drag, drop, and connect your thoughts on an infinite spatial plane.
 						</p>
 						{!isSignedIn ? (
 							<form onSubmit={(e) => {e.preventDefault();}} className="flex flex-col sm:flex-row gap-3 max-w-md">
-								<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="test@email.com" className="flex-1 bg-[#0f172a] border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500" />
+								<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="test@email.com" className="flex-1 bg-[#0f172a] border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-primary outline-none transition-all placeholder-slate-500" />
 								<button className="bg-white hover:bg-slate-200 text-black px-6 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">Join Beta <ArrowRight size={16}/></button>
 							</form>
 						): (
@@ -121,8 +121,8 @@ export default function LandingPage() {
 
 					{/* Interactive Canvas */}
 					<div className="relative h-[500px] perspective-[1000px] group">
-						<div className="absolute inset-0 rounded-3xl border border-white/10 bg-[#0f172a]/40 backdrop-blur-sm overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all duration-500 hover:border-indigo-500/30">
-							<div className="absolute top-4 left-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest pointer-events-none z-20">Interactive Preview</div>
+						<div className="absolute inset-0 rounded-3xl border border-white/10 bg-[#0f172a]/40 backdrop-blur-sm overflow-hidden shadow-2xl ring-1 ring-white/5 transition-all duration-500 hover:border-primary/30">
+							<div className="absolute top-4 left-6 text-[10px] font-mono text-muted-foreground uppercase tracking-widest pointer-events-none z-20">Interactive Preview</div>
 							<div id="canvas-container" className="absolute inset-0 cursor-crosshair">
 							</div>
 						</div>
@@ -133,32 +133,32 @@ export default function LandingPage() {
 					<section id="visual-engine" className="w-full max-w-7xl mx-auto mb-32">
 						<div className="text-center mb-16">
 							<h2 className="text-3xl font-bold text-white mb-4">Native Media Engine.</h2>
-							<p className="text-slate-400 max-w-2xl mx-auto">
+							<p className="text-secondary-foreground max-w-2xl mx-auto">
 								Unlike standard whiteboards, CanvasOne understands code, video, and design assets natively.
 							</p>
 						</div>
 						<div className="grid grid-cols-2 md:grid-cols-4 gap-4 h-[400px] md:h-[500px] overflow-hidden rounded-3xl border border-white/5 bg-[#0f172a]/20 p-4 relative group">
-							<div className="absolute inset-0 bg-indigo-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+							<div className="absolute inset-0 bg-primary/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 							{/* Column 1 */}
 							<div className="space-y-4 animate-scroll-slow">
-								<div className="h-32 bg-indigo-900/20 rounded-xl border border-indigo-500/20 flex items-center justify-center"><ImageIcon size={32} className="text-indigo-400"/></div>
-								<div className="h-48 bg-slate-800 rounded-xl border border-white/5"></div>
+								<div className="h-32 bg-indigo-900/20 rounded-xl border border-primary/20 flex items-center justify-center"><ImageIcon size={32} className="text-primary"/></div>
+								<div className="h-48 bg-secondary rounded-xl border border-white/5"></div>
 							</div>
 							{/* Column 2 */}
 							<div className="space-y-4 pt-12 animate-scroll-slow" style={{animationDelay: '-2s'}}>
-								<div className="h-32 bg-cyan-900/20 rounded-xl border border-cyan-500/20 flex items-center justify-center"><Type size={32} className="text-cyan-400"/></div>
-								<div className="h-40 bg-slate-800 rounded-xl border border-white/5"></div>
+								<div className="h-32 bg-cyan-900/20 rounded-xl border border-accent/20 flex items-center justify-center"><Type size={32} className="text-accent"/></div>
+								<div className="h-40 bg-secondary rounded-xl border border-white/5"></div>
 							</div>
 							{/* Column 3 */}
 							<div className="space-y-4 animate-scroll-slow" style={{animationDelay: '-5s'}}>
-								<div className="h-48 bg-slate-800 rounded-xl border border-white/5 p-4 font-mono text-xs text-slate-500">const init = ...</div>
+								<div className="h-48 bg-secondary rounded-xl border border-white/5 p-4 font-mono text-xs text-muted-foreground">const init = ...</div>
 								<div className="h-32 bg-purple-900/20 rounded-xl border border-purple-500/20 flex items-center justify-center"><Code size={32} className="text-purple-400"/></div>
-								<div className="h-40 bg-slate-800 rounded-xl border border-white/5"></div>
+								<div className="h-40 bg-secondary rounded-xl border border-white/5"></div>
 							</div>
 							{/* Column 4 */}
 							<div className="space-y-4 pt-8 animate-scroll-slow" style={{animationDelay: '-7s'}}>
 								<div className="h-32 bg-emerald-900/20 rounded-xl border border-emerald-500/20 flex items-center justify-center"><CheckSquare size={32} className="text-emerald-400"/></div>
-								<div className="h-48 bg-slate-800 rounded-xl border border-white/5"></div>
+								<div className="h-48 bg-secondary rounded-xl border border-white/5"></div>
 							</div>
 							<div className="absolute inset-0 bg-gradient-to-b from-[#020617] via-transparent to-[#020617] pointer-events-none"></div>
 						</div>
@@ -166,18 +166,18 @@ export default function LandingPage() {
 
 					{/* --- USE CASES  --- */}
 					<section id="use-cases" className="w-full max-w-7xl mx-auto mb-32">
-						<div className="text-left mb-12 pl-4 border-l-4 border-indigo-500">
+						<div className="text-left mb-12 pl-4 border-l-4 border-primary">
 							<h2 className="text-3xl font-bold text-white mb-2">Start with a blueprint.</h2>
-							<p className="text-slate-400">See how teams use CanvasOne. Real card arrangements.</p>
+							<p className="text-secondary-foreground">See how teams use CanvasOne. Real card arrangements.</p>
 						</div>
 						
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
 							
 							{/* 1. PRODUCT ROADMAP (Using Columns & Cards) */}
-							<div className="bg-[#0f172a]/30 border border-slate-800 rounded-3xl overflow-hidden hover:border-indigo-500/30 transition-all group">
+							<div className="bg-[#0f172a]/30 border border-slate-800 rounded-3xl overflow-hidden hover:border-primary/30 transition-all group">
 								<div className="p-6 border-b border-white/5 flex justify-between items-center">
 									<div className="flex items-center gap-2">
-										<Calendar size={18} className="text-indigo-400"/>
+										<Calendar size={18} className="text-primary"/>
 										<h3 className="font-bold text-white">Product Roadmap</h3>
 									</div>
 									<ArrowRight size={16} className="text-slate-600 group-hover:text-white transition-colors"/>
@@ -216,7 +216,7 @@ export default function LandingPage() {
 
 					{/* --- INTEGRATIONS --- */}
 					<section id="integrations" className="w-full max-w-4xl mx-auto mb-32 text-center">
-						<h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-10">Works with your stack</h2>
+						<h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-10">Works with your stack</h2>
 						<div className="flex flex-wrap justify-center gap-12 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-500">
 							<div className="flex items-center gap-2 text-white"><Github size={24}/> <span className="font-bold">GitHub</span></div>
 							<div className="flex items-center gap-2 text-white"><Figma size={24}/> <span className="font-bold">Figma</span></div>

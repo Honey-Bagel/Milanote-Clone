@@ -88,7 +88,7 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 
 						{/* Multi-select indicator badge */}
 						{selectedCardIds.size > 1 && (
-							<div className="absolute -top-2 -right-2 bg-cyan-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
+							<div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
 								{selectedCardIds.size}
 							</div>
 						)}

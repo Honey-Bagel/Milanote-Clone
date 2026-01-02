@@ -163,7 +163,7 @@ export function TaskListCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="task-list-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 rounded-lg w-full h-full">
+		<div className="task-list-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 rounded-lg w-full h-full">
 			<div
 				className="p-4 flex flex-col h-full"
 				onDoubleClick={(e) => e.stopPropagation()}
@@ -181,7 +181,7 @@ export function TaskListCardComponent({
 									setEditingTitle(false);
 								}
 							}}
-							className="w-full font-bold text-white bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
+							className="w-full font-bold text-white bg-transparent border-none outline-none focus:ring-1 focus:ring-ring rounded px-1"
 							onClick={(e) => e.stopPropagation()}
 							placeholder="Task List"
 							autoFocus
@@ -233,7 +233,7 @@ export function TaskListCardComponent({
 										}}
 										className={`w-5 h-5 rounded-[6px] border flex items-center justify-center transition-all ml-3 flex-shrink-0
 											${task.completed
-												? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400'
+												? 'bg-accent/20 border-accent/50 text-accent'
 												: 'border-white/20 hover:border-white/40 bg-transparent'
 											}`}
 										style={{ cursor: 'pointer' }}

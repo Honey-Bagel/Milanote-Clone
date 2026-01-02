@@ -75,7 +75,7 @@ const LockIndicator = memo(function LockIndicator({ viewport }: LockIndicatorPro
 		>
 			<Lock
 				size={iconSize}
-				className="text-slate-400/60"
+				className="text-secondary-foreground/60"
 				strokeWidth={2}
 			/>
 		</div>

@@ -33,8 +33,8 @@ const ToolbarButton = ({
     title={title}
     className={`p-2 rounded-lg transition-all ${
       isActive
-        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+        ? 'bg-primary text-white shadow-lg shadow-primary/20'
+        : 'text-secondary-foreground hover:bg-white/5 hover:text-white'
     }`}
     type="button"
   >
@@ -105,7 +105,7 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
     <div className="bg-[#0f172a] border-b border-white/10 px-6 py-3 h-full flex items-center">
       <div className="flex items-center gap-2">
         {/* Line Style Label */}
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">Line</span>
+        <span className="text-xs font-bold text-secondary-foreground uppercase tracking-wider mr-2">Line</span>
 
         <ToolbarDivider />
 
@@ -149,11 +149,11 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
         <ToolbarDivider />
 
         {/* Stroke Width */}
-        <span className="text-xs font-medium text-slate-400">Width</span>
+        <span className="text-xs font-medium text-secondary-foreground">Width</span>
         <select
           value={lineData.line_stroke_width}
           onChange={(e) => updateLineProperty({ line_stroke_width: parseInt(e.target.value) })}
-          className="bg-[#020617] text-slate-300 text-sm rounded-lg px-3 py-1.5 border border-white/10 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none cursor-pointer hover:border-white/20 transition-all"
+          className="bg-[#020617] text-foreground text-sm rounded-lg px-3 py-1.5 border border-white/10 focus:ring-2 focus:ring-primary focus:border-transparent outline-none cursor-pointer hover:border-white/20 transition-all"
         >
           <option value={1}>1px</option>
           <option value={2}>2px</option>
@@ -200,7 +200,7 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
         <ToolbarDivider />
 
         {/* Start Cap */}
-        <span className="text-xs font-medium text-slate-400">Start</span>
+        <span className="text-xs font-medium text-secondary-foreground">Start</span>
         <div className="flex items-center gap-1">
           {endCapOptions.map((option) => (
             <ToolbarButton
@@ -217,7 +217,7 @@ export default function LinePropertiesToolbar({ card }: LinePropertiesToolbarPro
         <ToolbarDivider />
 
         {/* End Cap */}
-        <span className="text-xs font-medium text-slate-400">End</span>
+        <span className="text-xs font-medium text-secondary-foreground">End</span>
         <div className="flex items-center gap-1">
           {endCapOptions.map((option) => (
             <ToolbarButton

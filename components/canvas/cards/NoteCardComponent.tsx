@@ -121,7 +121,7 @@ export function NoteCardComponent({
 		content: card.note_content || '',
 		editorProps: {
 			attributes: {
-				class: 'prose prose-sm max-w-none focus:outline-none p-4 min-h-[60px] text-slate-300 text-sm leading-relaxed'
+				class: 'prose prose-sm max-w-none focus:outline-none p-4 min-h-[60px] text-foreground text-sm leading-relaxed'
 			},
 		},
 		onUpdate: ({ editor }) => {
@@ -186,7 +186,7 @@ export function NoteCardComponent({
 	return (
 		<div
 			ref={rootRef}
-			className="note-card flex bg-[#1e293b]/90 shadow-xl hover:border-cyan-500/50 border border-white/10"
+			className="note-card flex bg-[#1e293b]/90 shadow-xl hover:border-accent/50 border border-white/10"
 			onKeyDown={handleKeyDown}
 			style={{
 				userSelect: isEditing ? 'text' : 'none',

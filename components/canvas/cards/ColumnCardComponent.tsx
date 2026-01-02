@@ -159,7 +159,7 @@ export function ColumnCardComponent({
 							transition-all
 							${isDropTarget
 								? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/30'
-								: 'bg-white/5 text-slate-400'
+								: 'bg-white/5 text-secondary-foreground'
 							}
 						`}>
 							{itemCount} {itemCount === 1 ? 'card' : 'cards'}
@@ -263,7 +263,7 @@ export function ColumnCardComponent({
 						transition-all
 						${isDropTarget
 							? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/30'
-							: 'bg-white/5 text-slate-400'
+							: 'bg-white/5 text-secondary-foreground'
 						}
 					`}>
 						{itemCount} {itemCount === 1 ? 'card' : 'cards'}
@@ -291,8 +291,8 @@ export function ColumnCardComponent({
 								w-14 h-14 rounded-2xl flex items-center justify-center mb-3
 								transition-all duration-300
 								${isDropTarget
-									? 'bg-cyan-500/15 text-cyan-300 scale-110 shadow-lg shadow-cyan-500/20'
-									: 'bg-white/5 text-slate-500'
+									? 'bg-accent/15 text-cyan-300 scale-110 shadow-lg shadow-accent/20'
+									: 'bg-white/5 text-muted-foreground'
 								}
 							`}>
 								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -303,7 +303,7 @@ export function ColumnCardComponent({
 								text-sm font-medium transition-all duration-300
 								${isDropTarget
 									? 'text-cyan-300'
-									: 'text-slate-500'
+									: 'text-muted-foreground'
 								}
 							`}>
 								{isDropTarget ? 'Drop cards here' : 'Drag cards here'}

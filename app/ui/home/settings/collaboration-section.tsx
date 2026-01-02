@@ -9,7 +9,7 @@ export function CollaborationSection() {
 	return (
 		<div className="pt-6 border-t border-white/10">
 			<h3 className="text-lg font-bold text-white mb-2">Collaboration</h3>
-			<p className="text-sm text-slate-400 mb-4">Control how you work with others</p>
+			<p className="text-sm text-secondary-foreground mb-4">Control how you work with others</p>
 
 			<div className="space-y-3">
 				<ToggleCard

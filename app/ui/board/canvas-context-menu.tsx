@@ -75,13 +75,13 @@ export default function CanvasContextMenu({ cards, isOpen, position, onClose }: 
 				left: `${position.x}px`
 			}}
 		>
-			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<StickyNote className="w-4 h-4 text-slate-400" />
+			<button className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<StickyNote className="w-4 h-4 text-secondary-foreground" />
 				<span>Add Note</span>
 			</button>
 			<div className="h-px bg-white/10 my-1.5"></div>
-			<button onClick={onSelectAll} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<CheckSquare className="w-4 h-4 text-slate-400" />
+			<button onClick={onSelectAll} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<CheckSquare className="w-4 h-4 text-secondary-foreground" />
 				<span>Select All</span>
 			</button>
 		</div>

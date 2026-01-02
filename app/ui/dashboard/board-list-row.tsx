@@ -64,7 +64,7 @@ export function BoardListRow({ board }: BoardListRowProps) {
 	return (
 		<>
 			<Link href={`/board/${board.id}`} className="block group mb-3">
-				<div className="flex items-center justify-between bg-[#0f172a]/40 border border-white/10 rounded-xl p-4 hover:border-indigo-500/50 hover:bg-[#0f172a]/60 transition-all duration-200 group hover:shadow-lg hover:shadow-indigo-500/5">
+				<div className="flex items-center justify-between bg-[#0f172a]/40 border border-white/10 rounded-xl p-4 hover:border-primary/50 hover:bg-[#0f172a]/60 transition-all duration-200 group hover:shadow-lg hover:shadow-indigo-500/5">
 					
 					{/* Left: Icon & Title */}
 					<div className="flex items-center gap-4 flex-1 min-w-0">
@@ -72,10 +72,10 @@ export function BoardListRow({ board }: BoardListRowProps) {
 							<Layers size={20} />
 						</div>
 						<div className="min-w-0">
-							<h4 className="font-bold text-white text-sm group-hover:text-indigo-400 transition-colors truncate">
+							<h4 className="font-bold text-white text-sm group-hover:text-primary transition-colors truncate">
 								{board.title}
 							</h4>
-							<p className="text-xs text-slate-500 truncate max-w-[300px]">
+							<p className="text-xs text-muted-foreground truncate max-w-[300px]">
 								{board.description || "No description"}
 							</p>
 						</div>
@@ -95,7 +95,7 @@ export function BoardListRow({ board }: BoardListRowProps) {
 
 					{/* Right: Meta & Actions */}
 					<div className="flex items-center gap-6">
-						<div className="text-xs text-slate-500 font-medium flex items-center gap-1.5 w-24 justify-end">
+						<div className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 w-24 justify-end">
 							<Clock size={12}/>
 							{getTimeAgo(board.updated_at)}
 						</div>
@@ -103,13 +103,13 @@ export function BoardListRow({ board }: BoardListRowProps) {
 						<div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
 							<button 
 								onClick={handleFavoriteClick} 
-								className={`p-1.5 rounded-lg hover:bg-white/10 transition-colors ${isFavorited ? 'text-yellow-400 opacity-100' : 'text-slate-400 hover:text-white'}`}
+								className={`p-1.5 rounded-lg hover:bg-white/10 transition-colors ${isFavorited ? 'text-yellow-400 opacity-100' : 'text-secondary-foreground hover:text-white'}`}
 							>
 								<Star className={isFavorited ? 'fill-yellow-400' : ''} size={16}/>
 							</button>
 							<button 
 								onClick={handleSettingsClick} 
-								className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+								className="p-1.5 rounded-lg text-secondary-foreground hover:text-white hover:bg-white/10 transition-colors"
 							>
 								<MoreVertical size={16}/>
 							</button>

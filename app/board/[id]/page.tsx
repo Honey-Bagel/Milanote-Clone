@@ -38,7 +38,7 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 	return (
 		<db.SignedIn>
 			<DndContextProvider boardId={id} allCardsMap={allCardsMap}>
-				<div className="min-h-screen bg-[#020617] text-slate-300 font-sans overflow-hidden flex flex-col h-screen selection:bg-indigo-500/30 selection:text-white">
+				<div className="min-h-screen bg-[#020617] text-foreground font-sans overflow-hidden flex flex-col h-screen selection:bg-primary/30 selection:text-white">
 					<TopToolbar
 						boardId={board.id}
 						boardTitle={board.title}

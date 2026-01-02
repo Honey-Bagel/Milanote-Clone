@@ -46,8 +46,8 @@ const ToolbarButton = ({
 		title={title}
 		className={`p-2 rounded-lg transition-all ${
 			isActive
-				? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-				: 'text-slate-400 hover:bg-white/5 hover:text-white'
+				? 'bg-primary text-white shadow-lg shadow-primary/20'
+				: 'text-secondary-foreground hover:bg-white/5 hover:text-white'
 		}`}
 		type="button"
 	>
@@ -152,7 +152,7 @@ export default function TextEditorToolbar({ editor }: TextEditorToolbarProps) {
 
 	return (
 		<div className="flex items-center gap-2 px-6 bg-[#0f172a] border-b border-white/10 h-full">
-			<span className="text-xs font-bold text-slate-400 uppercase tracking-wider mr-2">
+			<span className="text-xs font-bold text-secondary-foreground uppercase tracking-wider mr-2">
 				Text Formatting
 			</span>
 

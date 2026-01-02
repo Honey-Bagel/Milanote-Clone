@@ -111,7 +111,7 @@ export default function ElementToolbar({
 
 		return (
 			<div className="bg-[#0f172a]/95 backdrop-blur-sm border-b border-white/10 px-6 py-3 h-full flex items-center justify-center">
-				<div className="flex items-center space-x-2 text-slate-400">
+				<div className="flex items-center space-x-2 text-secondary-foreground">
 					<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -133,7 +133,7 @@ export default function ElementToolbar({
 						{/* Add Elements */}
 						<button
 							onClick={() => {setIsElementModalOpen(true)}}
-							className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-lg text-indigo-300 font-medium text-xs flex items-center space-x-2 transition-colors"
+							className="px-3 py-1.5 bg-primary/10 border border-primary/20 hover:bg-primary/20 rounded-lg text-primary font-medium text-xs flex items-center space-x-2 transition-colors"
 						>
 							<Plus size={14} />
 							<span>Add</span>
@@ -214,7 +214,7 @@ export default function ElementToolbar({
 							<TooltipTrigger asChild>
 								<Button
 									onClick={() => setConnectionMode(!isConnectionMode)}
-									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${isConnectionMode ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${isConnectionMode ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
 									variant={"ghost"}
 									size={"sm"}
 								>
@@ -223,7 +223,7 @@ export default function ElementToolbar({
 							</TooltipTrigger>
 							<TooltipContent>
 								<p>{isConnectionMode ? "Exit Connection Mode" : "Enter Connection Mode"}</p>
-								<p className="text-xs text-slate-400">Click card anchors to connect</p>
+								<p className="text-xs text-secondary-foreground">Click card anchors to connect</p>
 							</TooltipContent>
 						</Tooltip>
 
@@ -232,7 +232,7 @@ export default function ElementToolbar({
 							<TooltipTrigger asChild>
 								<Button
 									onClick={() => setShowGrid(!showGrid)}
-									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${showGrid ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${showGrid ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
 									variant={"ghost"}
 									size={"sm"}
 								>
@@ -248,7 +248,7 @@ export default function ElementToolbar({
 							<TooltipTrigger asChild>
 								<Button
 									onClick={() => setSnapToGrid(!snapToGrid)}
-									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${snapToGrid ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400 hover:text-white'}`}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${snapToGrid ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
 									variant={"ghost"}
 									size={"sm"}
 								>

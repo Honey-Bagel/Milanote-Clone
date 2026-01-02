@@ -34,7 +34,7 @@ export function ProfileSection() {
 	if (!user) {
 		return (
 			<div className="flex items-center justify-center h-64">
-				<Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+				<Loader2 className="w-8 h-8 animate-spin text-primary" />
 			</div>
 		);
 	}
@@ -43,7 +43,7 @@ export function ProfileSection() {
 		<div className="space-y-8">
 			<div>
 				<h3 className="text-2xl font-bold text-white mb-2">Profile</h3>
-				<p className="text-sm text-slate-400">Manage your public profile information</p>
+				<p className="text-sm text-secondary-foreground">Manage your public profile information</p>
 			</div>
 
 			{/* Avatar Section */}
@@ -51,7 +51,7 @@ export function ProfileSection() {
 				<div className="relative group">
 					<Avatar className="w-24 h-24 border-2 border-white/10">
 						<AvatarImage src={user.imageUrl} />
-						<AvatarFallback className="bg-indigo-600 text-white text-2xl font-medium">
+						<AvatarFallback className="bg-primary text-white text-2xl font-medium">
 							{user.username?.substring(0, 2).toUpperCase()}
 						</AvatarFallback>
 					</Avatar>
@@ -64,12 +64,12 @@ export function ProfileSection() {
 				</div>
 				<div>
 					<h4 className="text-base font-semibold text-white">{user.username}</h4>
-					<p className="text-sm text-slate-400 mt-1">
+					<p className="text-sm text-secondary-foreground mt-1">
 						{user.primaryEmailAddress?.emailAddress || user.emailAddresses[0]?.emailAddress}
 					</p>
 					<button
 						onClick={handleAvatarClick}
-						className="mt-2 text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+						className="mt-2 text-sm text-primary hover:text-primary transition-colors"
 					>
 						Change avatar
 					</button>
@@ -79,29 +79,29 @@ export function ProfileSection() {
 			{/* Profile Information */}
 			<div className="space-y-4">
 				<div>
-					<label className="block text-sm font-medium text-slate-400 mb-2">
+					<label className="block text-sm font-medium text-secondary-foreground mb-2">
 						Display Name
 					</label>
 					<input
 						type="text"
 						value={displayName}
 						onChange={(e) => setDisplayName(e.target.value)}
-						className="w-full px-4 py-3 bg-[#020617] border border-white/10 text-white rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder-slate-500"
+						className="w-full px-4 py-3 bg-[#020617] border border-white/10 text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder-slate-500"
 						placeholder="Enter your display name"
 					/>
 				</div>
 
 				<div>
-					<label className="block text-sm font-medium text-slate-400 mb-2">
+					<label className="block text-sm font-medium text-secondary-foreground mb-2">
 						Email
 					</label>
 					<input
 						type="email"
 						value={user.primaryEmailAddress?.emailAddress || user.emailAddresses[0]?.emailAddress}
 						disabled
-						className="w-full px-4 py-3 bg-[#020617] border border-white/10 text-slate-500 rounded-lg cursor-not-allowed"
+						className="w-full px-4 py-3 bg-[#020617] border border-white/10 text-muted-foreground rounded-lg cursor-not-allowed"
 					/>
-					<p className="text-xs text-slate-500 mt-2">
+					<p className="text-xs text-muted-foreground mt-2">
 						Email is managed by your authentication provider
 					</p>
 				</div>
@@ -110,7 +110,7 @@ export function ProfileSection() {
 					<button
 						onClick={handleUpdateProfile}
 						disabled={isUpdating || displayName === user.username}
-						className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+						className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-lg shadow-primary/20 flex items-center gap-2"
 					>
 						{isUpdating && <Loader2 className="w-4 h-4 animate-spin" />}
 						{isUpdating ? 'Updating...' : 'Update Profile'}
@@ -123,18 +123,18 @@ export function ProfileSection() {
 				<h4 className="text-lg font-semibold text-white mb-4">Account Information</h4>
 				<div className="space-y-3">
 					<div className="flex justify-between items-center">
-						<span className="text-sm text-slate-400">User ID</span>
-						<span className="text-sm text-slate-300 font-mono">{user.id.substring(0, 16)}...</span>
+						<span className="text-sm text-secondary-foreground">User ID</span>
+						<span className="text-sm text-foreground font-mono">{user.id.substring(0, 16)}...</span>
 					</div>
 					<div className="flex justify-between items-center">
-						<span className="text-sm text-slate-400">Account Created</span>
-						<span className="text-sm text-slate-300">
+						<span className="text-sm text-secondary-foreground">Account Created</span>
+						<span className="text-sm text-foreground">
 							{new Date(user.createdAt).toLocaleDateString()}
 						</span>
 					</div>
 					<div className="flex justify-between items-center">
-						<span className="text-sm text-slate-400">Last Sign In</span>
-						<span className="text-sm text-slate-300">
+						<span className="text-sm text-secondary-foreground">Last Sign In</span>
+						<span className="text-sm text-foreground">
 							{user.lastSignInAt ? new Date(user.lastSignInAt).toLocaleDateString() : 'N/A'}
 						</span>
 					</div>

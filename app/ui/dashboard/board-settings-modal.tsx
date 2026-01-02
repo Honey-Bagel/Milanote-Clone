@@ -148,7 +148,7 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 										<button
 											key={`wildcard-${index}`}
 											onClick={handleWildcardClick}
-											className="w-8 h-8 rounded-md transition-all bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 hover:scale-110 flex items-center justify-center"
+											className="w-8 h-8 rounded-md transition-all bg-gradient-to-br from-pink-500 via-purple-500 to-primary hover:scale-110 flex items-center justify-center"
 											aria-label="Open color picker"
 										>
 											<Palette className="w-4 h-4 text-white" />

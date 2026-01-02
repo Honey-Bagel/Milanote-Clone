@@ -10,7 +10,7 @@ export function NotificationsSection() {
 		<div className="space-y-8">
 			<div>
 				<h3 className="text-lg font-bold text-white mb-2">Notifications</h3>
-				<p className="text-sm text-slate-400 mb-4">Manage how you receive updates</p>
+				<p className="text-sm text-secondary-foreground mb-4">Manage how you receive updates</p>
 
 				<div className="space-y-3">
 					<ToggleCard

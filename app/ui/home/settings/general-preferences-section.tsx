@@ -9,7 +9,7 @@ export function GeneralPreferencesSection() {
 	return (
 		<div className="pt-6 border-t border-white/10">
 			<h3 className="text-lg font-bold text-white mb-2">General Settings</h3>
-			<p className="text-sm text-slate-400 mb-4">Configure workspace behavior and defaults</p>
+			<p className="text-sm text-secondary-foreground mb-4">Configure workspace behavior and defaults</p>
 
 			<div className="space-y-3">
 				<ToggleCard
@@ -39,7 +39,7 @@ export function GeneralPreferencesSection() {
 						/>
 						<div>
 							<div className="text-sm text-white font-mono">{preferences.defaultBoardColor}</div>
-							<div className="text-xs text-slate-500">Choose your preferred board color</div>
+							<div className="text-xs text-muted-foreground">Choose your preferred board color</div>
 						</div>
 					</div>
 				</div>

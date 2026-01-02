@@ -12,8 +12,8 @@ interface QuickActionProps {
 
 export function QuickActionCard({ icon: Icon, title, subtitle, color, onClick }: QuickActionProps) {
 	const colors = {
-		indigo: 'from-indigo-500/20 to-indigo-600/20 border-indigo-500/30 text-indigo-400 hover:border-indigo-400/50',
-		cyan: 'from-cyan-500/20 to-cyan-600/20 border-cyan-500/30 text-cyan-400 hover:border-cyan-400/50',
+		indigo: 'from-primary/20 to-primary/20 border-primary/30 text-primary hover:border-indigo-400/50',
+		cyan: 'from-cyan-500/20 to-cyan-600/20 border-accent/30 text-accent hover:border-cyan-400/50',
 		purple: 'from-purple-500/20 to-purple-600/20 border-purple-500/30 text-purple-400 hover:border-purple-400/50',
 		emerald: 'from-emerald-500/20 to-emerald-600/20 border-emerald-500/30 text-emerald-400 hover:border-emerald-400/50'
 	};
@@ -27,7 +27,7 @@ export function QuickActionCard({ icon: Icon, title, subtitle, color, onClick }:
 				<Icon size={24}/>
 			</div>
 			<div className="text-white font-bold text-lg mb-1">{title}</div>
-			<div className="text-xs text-slate-400/80 font-medium">{subtitle}</div>
+			<div className="text-xs text-secondary-foreground/80 font-medium">{subtitle}</div>
 		</button>
 	)
 }

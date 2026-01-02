@@ -99,7 +99,7 @@ export function ColorPaletteCardComponent({
 	// ========================================================================
 
 	return (
-		<div ref={rootRef} className="color-palette-card group/palette-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-cyan-500/50 border border-white/10 w-full overflow-hidden">
+		<div ref={rootRef} className="color-palette-card group/palette-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 w-full overflow-hidden">
 			<div className="px-4 pt-4 pb-3">
 				{/* Header Section */}
 				<div className="flex items-center gap-2 mb-2">
@@ -111,7 +111,7 @@ export function ColorPaletteCardComponent({
 							type="text"
 							value={card.palette_title}
 							onChange={handleTitleChange}
-							className="font-semibold text-white flex-1 bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1"
+							className="font-semibold text-white flex-1 bg-transparent border-none outline-none focus:ring-1 focus:ring-ring rounded px-1"
 							placeholder="Palette name"
 							onClick={(e) => e.stopPropagation()}
 							style={{
@@ -140,13 +140,13 @@ export function ColorPaletteCardComponent({
 					<textarea
 						value={card.palette_description || ''}
 						onChange={handleDescriptionChange}
-						className="text-xs text-slate-400 mb-4 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-cyan-500 rounded px-1 resize-none"
+						className="text-xs text-secondary-foreground mb-4 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-ring rounded px-1 resize-none"
 						placeholder="Description (optional)"
 						rows={2}
 						onClick={(e) => e.stopPropagation()}
 					/>
 				) : card.palette_description ? (
-					<p className="text-xs text-slate-400 mb-4">
+					<p className="text-xs text-secondary-foreground mb-4">
 						{card.palette_description}
 					</p>
 				) : null}
@@ -195,7 +195,7 @@ export function ColorPaletteCardComponent({
 											</div>
 										)}
 									</div>
-									<div className="text-[9px] text-slate-400 font-mono opacity-0 group-hover/palette-card:opacity-100 transition-opacity bg-slate-800 px-1.5 py-0.5 rounded whitespace-nowrap">
+									<div className="text-[9px] text-secondary-foreground font-mono opacity-0 group-hover/palette-card:opacity-100 transition-opacity bg-secondary px-1.5 py-0.5 rounded whitespace-nowrap">
 										{color}
 									</div>
 								</>
@@ -219,7 +219,7 @@ export function ColorPaletteCardComponent({
 								e.stopPropagation();
 								handleAddColor();
 							}}
-							className="text-sm text-slate-400 hover:text-slate-300 px-2 py-1 hover:bg-white/5 rounded transition-colors"
+							className="text-sm text-secondary-foreground hover:text-foreground px-2 py-1 hover:bg-white/5 rounded transition-colors"
 							style={{ cursor: 'pointer' }}
 						>
 							+ Add color
