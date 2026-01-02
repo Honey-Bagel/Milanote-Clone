@@ -40,6 +40,19 @@ const rules = {
 			update: "auth.id == data.id",
 		},
 	},
+	linked_accounts: {
+		allow: {
+			view: "auth.id in data.ref('user.id')",
+			create: "false", // Only API routes can create
+			update: "false", // Only API routes can update
+			delete: "auth.id in data.ref('user.id')",
+		},
+		bind: [
+			// Hide these fields from client-side queries
+			"access_token",
+			"refresh_token",
+		]
+	}
 } satisfies InstantRules;
 
 export default rules;

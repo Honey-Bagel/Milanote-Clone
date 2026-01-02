@@ -531,3 +531,19 @@ export type CardData = {
 };
 
 export type CollaboratorRole = 'owner' | 'editor' | 'viewer';
+
+// OAuth Providers
+export type OAuthProvider = 'google_drive' | 'pinterest';
+
+export interface LinkedAccount {
+	id: string;
+	provider: OAuthProvider;
+	provider_user_id: string;
+	provider_email: string;
+	provider_name?: string;
+	scopes: string[];
+	connected_at: number;
+	last_synced_at?: number;
+	is_active: boolean;
+	// Note: tokens not exposed to frontend
+};

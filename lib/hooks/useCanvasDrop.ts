@@ -143,6 +143,71 @@ export function useCanvasDrop(boardId: string) {
 		}
 	}, [boardId, viewport, addUploadingCard, removeUploadingCard, cards]);
 
+	const handleImportDrop = useCallback(async (e: React.DragEvent, importData: any) => {
+		const { provider, fileId, fileName, mimeType, boardId } = importData;
+		
+		// Calculate drop position
+		const canvasElement = e.currentTarget as HTMLElement;
+		const rect = canvasElement.getBoundingClientRect();
+		const clientX = e.clientX - rect.left;
+		const clientY = e.clientY - rect.top;
+		const canvasX = (clientX - viewport.x) / viewport.zoom;
+		const canvasY = (clientY - viewport.y) / viewport.zoom;
+
+		// Show loading placeholder
+		const tempId =`importing-${Date.now()}`;
+		addUploadingCard({
+			id: tempId,
+			filename: fileName,
+			x: canvasX,
+			y: canvasY,
+			type: mimeType.startsWith('image/') ? 'image' : 'link',
+		});
+
+		try {
+			// Call import API
+			const response = await fetch(`/api/import/${provider}/fetch`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ fileId, boardId }),
+			});
+			if (!response.ok) return;
+			const result = await response.json();
+
+			const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cards));
+
+			console.log(result);
+			
+			// Create appropriate card
+			if (result.type === 'image') {
+				await CardService.createCard({
+					boardId,
+					cardType: 'image',
+					position: { x: canvasX - 150, y: canvasY - 150 },
+					dimensions: { width: 300 },
+					data: { image_url: result.url, image_caption: fileName },
+					orderKey,
+					withUndo: true,
+				});
+			} else {
+				await CardService.createCard({
+					boardId,
+					cardType: 'link',
+					position: { x: canvasX - 150, y: canvasY - 50 },
+					dimensions: { width: 300, height: 100 },
+					data: { link_title: fileName, link_url: result.url },
+					orderKey,
+					withUndo: true,
+				});
+			}
+
+			removeUploadingCard(tempId);
+		} catch (error) {
+			console.error('Import failed:', error);
+			removeUploadingCard(tempId);
+		}
+	}, [boardId, viewport, addUploadingCard, removeUploadingCard, cards]);
+
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
 		e.dataTransfer.dropEffect = 'copy';
@@ -179,6 +244,20 @@ export function useCanvasDrop(boardId: string) {
 		e.preventDefault();
 		setIsDraggingOver(false);
 		setPotentialColumnTarget(null);
+
+		// Check for import data
+		const importData = e.dataTransfer.getData('application/json');
+		if (importData) {
+			try {
+				const parsedData = JSON.parse(importData);
+				if (parsedData.type === 'import') {
+					await handleImportDrop(e, parsedData);
+					return;
+				}
+			} catch (err) {
+				console.error('Failed to parse import data:', err);
+			}
+		}
 
 		// Check if the files are being dropped from computer
 		const files = e.dataTransfer.files;

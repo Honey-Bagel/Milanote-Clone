@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Settings, Palette, Bell, CreditCard, Shield } from 'lucide-react';
+import { X, User, Settings, Palette, Bell, CreditCard, Shield, Link2 } from 'lucide-react';
 import { ProfileSection } from './settings/profile-section';
 import { AppearanceSection } from './settings/appearance-section';
 import { GeneralPreferencesSection } from './settings/general-preferences-section';
@@ -10,13 +10,14 @@ import { CollaborationSection } from './settings/collaboration-section';
 import { NotificationsSection } from './settings/notifications-section';
 import { BillingSection } from './settings/billing-section';
 import { SecuritySection } from './settings/security-section';
+import { ConnectedAccountsSection } from './settings/connected-accounts-section';
 
 interface SettingsModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 }
 
-type SectionId = 'profile' | 'preferences' | 'appearance' | 'notifications' | 'billing' | 'security';
+type SectionId = 'profile' | 'preferences' | 'appearance' | 'notifications' | 'billing' | 'security' | 'connected_accounts';
 
 const SECTIONS = [
 	{ id: 'profile' as SectionId, label: 'Profile', icon: User },
@@ -25,6 +26,7 @@ const SECTIONS = [
 	{ id: 'notifications' as SectionId, label: 'Notifications', icon: Bell },
 	{ id: 'billing' as SectionId, label: 'Billing', icon: CreditCard },
 	{ id: 'security' as SectionId, label: 'Security', icon: Shield },
+	{ id: 'connected_accounts' as SectionId, label: 'Connections', icon: Link2 },
 ];
 
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
@@ -120,6 +122,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 						{activeSection === 'notifications' && <NotificationsSection />}
 						{activeSection === 'billing' && <BillingSection />}
 						{activeSection === 'security' && <SecuritySection />}
+						{activeSection === 'connected_accounts' && <ConnectedAccountsSection />}
 					</div>
 				</div>
 			</div>

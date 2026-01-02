@@ -132,6 +132,22 @@ const graph = i.schema({
 			created_at: i.number().indexed(),
 			updated_at: i.number().indexed(),
 		}),
+
+		linked_accounts: i.entity({
+			provider: i.string().indexed(), // 'google_drive' | 'pinterest'
+			provider_user_id: i.string().indexed(),
+			provider_email: i.string(),
+			provider_name: i.string().optional(),
+			access_token: i.string(), // Encrypted
+			refresh_token: i.string(), // Encrypted
+			token_expires_at: i.number(),
+			scopes: i.json<string[]>(),
+			connected_at: i.number().indexed(),
+			last_synced_at: i.number().optional(),
+			is_active: i.boolean(),
+			created_at: i.number(),
+			updated_at: i.number(),
+		}),
 	},
 	links: {
 		// Links $users to profiles (1-1)
@@ -232,6 +248,21 @@ const graph = i.schema({
 				on: "$users",
 				has: "many",
 				label: "collaborations",
+			},
+		},
+
+		// Link linked_accounts to users
+		userLinkedAccounts: {
+			forward: {
+				on: "$users",
+				has: "many",
+				label: "linked_accounts",
+			},
+			reverse: {
+				on: "linked_accounts",
+				has: "one",
+				label: "user",
+				onDelete: "cascade",
 			},
 		},
 	},

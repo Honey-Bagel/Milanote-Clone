@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
-import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline } from 'lucide-react';
+import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from '@/app/ui/board/add-element-modal';
 import { DraggableToolbarButton } from '@/components/ui/draggable-toolbar-button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from "@/components/ui/button";
+import { useBoardStore } from '@/lib/stores/board-store';
 
 interface ElementToolbarProps {
 	onCreateCard: (cardType: Card['card_type']) => void;
@@ -24,6 +25,7 @@ export default function ElementToolbar({
 }: ElementToolbarProps) {
 	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
+	const { importDrawerOpen, setImportDrawerOpen } = useBoardStore();
 	
 	// Track dragging state
 	const draggedCardTypeRef = useRef<Card['card_type'] | null>(null);
@@ -257,6 +259,23 @@ export default function ElementToolbar({
 							</TooltipTrigger>
 							<TooltipContent>
 								<p>{snapToGrid ? "Free Place" : "Snap to Grid"}</p>
+							</TooltipContent>
+						</Tooltip>
+					</div>
+					<div className="flex-1">
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									onClick={() => setImportDrawerOpen(!importDrawerOpen)}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${importDrawerOpen ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
+									variant={"ghost"}
+									size={"sm"}
+								>
+									<PanelRightOpen className="w-4 h-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								Open Import Drawer
 							</TooltipContent>
 						</Tooltip>
 					</div>
