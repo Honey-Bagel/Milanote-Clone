@@ -47,7 +47,7 @@ async function refreshOAuthToken(provider: OAuthProvider, encryptedRefreshToken:
 				client_id: process.env.GOOGLE_DRIVE_CLIENT_ID,
 				client_secret: process.env.GOOGLE_DRIVE_CLIENT_SECRET,
 				refresh_token: refreshToken,
-				grant_Type: 'refresh_token',
+				grant_type: 'refresh_token',
 			}),
 		});
 		return await response.json();

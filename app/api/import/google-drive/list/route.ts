@@ -22,6 +22,7 @@ export const GET = withInstantAuth(async (user, req) => {
 
 		return NextResponse.json(await response.json());
 	} catch (error) {
+		console.log('Import-google-drive-list:', error);
 		return NextResponse.json({ error: 'Failed to fetch files' }, { status: 500 });
 	}
 });
