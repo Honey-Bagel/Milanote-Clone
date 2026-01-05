@@ -275,9 +275,7 @@ function validateCardData(
 				line_control_point_offset: data.line_control_point_offset || 0,
 				line_reroute_nodes: data.line_reroute_nodes || null,
 				line_start_attached_card_id: data.line_start_attached_card_id || null,
-				line_start_attached_side: data.line_start_attached_side || null,
 				line_end_attached_card_id: data.line_end_attached_card_id || null,
-				line_end_attached_side: data.line_end_attached_side || null,
 			};
 		default:
 			return data;

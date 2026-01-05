@@ -257,11 +257,11 @@ export type LineCard = BaseCard & {
 	line_control_point_offset?: number;
 	// Reroute nodes - intermediate points for line routing
 	line_reroute_nodes: RerouteNode[] | null;
-	// Optional card attachments
+	// Optional card attachments - center-based dynamic attachment
+	// When attached to a card, the endpoint is computed as the intersection
+	// of a ray from the card's center toward the other endpoint with the card's edge
 	line_start_attached_card_id: string | null;
-	line_start_attached_side: "top" | "right" | "bottom" | "left" | null;
 	line_end_attached_card_id: string | null;
-	line_end_attached_side: "top" | "right" | "bottom" | "left" | null;
 };
 
 export type Card =

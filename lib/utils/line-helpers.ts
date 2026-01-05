@@ -4,21 +4,23 @@
  * Utility functions for line card dragging and snapping.
  */
 
-import type { Card, ConnectionSide } from '@/lib/types';
-import { getAnchorPosition } from './connection-path';
+import type { Card } from '@/lib/types';
 
-const SNAP_DISTANCE = 20; // pixels
+const SNAP_DISTANCE = 30; // pixels - increased for better UX with card-based snapping
 
 export interface SnapTarget {
   cardId: string;
-  side: ConnectionSide;
-  x: number;
-  y: number;
+  centerX: number;
+  centerY: number;
   distance: number;
 }
 
 /**
- * Find the closest snap target (card edge) within snap distance
+ * Find the closest snap target (card center) within snap distance
+ *
+ * New behavior: Instead of snapping to specific sides, we snap to the card itself.
+ * The line endpoint will be computed dynamically as the intersection of a ray
+ * from the card's center toward the other endpoint with the card's edge.
  */
 export function findSnapTarget(
   canvasX: number,
@@ -32,17 +34,25 @@ export function findSnapTarget(
     // Don't snap to self or other line cards
     if (cardId === excludeCardId || card.card_type === 'line') continue;
 
-    const sides: ConnectionSide[] = ['top', 'right', 'bottom', 'left'];
+    // Calculate card center
+    const centerX = card.position_x + card.width / 2;
+    const centerY = card.position_y + (card.height || 150) / 2;
 
-    for (const side of sides) {
-      const anchor = getAnchorPosition(card, side, 0.5);
-      const dx = canvasX - anchor.x;
-      const dy = canvasY - anchor.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+    // Calculate distance from mouse to card center
+    const dx = canvasX - centerX;
+    const dy = canvasY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance < SNAP_DISTANCE && (!closest || distance < closest.distance)) {
-        closest = { cardId, side, x: anchor.x, y: anchor.y, distance };
-      }
+    // Also check if mouse is within card bounds (expanded by snap distance)
+    const withinExpandedBounds =
+      canvasX >= card.position_x - SNAP_DISTANCE &&
+      canvasX <= card.position_x + card.width + SNAP_DISTANCE &&
+      canvasY >= card.position_y - SNAP_DISTANCE &&
+      canvasY <= card.position_y + (card.height || 150) + SNAP_DISTANCE;
+
+    // Snap if within distance OR within expanded bounds
+    if ((distance < SNAP_DISTANCE * 3 || withinExpandedBounds) && (!closest || distance < closest.distance)) {
+      closest = { cardId, centerX, centerY, distance };
     }
   }
 

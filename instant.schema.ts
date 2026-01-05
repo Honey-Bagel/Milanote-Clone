@@ -126,10 +126,9 @@ const graph = i.schema({
 			// Legacy field for backward compatibility
 			line_control_point_offset: i.number().optional(),
 			line_reroute_nodes: i.json<any>().optional(),
+			// Center-based dynamic attachment - stores only card ID, computes edge intersection dynamically
 			line_start_attached_card_id: i.string().optional(),
-			line_start_attached_side: i.string().optional(),
 			line_end_attached_card_id: i.string().optional(),
-			line_end_attached_side: i.string().optional(),
 
 			created_by: i.string().optional(),
 			created_at: i.number().indexed(),
