@@ -148,7 +148,7 @@ export async function updateCardContent(
  *
  * @param cardId - Card to delete
  * @param boardId - Board ID
- * @param cardData - Optional card data (needed for cascade delete of board cards)
+ * @param cardData - Optional card data (needed for cascade delete of board cards and file cleanup)
  *
  * @example
  * await deleteCard('1234', '5678');
@@ -166,6 +166,20 @@ export async function deleteCard(
 		cardType: cardData?.card_type,
 		linkedBoardId: cardData && 'linked_board_id' in cardData ? (cardData as any).linked_board_id : undefined,
 	});
+
+	// Delete associated files/images before deleting card
+	if (cardData) {
+		const { FileService } = await import('../services/file-service');
+		const cardType = cardData.card_type;
+
+		if (cardType === 'image' && cardData.image_url) {
+			console.log('[card-mutations] Deleting image file:', cardData.image_url);
+			await FileService.safeDeleteFile(cardData.image_url, 'image');
+		} else if (cardType === 'file' && cardData.file_url) {
+			console.log('[card-mutations] Deleting file:', cardData.file_url);
+			await FileService.safeDeleteFile(cardData.file_url, 'file');
+		}
+	}
 
 	// If this is a board card, delete both card and linked board in parallel for instant UI update
 	if (cardData?.card_type === 'board' && 'linked_board_id' in cardData) {

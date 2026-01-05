@@ -519,6 +519,20 @@ export async function deleteCard(
 		linkedBoardId: options?.cardData && 'linked_board_id' in options.cardData ? (options.cardData as { linked_board_id?: string }).linked_board_id : undefined,
 	});
 
+	// Delete associated files/images before deleting card
+	if (options?.cardData) {
+		const { FileService } = await import('./file-service');
+		const cardType = options.cardData.card_type;
+
+		if (cardType === 'image' && options.cardData.image_url) {
+			console.log('[CardService] Deleting image file:', options.cardData.image_url);
+			await FileService.safeDeleteFile(options.cardData.image_url, 'image');
+		} else if (cardType === 'file' && options.cardData.file_url) {
+			console.log('[CardService] Deleting file:', options.cardData.file_url);
+			await FileService.safeDeleteFile(options.cardData.file_url, 'file');
+		}
+	}
+
 	// If this is a board card, also delete the linked board
 	if (options?.cardData?.card_type === 'board') {
 		const boardCard = options.cardData as { linked_board_id?: string };

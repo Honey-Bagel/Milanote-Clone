@@ -551,3 +551,16 @@ export interface LinkedAccount {
 	is_active: boolean;
 	// Note: tokens not exposed to frontend
 };
+
+// R2 Upload API Types
+export interface PresignedUrlResponse {
+	uploadUrl: string;
+	publicUrl: string;
+	key: string;
+	expiresIn: number;
+}
+
+export interface DeleteFileResponse {
+	success: boolean;
+	key: string;
+}

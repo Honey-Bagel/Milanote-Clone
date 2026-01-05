@@ -66,20 +66,12 @@ export function ImageCardComponent({
 		saveContent({ image_url: e.target.value });
 	}, [saveContent]);
 
-	const handleCaptionChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		saveContent({ image_caption: e.target.value });
-	}, [saveContent]);
-
-	const handleAltTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		saveContent({ image_alt_text: e.target.value });
-	}, [saveContent]);
-
 	// ========================================================================
 	// RENDER
 	// ========================================================================
 
 	return (
-		<div className="image-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 rounded-lg w-full h-full overflow-hidden">
+		<div className="image-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 w-full h-full overflow-hidden">
 			<div className="flex flex-col h-full">
 				{card.image_url ? (
 					<>
@@ -94,26 +86,6 @@ export function ImageCardComponent({
 								onLoad={handleImageLoad}
 							/>
 						</div>
-						{isEditing && (
-							<div className="p-3 space-y-2 bg-secondary/50 border-t border-white/10">
-								<input
-									type="text"
-									value={card.image_caption || ''}
-									onChange={handleCaptionChange}
-									className="w-full px-2 py-1 text-xs bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
-									placeholder="Caption (optional)"
-									onClick={(e) => e.stopPropagation()}
-								/>
-								<input
-									type="text"
-									value={card.image_alt_text || ''}
-									onChange={handleAltTextChange}
-									className="w-full px-2 py-1 text-xs bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
-									placeholder="Alt text (optional)"
-									onClick={(e) => e.stopPropagation()}
-								/>
-							</div>
-						)}
 					</>
 				) : (
 					<div className="p-4 h-full">
