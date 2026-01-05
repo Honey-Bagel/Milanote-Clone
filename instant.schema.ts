@@ -120,7 +120,10 @@ const graph = i.schema({
 			line_style: i.string().optional(),
 			line_start_cap: i.string().optional(),
 			line_end_cap: i.string().optional(),
-			line_curvature: i.number().optional(),
+			// New 2-DOF control model
+			line_curvature: i.number().optional(), // Bend magnitude in pixels (unrestricted)
+			line_directional_bias: i.number().optional(), // Curve asymmetry (unrestricted)
+			// Legacy field for backward compatibility
 			line_control_point_offset: i.number().optional(),
 			line_reroute_nodes: i.json<any>().optional(),
 			line_start_attached_card_id: i.string().optional(),

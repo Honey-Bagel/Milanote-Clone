@@ -305,7 +305,7 @@ export function Canvas({
 					line_start_cap: 'none' as const,
 					line_end_cap: 'arrow' as const,
 					line_curvature: 0,
-					line_control_point_offset: 0,
+					line_directional_bias: 0,
 					line_reroute_nodes: null,
 					line_start_attached_card_id: null,
 					line_start_attached_side: null,

@@ -247,10 +247,14 @@ export type LineCard = BaseCard & {
 	// End caps
 	line_start_cap: "none" | "arrow" | "dot" | "diamond";
 	line_end_cap: "none" | "arrow" | "dot" | "diamond";
-	// Curvature: 0 = straight, positive/negative = curve direction & amount
+	// New 2-DOF control model (replaces legacy control_point_offset)
+	// Curvature: controls bend magnitude in pixels (unrestricted), 0 = straight
 	line_curvature: number;
-	// Control point offset (perpendicular distance from midpoint, can be negative)
-	line_control_point_offset: number;
+	// Directional bias: controls curve asymmetry (unrestricted), 0 = symmetric
+	line_directional_bias: number;
+	// Legacy: Control point offset (perpendicular distance from midpoint, can be negative)
+	// Kept for backward compatibility, will be converted to curvature/bias
+	line_control_point_offset?: number;
 	// Reroute nodes - intermediate points for line routing
 	line_reroute_nodes: RerouteNode[] | null;
 	// Optional card attachments

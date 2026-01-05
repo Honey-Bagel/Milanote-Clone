@@ -14,6 +14,14 @@ import { useDebouncedCallback } from 'use-debounce';
 import { getAnchorPosition } from '@/lib/utils/connection-path';
 import { CardService } from '@/lib/services';
 import { useBoardCards } from '@/lib/hooks/cards';
+import {
+  type CurveControl,
+  handlePositionToCurveControl,
+  curveControlToHandlePosition,
+  generateCubicBezierPath,
+  offsetToCurveControl,
+  calculateLocalFrame
+} from '@/lib/utils/bezier-curve';
 
 
 const SNAP_DISTANCE = 20; // pixels
@@ -86,7 +94,7 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
   const [localStartY, setLocalStartY] = useState<number | null>(null);
   const [localEndX, setLocalEndX] = useState<number | null>(null);
   const [localEndY, setLocalEndY] = useState<number | null>(null);
-  const [localControlOffset, setLocalControlOffset] = useState<number | null>(null);
+  const [localCurveControl, setLocalCurveControl] = useState<CurveControl | null>(null);
   const [localRerouteNodes, setLocalRerouteNodes] = useState<RerouteNode[] | null>(null);
 
   // Fetch board cards with real-time updates via InstantDB subscription
@@ -185,32 +193,42 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
     1000
   );
 
-  // Calculate control point position
-  const getControlPoint = useCallback(() => {
-    const dx = endX - startX;
-    const dy = endY - startY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+  // Get current curve control (with backward compatibility)
+  const getCurveControl = useCallback((): CurveControl => {
+    // Use local state during drag if available
+    if (localCurveControl !== null) {
+      return localCurveControl;
+    }
 
-    if (distance === 0) return { x: startX, y: startY };
+    // Check if we have new format data
+    if (lineData.line_curvature !== undefined && lineData.line_directional_bias !== undefined) {
+      return {
+        curvature: lineData.line_curvature,
+        directionalBias: lineData.line_directional_bias
+      };
+    }
 
-    const midX = (startX + endX) / 2;
-    const midY = (startY + endY) / 2;
+    // Backward compatibility: convert legacy control_point_offset
+    if (lineData.line_control_point_offset !== undefined) {
+      const frame = calculateLocalFrame(
+        { x: startX, y: startY },
+        { x: endX, y: endY }
+      );
+      return offsetToCurveControl(lineData.line_control_point_offset, frame.length);
+    }
 
-    // Perpendicular unit vector
-    const nx = -dy / distance;
-    const ny = dx / distance;
+    // Default: straight line
+    return { curvature: 0, directionalBias: 0 };
+  }, [startX, startY, endX, endY, lineData.line_curvature, lineData.line_directional_bias, lineData.line_control_point_offset, localCurveControl]);
 
-    // Use control_point_offset directly (can be positive or negative)
-    // Use local state during drag, otherwise use DB value
-    const offset = localControlOffset !== null ? localControlOffset : (lineData.line_control_point_offset || 0);
+  const curveControl = getCurveControl();
 
-    return {
-      x: midX + nx * offset,
-      y: midY + ny * offset,
-    };
-  }, [startX, startY, endX, endY, lineData.line_control_point_offset, localControlOffset]);
-
-  const controlPoint = getControlPoint();
+  // Calculate control handle position for UI
+  const controlHandlePosition = curveControlToHandlePosition(
+    { x: startX, y: startY },
+    { x: endX, y: endY },
+    curveControl
+  );
 
   // Get reroute nodes (filter out any null values)
   // Use local state during drag, otherwise use DB value
@@ -236,12 +254,12 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
   // Generate SVG path - with reroute nodes, use smooth Catmull-Rom style curves
   const generatePath = useCallback(() => {
     if (rerouteNodes.length === 0) {
-      // No reroute nodes - use original curve logic
-      const offset = lineData.line_control_point_offset || 0;
-      if (offset === 0) {
-        return `M ${startX} ${startY} L ${endX} ${endY}`;
-      }
-      return `M ${startX} ${startY} Q ${controlPoint.x} ${controlPoint.y} ${endX} ${endY}`;
+      // No reroute nodes - use new cubic Bézier system
+      return generateCubicBezierPath(
+        { x: startX, y: startY },
+        { x: endX, y: endY },
+        curveControl
+      );
     }
 
     // Build array of all points: start -> reroute nodes -> end
@@ -306,7 +324,7 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
     }
 
     return path;
-  }, [startX, startY, endX, endY, controlPoint, lineData.line_control_point_offset, rerouteNodes]);
+  }, [startX, startY, endX, endY, curveControl, rerouteNodes]);
 
   // Add reroute node on double-click
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
@@ -424,27 +442,13 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       }
 
       if (dragTarget === 'control') {
-		console.log("control")
-        // Calculate perpendicular distance from mouse to line midpoint
-        const midX = (startX + endX) / 2 + card.position_x;
-        const midY = (startY + endY) / 2 + card.position_y;
+        // Convert mouse position to new 2-DOF curve control
+        const mousePos = { x: canvasX, y: canvasY };
+        const start = { x: startX + card.position_x, y: startY + card.position_y };
+        const end = { x: endX + card.position_x, y: endY + card.position_y };
 
-        const dx = endX - startX;
-        const dy = endY - startY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance > 0) {
-          // Perpendicular unit vector
-          const nx = -dy / distance;
-          const ny = dx / distance;
-
-          // Project mouse position onto perpendicular
-          const mouseOffsetX = canvasX - midX;
-          const mouseOffsetY = canvasY - midY;
-          const offset = mouseOffsetX * nx + mouseOffsetY * ny;
-
-          setLocalControlOffset(offset);
-        }
+        const newControl = handlePositionToCurveControl(start, end, mousePos);
+        setLocalCurveControl(newControl);
         return;
       }
 
@@ -482,11 +486,12 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       } else if (typeof dragTarget === 'object' && 'type' in dragTarget && dragTarget.type === 'segment_control') {
         debouncedSave({
           line_reroute_nodes: localRerouteNodes || lineData.line_reroute_nodes,
-          line_control_point_offset: localControlOffset ?? lineData.line_control_point_offset,
         });
       } else if (dragTarget === 'control') {
+        const finalControl = localCurveControl || curveControl;
         debouncedSave({
-          line_control_point_offset: localControlOffset ?? lineData.line_control_point_offset,
+          line_curvature: finalControl.curvature,
+          line_directional_bias: finalControl.directionalBias,
         });
       } else if (dragTarget === 'start') {
         debouncedSave({
@@ -511,7 +516,7 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
         setLocalStartY(null);
         setLocalEndX(null);
         setLocalEndY(null);
-        setLocalControlOffset(null);
+        setLocalCurveControl(null);
         setLocalRerouteNodes(null);
       }, 1500); // Wait 1.5 seconds (longer than debounce) for DB to update
 
@@ -527,7 +532,7 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragTarget, card, lineData, debouncedSave, viewport, cards, snapPreview, rerouteNodes, startX, startY, endX, endY, setDraggingLineEndpoint, localStartX, localStartY, localEndX, localEndY, localControlOffset, localRerouteNodes]);
+  }, [dragTarget, card, lineData, debouncedSave, viewport, cards, snapPreview, rerouteNodes, startX, startY, endX, endY, setDraggingLineEndpoint, localStartX, localStartY, localEndX, localEndY, localCurveControl, localRerouteNodes, curveControl]);
 
   // Get stroke dash array
   const getStrokeDashArray = () => {
@@ -548,10 +553,10 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
     }
   };
 
-  // Calculate bounding box for the SVG viewBox (include control point and reroute nodes)
+  // Calculate bounding box for the SVG viewBox (include control handle and reroute nodes)
   const padding = 25;
-  const allXPoints = [startX, endX, controlPoint.x, ...rerouteNodes.map(n => n.x)];
-  const allYPoints = [startY, endY, controlPoint.y, ...rerouteNodes.map(n => n.y)];
+  const allXPoints = [startX, endX, controlHandlePosition.x, ...rerouteNodes.map(n => n.x)];
+  const allYPoints = [startY, endY, controlHandlePosition.y, ...rerouteNodes.map(n => n.y)];
   const minX = Math.min(...allXPoints) - padding;
   const minY = Math.min(...allYPoints) - padding;
   const maxX = Math.max(...allXPoints) + padding;
@@ -685,12 +690,12 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       {/* Endpoint handles (only when selected) */}
       {isSelected && (
         <>
-          {/* Control point handle (for curve editing) - only show when no reroute nodes */}
+          {/* Control handle (for curve editing) - only show when no reroute nodes */}
           {rerouteNodes.length === 0 && (
             <>
               <circle
-                cx={controlPoint.x}
-                cy={controlPoint.y}
+                cx={controlHandlePosition.x}
+                cy={controlHandlePosition.y}
                 r={hoveredEndpoint === 'control' || dragTarget === 'control' ? 7 : 5}
                 fill={dragTarget === 'control' ? '#f97316' : '#ffffff'}
                 stroke="#f97316"
@@ -703,13 +708,13 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
                 onMouseEnter={() => setHoveredEndpoint('control')}
                 onMouseLeave={() => setHoveredEndpoint(null)}
               />
-              {/* Control point guide lines */}
-              {((lineData.line_control_point_offset || 0) !== 0 || dragTarget === 'control') && (
+              {/* Control handle guide lines */}
+              {(Math.abs(curveControl.curvature) > 0.001 || dragTarget === 'control') && (
                 <line
                   x1={(startX + endX) / 2}
                   y1={(startY + endY) / 2}
-                  x2={controlPoint.x}
-                  y2={controlPoint.y}
+                  x2={controlHandlePosition.x}
+                  y2={controlHandlePosition.y}
                   stroke="#f97316"
                   strokeWidth={1}
                   strokeDasharray="4,2"
