@@ -64,6 +64,22 @@ export function useCanvasDrop(boardId: string) {
 	};
 
 	/**
+	 * Load an image and get its natural dimensions
+	 */
+	const loadImageDimensions = useCallback((url: string): Promise<{ width: number; height: number }> => {
+		return new Promise((resolve, reject) => {
+			const img = new Image();
+			img.onload = () => {
+				resolve({ width: img.naturalWidth, height: img.naturalHeight });
+			};
+			img.onerror = () => {
+				reject(new Error('Failed to load image'));
+			};
+			img.src = url;
+		});
+	}, []);
+
+	/**
 	 * Handle file drop from computer
 	 */
 	const handleFileDrop = useCallback(async (e: React.DragEvent, files: FileList) => {
@@ -102,11 +118,25 @@ export function useCanvasDrop(boardId: string) {
 				type: cardType,
 			});
 
-				try {
+			try {
 				// Upload file to storage (using FileService with placeholder)
 				const fileUrl = cardType === 'image'
 					? await FileService.uploadImage(file, boardId)
 					: await FileService.uploadFile(file, boardId);
+
+				// For image cards, calculate proper height based on aspect ratio
+				let cardHeight = defaultHeight;
+				if (cardType === 'image') {
+					try {
+						const imageDimensions = await loadImageDimensions(fileUrl);
+						const aspectRatio = imageDimensions.height / imageDimensions.width;
+						cardHeight = Math.round(defaultWidth * aspectRatio);
+					} catch (error) {
+						console.warn('Failed to load image dimensions, using default height:', error);
+						// Fallback to a reasonable default aspect ratio (4:3)
+						cardHeight = Math.round(defaultWidth * 0.75);
+					}
+				}
 
 				// Pre-calculate order key from already-loaded cards
 				const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cards));
@@ -116,7 +146,7 @@ export function useCanvasDrop(boardId: string) {
 					boardId: boardId,
 					cardType: cardType,
 					position: { x: posX, y: posY },
-					dimensions: { width: defaultWidth, height: defaultHeight ?? undefined },
+					dimensions: { width: defaultWidth, height: cardHeight ?? undefined },
 					data: cardType === 'image' ? {
 						image_url: fileUrl,
 						image_caption: file.name,
@@ -141,7 +171,7 @@ export function useCanvasDrop(boardId: string) {
 				removeUploadingCard(tempId);
 			}
 		}
-	}, [boardId, viewport, addUploadingCard, removeUploadingCard, cards]);
+	}, [boardId, viewport, addUploadingCard, removeUploadingCard, cards, loadImageDimensions]);
 
 	const handleImportDrop = useCallback(async (e: React.DragEvent, importData: any) => {
 		const { provider, fileId, fileName, mimeType, boardId } = importData;
@@ -175,8 +205,6 @@ export function useCanvasDrop(boardId: string) {
 			const result = await response.json();
 
 			const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cards));
-
-			console.log(result);
 			
 			// Create appropriate card
 			if (result.type === 'image') {
@@ -375,7 +403,7 @@ export function useCanvasDrop(boardId: string) {
 				console.error('Failed to create card on drop:', error);
 			});
 		}
-	}, [boardId, viewport, handleFileDrop, cards, setPotentialColumnTarget, getDefaultCardData, board]);
+	}, [boardId, viewport, handleFileDrop, cards, setPotentialColumnTarget, board, handleImportDrop]);
 
 	return {
 		isDraggingOver,

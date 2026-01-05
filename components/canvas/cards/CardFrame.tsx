@@ -249,7 +249,7 @@ export const CardFrame = memo(function CardFrame({
 
 	// Calculate frame dimensions
 	const frameWidth = isInsideColumn ? '100%' : currentDimensions.width;
-	const isAutoHeight = dimensions.height === 'auto';
+	const isAutoHeight = dimensions.height === 'auto' || card.card_type === "image"; // TODO: Fix this bandaid image fix
 
 	const frameStyle: React.CSSProperties = {
 		width: frameWidth,
@@ -259,7 +259,7 @@ export const CardFrame = memo(function CardFrame({
 
 	if (isAutoHeight) {
 		frameStyle.height = 'auto';
-		if (dimensions.minHeight != null) {
+		if (dimensions.minHeight != null && card.card_type !== "image") { // TODO: Part of bandaid image height fix
 			frameStyle.minHeight = dimensions.minHeight;
 		}
 	} else {

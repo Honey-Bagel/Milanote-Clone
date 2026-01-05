@@ -43,23 +43,17 @@ export function ImageCardComponent({
 	// Handle image load to update dimensions
 	const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
 		const img = e.currentTarget as HTMLImageElement;
+		const naturalWidth = img.naturalWidth;
+		const naturalHeight = img.naturalHeight;
+
 		setImageDimensions({
-			width: img.naturalWidth,
-			height: img.naturalHeight
+			width: naturalWidth,
+			height: naturalHeight
 		});
 
-		// Update card height based on aspect ratio
-		if (card.width) {
-			const aspectRatio = img.naturalHeight / img.naturalWidth;
-			const newHeight = Math.round(card.width * aspectRatio);
-
-			if (card.height !== newHeight) {
-				// Use saveContent to update height (goes through transform update)
-				// Note: height updates go through CardService.updateCardTransform
-				// For now, we'll let the parent handle this via dimensions hook
-			}
-		}
-	}, [card.width, card.height]);
+		// Note: Height is now calculated before card creation in handleFileDrop
+		// so we don't need to update it here
+	}, []);
 
 	// Event handlers
 	const handleImageUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,18 +65,17 @@ export function ImageCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="image-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 w-full h-full overflow-hidden">
-			<div className="flex flex-col h-full">
+		<div className="image-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 w-full h-auto overflow-hidden">
+			<div className="flex flex-col h-auto">
 				{card.image_url ? (
 					<>
-						<div className="flex-shrink-0 relative" style={{ width: '100%', height: 'auto' }}>
+						<div className="shrink-0 relative" style={{ width: '100%', height: '100%' }}>
 							<Image
 								src={card.image_url}
 								alt={card.image_alt_text || 'Image'}
 								width={card.width || 300}
 								height={card.height || 300}
 								className="w-full h-auto"
-								sizes="(max-width: 1200px) 100vw, 1200px"
 								onLoad={handleImageLoad}
 							/>
 						</div>
