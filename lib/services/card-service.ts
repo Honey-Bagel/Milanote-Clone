@@ -828,16 +828,34 @@ export async function addCardsToColumnBatch(
 		throw new Error(`Card ${column.id} is not a column`);
 	}
 
-	// Calculate sequential positions
-	const startPos = startPosition ?? (column.column_items?.length || 0);
-	const newItems = uniqueCardIds.map((cardId, index) => ({
+	const existingItems = [...(column.column_items || [])]
+		.sort((a, b) => a.position - b.position);
+
+	const insertAt = 
+		startPosition != null
+		? Math.max(0, Math.min(startPosition, existingItems.length))
+		: existingItems.length;
+
+	// Remove cards if they already exist in the column
+	const filteredItems = existingItems.filter(
+		item => !uniqueCardIds.includes(item.card_id)
+	);
+
+	// Build inserted items
+	const insertedItems = uniqueCardIds.map((cardId, index) => ({
 		card_id: cardId,
-		position: startPos + index,
+		position: insertAt + index,
 	}));
 
-	// Merge and reindex all positions
-	const mergedItems = [...(column.column_items || []), ...newItems];
-	const reindexedItems = mergedItems.map((item, index) => ({
+	// Insert
+	const nextItems = [
+		...filteredItems.slice(0, insertAt),
+		...insertedItems,
+		...filteredItems.slice(insertAt)
+	];
+
+	// Reindex cleanly
+	const reindexedItems = nextItems.map((item, index) => ({
 		...item,
 		position: index,
 	}));

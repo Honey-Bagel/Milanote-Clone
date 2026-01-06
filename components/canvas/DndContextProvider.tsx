@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core';
 import { useDndCanvas } from '@/lib/hooks/useDndCanvas';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { CardProvider } from './cards/CardContext';
@@ -37,6 +37,7 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 	return (
 		<DndContext
 			sensors={sensors}
+			collisionDetection={pointerWithin}
 			onDragStart={handleDragStart}
 			onDragMove={handleDragMove}
 			onDragEnd={handleDragEnd}

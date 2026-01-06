@@ -54,6 +54,24 @@ interface UseDndCanvasReturn {
 	activeDragType: 'canvas-card' | 'column-card' | null;
 }
 
+function getInsertionIndex(params: {
+	items: string[];
+	overId: string;
+	pointerY: number;
+	overRect: { top: number; height: number } | null;
+}) {
+	const { items, overId, pointerY, overRect } = params;
+
+	const overIndex = items.indexOf(overId);
+
+	if (overIndex === -1 || !overRect) return -1;
+	
+	const overMiddleY = overRect.top + overRect.height / 2;
+	const insertAfter = pointerY > overMiddleY;
+
+	return overIndex + (insertAfter ? 1 : 0);
+}
+
 export function useDndCanvas({
 	boardId,
 	allCardsMap,
@@ -68,6 +86,7 @@ export function useDndCanvas({
 		snapToGrid,
 		setPotentialColumnTarget,
 		setPotentialBoardTarget,
+		setColumnInsertionIndexTarget,
 	} = useCanvasStore();
 
 	// ============================================================================
@@ -263,7 +282,7 @@ export function useDndCanvas({
 	// ============================================================================
 
 	const handleDragStart = useCallback((event: DragStartEvent) => {
-		const { active } = event;
+		const { active, activatorEvent } = event;
 		const dragData = active.data.current;
 		const dragType = dragData?.type;
 
@@ -375,8 +394,10 @@ export function useDndCanvas({
 	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard]);
 
 	const handleDragMove = useCallback((event: DragMoveEvent) => {
-		const { active, delta, over } = event;
+		const { active, delta, over, activatorEvent } = event;
 		const dragType = active.data.current?.type;
+		const overData = over?.data.current;
+		const activeData = active.data.current;
 
 		// Delta is already in screen coordinates; canvas coordinate modifier handles zoom
 		const canvasDelta = {
@@ -384,10 +405,34 @@ export function useDndCanvas({
 			y: delta.y,
 		};
 
-
 		// ========================================================================
   		// CANVAS CARD LOGIC
   		// ========================================================================
+
+		if (activeData?.type === "canvas-card") {
+			const columnId =
+				overData?.type === "column" ? overData.columnId :
+				overData?.type === "column-card" ? overData.columnId :
+				null;
+			
+			if (columnId) {
+				const column = allCardsMap.get(columnId);
+				const columnItems = column?.card_type === "column" ? column.column_items : [];
+				const items = columnItems?.map((value) => value.card_id);
+				const clientY = activatorEvent.clientY + canvasDelta.y;
+
+				if (clientY != null) {
+					const index = getInsertionIndex({
+						items,
+						overId: String(over.id),
+						pointerY: clientY,
+						overRect: over.rect ?? null
+					});
+
+					if (index !== -1) setColumnInsertionIndexTarget(index);
+				}
+			}
+		}
 
 		if (dragType === 'canvas-card') {
 			// Determine which cards are being dragged - filter out locked cards
@@ -477,10 +522,10 @@ export function useDndCanvas({
 			}
 		}
 
-	}, [viewport.zoom, selectedCardIds, allCardsMap, setDragPositions, setPotentialColumnTarget, snapToGrid]);
+	}, [selectedCardIds, allCardsMap, setDragPositions, setPotentialColumnTarget, snapToGrid, setColumnInsertionIndexTarget]);
 
 	const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-		const { active, over, delta } = event;
+		const { active, over, delta, activatorEvent } = event;
 		const dragData = active.data.current;
 		const dragType = dragData?.type;
 
@@ -514,7 +559,8 @@ export function useDndCanvas({
 			}
 
 			const targetColumnId = getColumnIdFromOver(over);
-
+			const targetIndex = over?.data?.current?.sortable?.index;
+			
 			if (targetColumnId && boardId) {
 				const targetColumn = allCardsMap.get(targetColumnId);
 
@@ -534,7 +580,7 @@ export function useDndCanvas({
 							cardIds: draggedCardIds,
 							boardId,
 							column: targetColumn,
-							startPosition: targetColumn.column_items?.length || 0,
+							startPosition: (targetIndex + 1) || 0,
 						});
 
 						timer.mark('CardService.addCardsToColumnBatch complete');
@@ -714,8 +760,8 @@ export function useDndCanvas({
 
 			// Persist z-index
 			if (boardId) {
-			const allCardsArray = Array.from(allCardsMap.values());
-			await CardService.bringCardsToFront(draggedCardIds, boardId, allCardsArray);
+				const allCardsArray = Array.from(allCardsMap.values());
+				await CardService.bringCardsToFront(draggedCardIds, boardId, allCardsArray);
 			}
 		}
 
@@ -906,9 +952,14 @@ export function useDndCanvas({
 	]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {
-		const { over, active } = event;
+		const { over } = event;
 
-		if (over?.data?.current?.type === 'board-card') {
+		if (!over) return;
+
+		console.log(event);
+
+
+		if (over.data?.current?.type === 'board-card') {
 			const boardCardId = over.data.current.boardCardId || over.id as string;
 			setPotentialBoardTarget(boardCardId);
 		} else {

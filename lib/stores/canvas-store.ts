@@ -132,6 +132,7 @@ interface CanvasState {
 	// Column interaction state
 	potentialColumnTarget: string | null;
 	potentialBoardTarget: string | null;
+	columnInsertionIndexTarget: number | null;
 
 	// Connection mode
 	isConnectionMode: boolean;
@@ -237,6 +238,7 @@ interface CanvasState {
 	// Potential targets
 	setPotentialColumnTarget: (columnId: string | null) => void;
 	setPotentialBoardTarget: (boardCardId: string | null) => void;
+	setColumnInsertionIndexTarget: (targetIndex: number | null) => void;
 
 	// ============================================================================
 	// VISUAL STATE ACTIONS
@@ -284,6 +286,7 @@ export const useCanvasStore = create<CanvasState>()(
 				dragPositions: new Map(),
 				potentialColumnTarget: null as string | null,
 				potentialBoardTarget: null as string | null,
+				columnInsertionIndexTarget: null as number | null,
 				isConnectionMode: false,
 				pendingConnection: null as {
 					fromCardId: string;
@@ -629,6 +632,11 @@ export const useCanvasStore = create<CanvasState>()(
 				setPotentialBoardTarget: (boardCardId) =>
 					set((state) => {
 						state.potentialBoardTarget = boardCardId;
+					}),
+
+				setColumnInsertionIndexTarget: (targetIndex) =>
+					set((state) => {
+						state.columnInsertionIndexTarget = targetIndex
 					}),
 
 				setDragPositions: (positions) =>

@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import type { ColumnCard, Card, CardData } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useOptionalCardContext } from './CardContext';
@@ -54,7 +54,7 @@ export function ColumnCardComponent({
 		saveContentImmediate: async () => {},
 	};
 
-	const { setNodeRef } = useDroppable({
+	const { setNodeRef, over } = useDroppable({
 		id: card.id,
 		data: {
 			type: 'column',
@@ -69,7 +69,8 @@ export function ColumnCardComponent({
 		selectCard,
 		setEditingCardId,
 		setDragPreview,
-		viewport
+		viewport,
+		columnInsertionIndexTarget
 	} = useCanvasStore();
 
 	// Use cards passed from parent, or fallback to fetching
@@ -187,21 +188,29 @@ export function ColumnCardComponent({
 						items={columnItems.map(c => c.id)}
 						strategy={verticalListSortingStrategy}
 					>
-						<div className="column-cards-list space-y-3 w-full">
+						<div className="column-cards-list space-y-3 w-full relative">
 							{columnItems.map((itemCard, index) => (
-								<SortableColumnItem
-									key={itemCard.id}
-									card={itemCard as unknown as Card}
-									columnId={card.id}
-									index={index}
-									boardId={card.board_id}
-									allCards={cards}
-									onCardClick={handleCardClick}
-									onCardDoubleClick={handleCardDoubleClick}
-									onContextMenu={handleCardContextMenu}
-									onEditorReady={onEditorReady}
-								/>
+								<div key={itemCard.id} className="relative">
+									{over && columnInsertionIndexTarget === index ? <DropLineOverlay /> : null}
+									<SortableColumnItem
+										key={itemCard.id}
+										card={itemCard as unknown as Card}
+										columnId={card.id}
+										index={index}
+										boardId={card.board_id}
+										allCards={cards}
+										onCardClick={handleCardClick}
+										onCardDoubleClick={handleCardDoubleClick}
+										onContextMenu={handleCardContextMenu}
+										onEditorReady={onEditorReady}
+									/>
+								</div>
 							))}
+							{over && columnInsertionIndexTarget === columnItems.length ? (
+								<div className="pointer-events-none absolute left-0 right-0 -bottom-3 h-3">
+									<div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/80" />
+								</div>
+							) : null}
 						</div>
 					</SortableContext>
 				)}
@@ -337,4 +346,12 @@ export function ColumnCardComponent({
 				</div>
 			</div>
 	);
+}
+
+function DropLineOverlay() {
+	return (
+		<div className="pointer-events-none absolute left-0 right-0 -top-3 h-3">
+			<div className="drop-line-overlay absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/80" />
+		</div>
+	)
 }
