@@ -54,7 +54,7 @@ export function ColumnCardComponent({
 		saveContentImmediate: async () => {},
 	};
 
-	const { setNodeRef, over } = useDroppable({
+	const { setNodeRef, over, active } = useDroppable({
 		id: card.id,
 		data: {
 			type: 'column',
@@ -80,7 +80,35 @@ export function ColumnCardComponent({
 		[allCardsProp, cardsArray]
 	);
 
-	const isDropTarget = potentialColumnTarget === card.id;
+	const isOverThisColumn = useMemo(() => {
+		if (!over) return false;
+
+		const meta = over.data?.current;
+
+		if (meta?.type === 'column') {
+			const overColumnId = meta.columnId ?? String(over.id);
+			return overColumnId === card.id;
+		}
+
+		if (meta?.type === 'column-card') {
+			const overColumnId = meta.columnId ?? String(meta.parentColumnId);
+			return overColumnId === card.id;
+		}
+
+		return false;
+	}, [over, card.id]);
+
+	const isActiveFromThisColumn = useMemo(() => {
+		if (!active) return false;
+
+		const meta = active.data?.current;
+
+		if (meta?.type === 'column-card') {
+			return active.data?.current?.columnId === card.id;
+		}
+
+		return false;
+	}, [active, card.id]);
 
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,6 +143,8 @@ export function ColumnCardComponent({
 		.filter(c => c !== undefined);
 
 	const itemCount = columnItems.length;
+
+	const showInsertionLines = isOverThisColumn && !isActiveFromThisColumn;
 
 	// ========================================================================
 	// RENDER
@@ -157,11 +187,7 @@ export function ColumnCardComponent({
 						{/* Card count badge */}
 						<div className={`
 							px-2.5 py-0.5 rounded-full text-[11px] font-medium
-							transition-all
-							${isDropTarget
-								? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/30'
-								: 'bg-white/5 text-secondary-foreground'
-							}
+							transition-all bg-white/5 text-secondary-foreground
 						`}>
 							{itemCount} {itemCount === 1 ? 'card' : 'cards'}
 						</div>
@@ -191,7 +217,7 @@ export function ColumnCardComponent({
 						<div className="column-cards-list space-y-3 w-full relative">
 							{columnItems.map((itemCard, index) => (
 								<div key={itemCard.id} className="relative">
-									{over && columnInsertionIndexTarget === index ? <DropLineOverlay /> : null}
+									{showInsertionLines && columnInsertionIndexTarget === index ? <DropLineOverlay /> : null}
 									<SortableColumnItem
 										key={itemCard.id}
 										card={itemCard as unknown as Card}
@@ -206,152 +232,23 @@ export function ColumnCardComponent({
 									/>
 								</div>
 							))}
-							{over && columnInsertionIndexTarget === columnItems.length ? (
-								<div className="pointer-events-none absolute left-0 right-0 -bottom-3 h-3">
-									<div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/80" />
-								</div>
-							) : null}
 						</div>
 					</SortableContext>
 				)}
+				{showInsertionLines && columnInsertionIndexTarget === columnItems.length ? (
+					<div className="pointer-events-none absolute left-2 right-2 -bottom-1.75 h-3">
+						<div className="drop-line-overlay h-[1px] bg-white/60" />
+					</div>
+				) : null}
 			</div>
 		</div>
 	)
-
-	return (
-		<div
-			className={`
-				column-card-container
-				flex flex-col
-				overflow-hidden
-				transition-all duration-200
-				w-full h-full
-				bg-[#1a1f2e]/95 backdrop-blur-sm shadow-lg
-				rounded-xl
-				${isDropTarget
-					? 'ring-2 ring-cyan-400/40 ring-offset-0 shadow-2xl shadow-cyan-500/10'
-					: isEditing
-						? 'ring-1 ring-cyan-400/30'
-						: 'ring-1 ring-white/5 hover:ring-white/10 hover:shadow-xl'
-				}
-			`}
-		>
-			{/* Header */}
-			<div className={`
-				column-header relative
-				flex flex-col items-center
-				px-6 py-4
-				border-b
-				flex-shrink-0
-				${isDropTarget
-					? 'border-cyan-400/20 bg-gradient-to-b from-cyan-500/5 to-transparent'
-					: 'border-white/5'
-				}
-			`}>
-				{/* Center content */}
-				<div className="flex flex-col items-center gap-1.5 w-full px-12">
-					{/* Title */}
-					{isEditing ? (
-						<input
-							type="text"
-							value={card.column_title}
-							onChange={handleTitleChange}
-							className="w-full px-3 py-1.5 text-sm font-semibold text-center bg-white/5 text-white border border-white/10 rounded-lg focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent outline-none transition-all"
-							placeholder="Column title"
-							onClick={(e) => e.stopPropagation()}
-						/>
-					) : (
-						<h3 className="text-sm font-semibold text-white text-center truncate w-full">
-							{card.column_title}
-						</h3>
-					)}
-
-					{/* Card count badge */}
-					<div className={`
-						px-2.5 py-0.5 rounded-full text-[11px] font-medium
-						transition-all
-						${isDropTarget
-							? 'bg-cyan-400/15 text-cyan-300 ring-1 ring-cyan-400/30'
-							: 'bg-white/5 text-secondary-foreground'
-						}
-					`}>
-						{itemCount} {itemCount === 1 ? 'card' : 'cards'}
-					</div>
-				</div>
-			</div>
-
-			{/* Body */}
-			<div
-				className="column-body flex-1 overflow-y-auto p-4 relative"
-			>
-					{columnItems.length === 0 ? (
-						/* Empty state */
-						<div className={`
-							flex flex-col items-center justify-center
-							min-h-[240px]
-							border-2 border-dashed rounded-xl
-							transition-all duration-300
-							${isDropTarget
-								? 'border-cyan-400/60 bg-gradient-to-br from-cyan-500/10 to-cyan-500/5'
-								: 'border-white/10 bg-transparent'
-							}
-						`}>
-							<div className={`
-								w-14 h-14 rounded-2xl flex items-center justify-center mb-3
-								transition-all duration-300
-								${isDropTarget
-									? 'bg-accent/15 text-cyan-300 scale-110 shadow-lg shadow-accent/20'
-									: 'bg-white/5 text-muted-foreground'
-								}
-							`}>
-								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-									<path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-								</svg>
-							</div>
-							<p className={`
-								text-sm font-medium transition-all duration-300
-								${isDropTarget
-									? 'text-cyan-300'
-									: 'text-muted-foreground'
-								}
-							`}>
-								{isDropTarget ? 'Drop cards here' : 'Drag cards here'}
-							</p>
-						</div>
-					) : (
-						/* Render cards inside column */
-						<SortableContext
-							id={card.id}
-							items={columnItems.map(c => c.id)}
-							strategy={verticalListSortingStrategy}
-						>
-							<div className="column-cards-list space-y-3">
-								{columnItems.map((itemCard, index) => (
-									<SortableColumnItem
-										key={itemCard.id}
-										card={itemCard as unknown as Card}
-										columnId={card.id}
-										index={index}
-										boardId={card.board_id}
-										allCards={cards}
-										onCardClick={handleCardClick}
-										onCardDoubleClick={handleCardDoubleClick}
-										onContextMenu={handleCardContextMenu}
-										onEditorReady={onEditorReady}
-									/>
-								))}
-							</div>
-						</SortableContext>
-					)}
-				</div>
-			</div>
-	);
 }
 
 function DropLineOverlay() {
 	return (
 		<div className="pointer-events-none absolute left-0 right-0 -top-3 h-3">
-			<div className="drop-line-overlay absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-white/80" />
+			<div className="drop-line-overlay absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[1px] bg-white/60" />
 		</div>
 	)
 }

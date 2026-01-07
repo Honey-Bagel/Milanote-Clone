@@ -27,6 +27,7 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 		modifiers,
 		activeDragCard,
 		activeDragType,
+		customCollisionDetection
 	} = useDndCanvas({
 		boardId,
 		allCardsMap,
@@ -37,7 +38,7 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 	return (
 		<DndContext
 			sensors={sensors}
-			collisionDetection={pointerWithin}
+			collisionDetection={customCollisionDetection}
 			onDragStart={handleDragStart}
 			onDragMove={handleDragMove}
 			onDragEnd={handleDragEnd}

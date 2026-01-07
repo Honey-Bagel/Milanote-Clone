@@ -40,7 +40,7 @@ export function SortableColumnItem({
 		id: card.id,
 		data: {
 			type: 'column-card',
-			columnId: columnId,
+			columnId,
 			card: card,
 			index: index,
 			sortableContext: 'column',

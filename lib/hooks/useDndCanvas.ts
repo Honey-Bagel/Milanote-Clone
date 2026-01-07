@@ -11,9 +11,9 @@
  * - Position persistence
  */
 
-import { useCallback, useRef, useState } from 'react';
-import { useSensors, useSensor, PointerSensor, MouseSensor } from '@dnd-kit/core';
-import type { DragStartEvent, DragMoveEvent, DragEndEvent, DragOverEvent, Over } from '@dnd-kit/core';
+import { use, useCallback, useRef, useState } from 'react';
+import { useSensors, useSensor, PointerSensor, MouseSensor, pointerWithin } from '@dnd-kit/core';
+import type { DragStartEvent, DragMoveEvent, DragEndEvent, DragOverEvent, Over, CollisionDetection } from '@dnd-kit/core';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import { CardService, CardTransaction } from '@/lib/services/card-service';
@@ -87,6 +87,7 @@ export function useDndCanvas({
 		setPotentialColumnTarget,
 		setPotentialBoardTarget,
 		setColumnInsertionIndexTarget,
+		columnInsertionIndexTarget
 	} = useCanvasStore();
 
 	// ============================================================================
@@ -216,6 +217,51 @@ export function useDndCanvas({
 
 		return [];
 	}, [allCardsMap]);
+
+	const columnAwareCollisionDetection: CollisionDetection = (args) => {
+		const { active, droppableContainers } = args;
+		const activeType = active.data.current?.type;
+
+		// Use pointerWithin first
+		const pointerCollisions = pointerWithin(args);
+
+		if (activeType !== "canvas-card" && activeType !== "column-card") {
+			return pointerCollisions.length ? pointerCollisions : [];
+		}
+
+		if (!pointerCollisions.length) {
+			return [];
+		}
+
+		// Resolve the droppable container we're currently "over"
+		const overId = pointerCollisions[0].id;
+		const overContainer = droppableContainers.find((c) => c.id === overId);
+		const overType = overContainer?.data.current?.type;
+
+		if (overType === "column-card") {
+			return pointerCollisions;
+		}
+
+		if (overType === "column") {
+			const columnId = overContainer?.data.current?.columnId ?? String(overId);
+
+			const columnItemDroppables = droppableContainers.filter((c) => {
+				const data = c.data.current;
+				return data?.type === 'column-card' && data?.columnId === columnId;
+			});
+
+			if (!columnItemDroppables.length) {
+				return pointerCollisions;
+			}
+
+			return closestCenter({
+				...args,
+				droppableContainers: columnItemDroppables,
+			});
+		}
+
+		return pointerCollisions;
+	}
 
 	// ============================================================================
 	// MISC
@@ -362,7 +408,7 @@ export function useDndCanvas({
 		}
 
 		// ========================================================================
- 		// COLUMN CARD LOGIC (ADD THIS ENTIRE SECTION)
+ 		// COLUMN CARD LOGIC
   		// ========================================================================
 		if (dragType === 'column-card') {
 			const sourceColumnId = dragData?.columnId;
@@ -409,12 +455,12 @@ export function useDndCanvas({
   		// CANVAS CARD LOGIC
   		// ========================================================================
 
-		if (activeData?.type === "canvas-card") {
+		if (activeData?.type === "canvas-card" || activeData?.type === "column-card") {
 			const columnId =
 				overData?.type === "column" ? overData.columnId :
 				overData?.type === "column-card" ? overData.columnId :
 				null;
-			
+
 			if (columnId) {
 				const column = allCardsMap.get(columnId);
 				const columnItems = column?.card_type === "column" ? column.column_items : [];
@@ -431,6 +477,8 @@ export function useDndCanvas({
 
 					if (index !== -1) setColumnInsertionIndexTarget(index);
 				}
+			} else {
+				setColumnInsertionIndexTarget(null);
 			}
 		}
 
@@ -529,6 +577,8 @@ export function useDndCanvas({
 		const dragData = active.data.current;
 		const dragType = dragData?.type;
 
+		setColumnInsertionIndexTarget(null);
+
 		// Delta is already in screen coordinates; canvas coordinate modifier handles zoom
 		const canvasDelta = {
 			x: delta.x,
@@ -580,7 +630,7 @@ export function useDndCanvas({
 							cardIds: draggedCardIds,
 							boardId,
 							column: targetColumn,
-							startPosition: (targetIndex + 1) || 0,
+							startPosition: columnInsertionIndexTarget || 0,
 						});
 
 						timer.mark('CardService.addCardsToColumnBatch complete');
@@ -783,7 +833,8 @@ export function useDndCanvas({
 				return;
 			}
 
-			if (over && over.id !== active.id && over.data?.current?.columnId === sourceColumnId) {
+			// Check if was moved within the same column
+			if (over && over.data?.current?.columnId === sourceColumnId) {
 				const sourceColumn = allCardsMap.get(sourceColumnId);
 				if (!sourceColumn || sourceColumn.card_type !== 'column') {
 					clearDragPositions();
@@ -817,10 +868,11 @@ export function useDndCanvas({
 			}
 
 			// Check if dropped over any column
-			const overlappingColumns = findOverlappingColumns(active.id as string, allCardsMap);
+			const targetColumnId = getColumnIdFromOver(over);
+			console.log(targetColumnId);
 
 			// No overlap → Extract to canvas
-			if (overlappingColumns.length === 0) {
+			if (!targetColumnId) {
 				const sourceColumn = allCardsMap.get(sourceColumnId);
 				if (!sourceColumn) {
 					clearDragPositions();
@@ -873,19 +925,17 @@ export function useDndCanvas({
 			// ======================================================================
 			// SCENARIO 3: COLUMN CARD → DIFFERENT COLUMN (Transfer)
 			// ======================================================================
-			const targetColumn = overlappingColumns[0];
 			const sourceColumn = allCardsMap.get(sourceColumnId);
-			if (sourceColumn && targetColumn.id !== sourceColumnId) {
-				console.log(`Transferring card from ${sourceColumnId} to ${targetColumn.id}`);
-
-				const insertIndex = targetColumn.column_items?.length || 0;
+			const targetColumn = allCardsMap.get(targetColumnId);
+			if (sourceColumn && targetColumnId !== sourceColumnId) {
+				console.log(`Transferring card from ${sourceColumnId} to ${targetColumnId}`);
 
 				await CardService.transferCardBetweenColumns({
 					cardId: active.id as string,
 					boardId,
 					fromColumn: sourceColumn,
 					toColumn: targetColumn as unknown as CardData,
-					toIndex: insertIndex,
+					toIndex: columnInsertionIndexTarget || 0,
 				});
 
 				clearDragPositions();
@@ -938,7 +988,6 @@ export function useDndCanvas({
 		setActiveDragType(null);
 		setActiveCardPosition(null);
 	}, [
-		viewport.zoom,
 		selectedCardIds,
 		allCardsMap,
 		boardId,
@@ -949,6 +998,8 @@ export function useDndCanvas({
 		getBoardCardIdFromOver,
 		getBreadcrumbIdFromOver,
 		snapToGrid,
+		columnInsertionIndexTarget,
+		setColumnInsertionIndexTarget,
 	]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -979,7 +1030,7 @@ export function useDndCanvas({
 		handleDragMove,
 		handleDragEnd,
 		handleDragOver,
-		customCollisionDetection,
+		customCollisionDetection: columnAwareCollisionDetection,
 		modifiers,
 		activeId,
 		activeDragCard,
