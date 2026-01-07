@@ -329,10 +329,10 @@ interface TabButtonProps {
 
 function TabButton({ children, icon: Icon, active, onClick }: TabButtonProps) {
 	return (
-		<button onClick={onClick} className={`flex items-center gap-2 px-4 py-3 rounded-t-lg text-sm font-medium transition-all ${
+		<button onClick={onClick} className={`flex items-center gap-2 px-4 py-3 rounded-t-lg text-sm font-medium border-b-2 transition-colors ${
 			active
-				? 'bg-gradient-to-t from-primary/10 to-transparent text-white border-b-2 border-primary'
-				: 'text-secondary-foreground hover:text-white hover:bg-white/5'
+				? 'bg-gradient-to-t from-primary/10 to-transparent text-white border-primary'
+				: 'text-secondary-foreground border-transparent hover:text-white hover:bg-white/5'
 		}`}>
 			<Icon size={14} />
 			{children}
