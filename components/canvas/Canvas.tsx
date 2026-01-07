@@ -22,6 +22,7 @@ import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
 import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
 import { useBoardCards } from '@/lib/hooks/cards';
+import { CardProvider, CardRenderer } from './cards';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -411,7 +412,103 @@ export function Canvas({
 								))}
 							</div>
 
-							{/* Uploading placeholders, drag preview - same as before */}
+							{/* Uploading Cards Placeholders */}
+							{Array.from(uploadingCards.values()).map((uploadingCard) => (
+								<div
+									key={uploadingCard.id}
+									className="uploading-card-placeholder"
+									style={{
+										position: 'absolute',
+										left: uploadingCard.x,
+										top: uploadingCard.y,
+										width: uploadingCard.type === 'image' ? 300 : 250,
+										minHeight: 100,
+										backgroundColor: '#1e293b',
+										borderRadius: '12px',
+										boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										justifyContent: 'center',
+										padding: '16px',
+										gap: '12px',
+										border: '1px dashed #6366f1',
+										zIndex: 9999,
+									}}
+								>
+									<div
+										className="loading-spinner"
+										style={{
+											width: 32,
+											height: 32,
+											border: '3px solid rgba(255,255,255,0.1)',
+											borderTopColor: '#6366f1',
+											borderRadius: '50%',
+											animation: 'spin 1s linear infinite',
+										}}
+									/>
+									<span style={{ fontSize: 14, color: '#94a3b8', textAlign: 'center', wordBreak: 'break-word' }}>
+										Uploading {uploadingCard.filename}...
+									</span>
+								</div>
+							))}
+
+							{/* Drag Preview Ghost Layer */}
+							{dragPreview && (
+								<div
+									className="preview-ghost-layer pointer-events-none"
+									style={{
+										position: 'absolute',
+										left: dragPreview.canvasX,
+										top: dragPreview.canvasY,
+										transform: 'translate(-50%, -50%)',
+										opacity: 0.6,
+										transition: 'none',
+										zIndex: 10000,
+									}}
+								>
+									<div 
+										className="preview-card-wrapper"
+										style={{
+											filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))',
+										}}
+									>
+										{(() => {
+											const previewCard = createPreviewCard(
+												dragPreview.cardType || 'note',
+												dragPreview.canvasX,
+												dragPreview.canvasY
+											);
+											
+											if (!previewCard) return null;
+
+											return (
+												<div
+													style={{
+														width: `${previewCard.width}px`,
+														overflow: 'hidden',
+													}}
+												>
+													<CardProvider
+														card={previewCard}
+														boardId={boardId || previewCard.board_id}
+														isSelected={false}
+														isReadOnly={true}
+														isInsideColumn={false}
+													>
+														<CardRenderer
+															card={previewCard}
+															isEditing={false}
+															isSelected={false}
+															boardId={boardId}
+														/>
+													</CardProvider>
+												</div>
+											);
+										})()}
+									</div>
+								</div>
+							)}
 						</div>
 					</div>
 

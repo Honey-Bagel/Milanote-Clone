@@ -298,11 +298,6 @@ export function useCanvasDrop(boardId: string) {
 		const cardType = e.dataTransfer.getData('cardType') as Card['card_type'];
 		if (!cardType) return;
 
-		// Don't allow dropping columns into columns
-		if (cardType === 'column' || cardType === 'line') {
-			// These card types should not be dropped into columns, handle normally
-		}
-
 		const { defaultWidth, defaultHeight, minHeight } = getDefaultCardDimensions(cardType);
 
 		// Get the canvas element to calculate relative position

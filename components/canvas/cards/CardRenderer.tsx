@@ -32,7 +32,7 @@ interface CardRendererProps {
 	onEditorReady?: (editor: Editor) => void;
 	onHeightChange?: (newHeight: number) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
-	options: any;
+	options?: any;
 }
 
 /**

@@ -110,6 +110,19 @@ export function ColumnCardComponent({
 		return false;
 	}, [active, card.id]);
 
+	const isAllowedInColumn = useMemo(() => {
+		if (!active) return false;
+
+		const meta = active.data?.current;
+
+		const cardType = meta?.card?.card_type;
+
+		if (!cardType) return false;
+		const NOT_ALLOWED_TYPES = ["column", "line"];
+
+		return !NOT_ALLOWED_TYPES.includes(cardType);
+	}, [active]);
+
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
 		saveContent({ column_title: e.target.value });
@@ -144,7 +157,7 @@ export function ColumnCardComponent({
 
 	const itemCount = columnItems.length;
 
-	const showInsertionLines = isOverThisColumn && !isActiveFromThisColumn;
+	const showInsertionLines = isOverThisColumn && !isActiveFromThisColumn && isAllowedInColumn;
 
 	// ========================================================================
 	// RENDER
