@@ -19,7 +19,8 @@ import {
 	ColorPaletteCardComponent,
 	ColumnCardComponent,
 	BoardCardComponent,
-	LineCardComponent
+	LineCardComponent,
+	DrawingCardComponent
 } from '.';
 
 interface CardRendererProps {
@@ -67,6 +68,9 @@ export function CardRenderer({ card, boardId, isEditing, isSelected, isPublicVie
 
 		case 'line':
 			return <LineCardComponent card={card} boardId={boardId ?? card.board_id} isEditing={isEditing} isSelected={isSelected ?? false} />;
+
+		case 'drawing':
+			return <DrawingCardComponent card={card} isEditing={isEditing} />;
 
 		default:
 			// TypeScript should prevent this, but just in case

@@ -130,6 +130,14 @@ const graph = i.schema({
 			line_start_attached_card_id: i.string().optional(),
 			line_end_attached_card_id: i.string().optional(),
 
+			// Drawing card fields
+			drawing_strokes: i.json<Array<{
+				points: number[][];
+				color: string;
+				size: number;
+				timestamp: number;
+			}>>().optional(),
+
 			created_by: i.string().optional(),
 			created_at: i.number().indexed(),
 			updated_at: i.number().indexed(),

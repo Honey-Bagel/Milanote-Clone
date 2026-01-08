@@ -12,6 +12,7 @@ export { ColorPaletteCardComponent } from './ColorPaletteCardComponent';
 export { ColumnCardComponent } from './ColumnCardComponent';
 export { BoardCardComponent } from './BoardCardComponent';
 export { LineCardComponent } from './LineCardComponent';
+export { DrawingCardComponent } from './DrawingCardComponent';
 
 // Core Architecture
 export { CardRenderer } from './CardRenderer';

@@ -63,6 +63,9 @@ export function useCanvasInteractions(
 		// ============================================================================
 
 		const handleMouseDown = (e: MouseEvent) => {
+			// Disable pan in drawing mode
+			if (interactionMode.mode === 'drawing') return;
+
 			// Middle mouse button (1) or Space + left click
 			const shouldPan =
 				enablePan &&
@@ -111,6 +114,9 @@ export function useCanvasInteractions(
 		// ============================================================================
 
 		const handleWheel = (e: WheelEvent) => {
+			// Disable zoom in drawing mode
+			if (interactionMode.mode === 'drawing') return;
+
 			// Only zoom with Ctrl/Cmd held
 			if (!enableZoom || !(e.ctrlKey || e.metaKey)) return;
 

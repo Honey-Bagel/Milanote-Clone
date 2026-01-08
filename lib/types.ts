@@ -264,6 +264,18 @@ export type LineCard = BaseCard & {
 	line_end_attached_card_id: string | null;
 };
 
+export interface DrawingStroke {
+	points: number[][];
+	color: string;
+	size: number;
+	timestamp: number;
+}
+
+export type DrawingCard = BaseCard & {
+	card_type: "drawing";
+	drawing_strokes: DrawingStroke[];
+};
+
 export type Card =
 	| NoteCard
 	| ImageCard
@@ -274,7 +286,8 @@ export type Card =
 	| ColorPaletteCard
 	| ColumnCard
 	| BoardCard
-	| LineCard;
+	| LineCard
+	| DrawingCard;
 
 // Type-specific data for creating cards
 export type NoteCardData = {
@@ -345,6 +358,10 @@ export type LineCardData = {
 	end_attached_side?: "top" | "right" | "bottom" | "left" | null;
 };
 
+export type DrawingCardData = {
+	strokes?: DrawingStroke[];
+};
+
 // Union type for all card-specific data
 export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? NoteCardData
@@ -366,6 +383,8 @@ export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? BoardCardData
 	: T extends "line"
 	? LineCardData
+	: T extends "drawing"
+	? DrawingCardData
 	: never;
 
 export type BoardCard = BaseCard & {
@@ -483,7 +502,7 @@ export interface UserSettings {
 export type CardData = {
 	id: string;
 	board_id: string;
-	card_type: 'note' | 'image' | 'text' | 'task_list' | 'link' | 'file' | 'color_palette' | 'column' | 'board' | 'line';
+	card_type: 'note' | 'image' | 'text' | 'task_list' | 'link' | 'file' | 'color_palette' | 'column' | 'board' | 'line' | 'drawing';
 	position_x: number;
 	position_y: number;
 	width: number;
@@ -529,6 +548,7 @@ export type CardData = {
 	line_start_attached_side?: string;
 	line_end_attached_card_id?: string;
 	line_end_attached_side?: string;
+	drawing_strokes?: DrawingStroke[];
 
 	created_at: number;
 	updated_at: number;

@@ -10,11 +10,12 @@ import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
 import { ConnectionLayer } from './ConnectionLayer';
-import type { Card, CardData, LineCard } from '@/lib/types';
+import type { Card, CardData, LineCard, DrawingCard, DrawingStroke } from '@/lib/types';
 import { type Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/toolbars/element-toolbar';
 import TextEditorToolbar from '@/app/ui/board/toolbars/text-editor-toolbar';
 import LinePropertiesToolbar from '@/app/ui/board/toolbars/line-properties-toolbar';
+import DrawingToolbar from '@/app/ui/board/toolbars/drawing-toolbar';
 import ContextMenu from '@/app/ui/board/context-menu';
 import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
 import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
@@ -23,6 +24,9 @@ import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { CardProvider, CardRenderer } from './cards';
+import { DrawingLayer } from './drawing/DrawingLayer';
+import { clusterStrokes, makeStrokesRelative, makeStrokesAbsolute, convertStrokesToViewport } from '@/lib/utils/stroke-clustering';
+import { CardService } from '@/lib/services/card-service';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -78,6 +82,8 @@ export function Canvas({
 		deleteConnection,
 		uploadingCards,
 		setBoardId,
+		interactionMode,
+		setInteractionMode,
 	} = useCanvasStore();
 
 	if (boardId) setBoardId(boardId);
@@ -90,6 +96,15 @@ export function Canvas({
 	// Mouse position tracking for connection preview
 	const [mousePosition, setMousePosition] = useState<Point | null>(null);
 	const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+
+	// Drawing mode state
+	const isDrawingMode = interactionMode.mode === 'drawing';
+	const [drawingTool, setDrawingTool] = useState({
+		type: 'pen' as 'pen' | 'eraser',
+		color: '#000000',
+		size: 4,
+	});
+	const [currentDrawingStrokes, setCurrentDrawingStrokes] = useState<DrawingStroke[]>([]);
 
 	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop(boardId || '');
 
@@ -128,6 +143,60 @@ export function Canvas({
 		setSelectedConnectionId(connectionId);
 		clearSelection();
 	}, [clearSelection]);
+
+	// ============================================================================
+	// DRAWING MODE HANDLERS
+	// ============================================================================
+
+	const handleSaveDrawing = useCallback(async (strokes: DrawingStroke[]) => {
+		if (!boardId || strokes.length === 0) {
+			setInteractionMode({ mode: 'idle' });
+			setCurrentDrawingStrokes([]);
+			return;
+		}
+
+		// Check if we're editing an existing card
+		const editingCardId = interactionMode.mode === 'drawing' ? interactionMode.editingCardId : undefined;
+
+		// Exit drawing mode immediately to prevent overlap
+		setInteractionMode({ mode: 'idle' });
+		setCurrentDrawingStrokes([]);
+
+		if (editingCardId) {
+			// Update existing drawing card
+			const card = (cards.get(editingCardId) as unknown) as DrawingCard;
+			if (card) {
+				// Convert absolute strokes back to relative coordinates
+				const relativeStrokes = makeStrokesRelative(strokes, card.position_x, card.position_y);
+				await CardService.updateDrawingCard(editingCardId, relativeStrokes);
+			}
+		} else {
+			const viewportStrokes = convertStrokesToViewport(strokes, viewport);
+			// Create new drawing cards from clusters
+			const clusters = clusterStrokes(viewportStrokes, 50);
+
+			for (const cluster of clusters) {
+				const relativeStrokes = makeStrokesRelative(
+					cluster.strokes,
+					cluster.position.x,
+					cluster.position.y
+				);
+
+				await CardService.createDrawingCard({
+					boardId,
+					position: cluster.position,
+					width: Math.max(100, cluster.width),
+					height: Math.max(100, cluster.height),
+					strokes: relativeStrokes,
+				});
+			}
+		}
+	}, [boardId, interactionMode, setInteractionMode, setCurrentDrawingStrokes, cards, viewport, convertStrokesToViewport]);
+
+	const handleCancelDrawing = useCallback(() => {
+		setInteractionMode({ mode: 'idle' });
+		setCurrentDrawingStrokes([]);
+	}, [setInteractionMode, setCurrentDrawingStrokes]);
 
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
@@ -331,7 +400,14 @@ export function Canvas({
 		<div className="flex flex-col h-screen bg-[#020617] text-foreground">
 			{/* Toolbar */}
 			<div className="h-[56px] flex-shrink-0 z-40">
-				{selectedEditor ? (
+				{isDrawingMode ? (
+					<DrawingToolbar
+						tool={drawingTool}
+						onToolChange={(changes) => setDrawingTool({ ...drawingTool, ...changes })}
+						onSave={() => handleSaveDrawing(currentDrawingStrokes)}
+						onCancel={handleCancelDrawing}
+					/>
+				) : selectedEditor ? (
 					<TextEditorToolbar editor={selectedEditor} />
 				) : selectedLineCard ? (
 					<LinePropertiesToolbar card={selectedLineCard} />
@@ -511,6 +587,27 @@ export function Canvas({
 							)}
 						</div>
 					</div>
+
+				{/* Drawing Layer - shown when in drawing mode */}
+				{isDrawingMode && (
+					<DrawingLayer
+						onSave={handleSaveDrawing}
+						onCancel={handleCancelDrawing}
+						initialStrokes={
+							interactionMode.mode === 'drawing' && interactionMode.editingCardId
+								? (() => {
+									const card = (cards.get(interactionMode.editingCardId) as unknown) as DrawingCard;
+									if (!card?.drawing_strokes) return [];
+									// Convert relative strokes to absolute coordinates for editing
+									return makeStrokesAbsolute(card.drawing_strokes, card.position_x, card.position_y);
+								})()
+								: currentDrawingStrokes
+						}
+						editingCardId={interactionMode.mode === 'drawing' ? interactionMode.editingCardId : undefined}
+						tool={drawingTool}
+						onStrokesChange={setCurrentDrawingStrokes}
+					/>
+				)}
 
 				<SelectionBox />
 				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)} />

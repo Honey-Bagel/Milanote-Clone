@@ -80,11 +80,19 @@ export const CanvasElement = memo(function CanvasElement({
 		snapToGrid,
 		dragPositions,
 		isDraggingLineEndpoint,
+		interactionMode,
+		setInteractionMode,
 	} = useCanvasStore();
 	const [cardOptions, setCardOptions] = useState<CardOptions | null>(null);
 
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
+
+	// Check if this drawing card is being edited in drawing mode
+	const isBeingEditedInDrawingMode =
+		card.card_type === 'drawing' &&
+		interactionMode.mode === 'drawing' &&
+		interactionMode.editingCardId === card.id;
 
 	// Z-index calculation
 	const cssZIndex = useCardZIndex(card, allCards);
@@ -112,6 +120,15 @@ export const CanvasElement = memo(function CanvasElement({
 		e.stopPropagation();
 		if (isReadOnly) return;
 
+		// If this is a drawing card, enter drawing mode instead of text editing
+		if (card.card_type === 'drawing') {
+			setInteractionMode({
+				mode: 'drawing',
+				editingCardId: card.id,
+			});
+			return;
+		}
+
 		setEditingCardId(card.id);
 		onCardDoubleClick?.(card.id);
 		setCardOptions({
@@ -120,7 +137,12 @@ export const CanvasElement = memo(function CanvasElement({
 				clientY: e.clientY,
 			}
 		});
-	}, [card.id, isReadOnly, setEditingCardId, onCardDoubleClick]);
+	}, [card.id, card.card_type, isReadOnly, setEditingCardId, setInteractionMode, onCardDoubleClick]);
+
+	// Hide drawing cards when being edited in drawing mode
+	if (isBeingEditedInDrawingMode) {
+		return null;
+	}
 
 	const handleContextMenu = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();

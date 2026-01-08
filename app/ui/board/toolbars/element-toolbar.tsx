@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
-import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen } from 'lucide-react';
+import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen, Pencil } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from '@/app/ui/board/add-element-modal';
@@ -23,9 +23,11 @@ export default function ElementToolbar({
 	isPublicView = false,
 	isViewerOnly = false,
 }: ElementToolbarProps) {
-	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode } = useCanvasStore();
+	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode, interactionMode, setInteractionMode } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
 	const { importDrawerOpen, setImportDrawerOpen } = useBoardStore();
+
+	const isDrawingMode = interactionMode.mode === 'drawing';
 	
 	// Track dragging state
 	const draggedCardTypeRef = useRef<Card['card_type'] | null>(null);
@@ -210,6 +212,30 @@ export default function ElementToolbar({
 						/>
 
 						<div className="w-px h-6 bg-white/10 mx-2"></div>
+
+						{/* Drawing Mode Toggle */}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									onClick={() => {
+										if (isDrawingMode) {
+											setInteractionMode({ mode: 'idle' });
+										} else {
+											setInteractionMode({ mode: 'drawing' });
+										}
+									}}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${isDrawingMode ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
+									variant={"ghost"}
+									size={"sm"}
+								>
+									<Pencil className="w-4 h-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>{isDrawingMode ? "Exit Drawing Mode" : "Enter Drawing Mode"}</p>
+								<p className="text-xs text-secondary-foreground">Draw freely on the canvas</p>
+							</TooltipContent>
+						</Tooltip>
 
 						{/* Connection Tools */}
 						<Tooltip>

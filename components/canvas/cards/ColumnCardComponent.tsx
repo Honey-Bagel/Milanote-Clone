@@ -161,7 +161,7 @@ export function ColumnCardComponent({
 
 	const itemCount = columnItems.length;
 
-	const showInsertionLines = isOverThisColumn && !isActiveFromThisColumn && isAllowedInColumn;
+	const showInsertionLines = isOverThisColumn && !isActiveFromThisColumn;
 
 	// ========================================================================
 	// RENDER

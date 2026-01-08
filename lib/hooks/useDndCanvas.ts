@@ -413,31 +413,36 @@ export function useDndCanvas({
 		if (dragType === 'column-card') {
 			const sourceColumnId = dragData?.columnId;
 			const draggedCard = allCardsMap.get(active.id as string);
+			const draggedElement = (activatorEvent?.target as HTMLElement)?.closest('[data-card="true"]');
 
 			if (!draggedCard || !sourceColumnId) return;
 
-			// Initialize position based on column's position
-			const sourceColumn = allCardsMap.get(sourceColumnId);
-			if (sourceColumn) {
-				// Capture source column position for grid snapping
-				setActiveCardPosition({
-					x: sourceColumn.position_x,
-					y: sourceColumn.position_y,
-				});
+			if (draggedElement) {
+				const rect = draggedElement.getBoundingClientRect();
 
-				const positions = new Map<string, { x: number, y: number }>();
-				positions.set(active.id as string, {
-					x: sourceColumn.position_x,
-					y: sourceColumn.position_y,
-				});
-				setDragPositions(positions);
+				// Get canvas viewport container's position
+				const canvasViewport = document.querySelector('[data-canvas-root="true"]');
+				const canvasRect = canvasViewport?.getBoundingClientRect();
+
+				if (canvasRect) {
+					const viewportRelativeX = rect.left - canvasRect.left;
+					const viewportRelativeY = rect.top - canvasRect.top;
+
+					const canvasX = (viewportRelativeX - viewport.x) / viewport.zoom;
+					const canvasY = (viewportRelativeY - viewport.y) / viewport.zoom;;
+
+					setActiveCardPosition({
+						x: canvasX,
+						y: canvasY,
+					});
+				}
 			}
 
 			// Select the card
 			selectCard(active.id as string, false);
 		}
 
-	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard]);
+	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard, viewport]);
 
 	const handleDragMove = useCallback((event: DragMoveEvent) => {
 		const { active, delta, over, activatorEvent } = event;
@@ -869,7 +874,6 @@ export function useDndCanvas({
 
 			// Check if dropped over any column
 			const targetColumnId = getColumnIdFromOver(over);
-			console.log(targetColumnId);
 
 			// No overlap → Extract to canvas
 			if (!targetColumnId) {
@@ -882,8 +886,17 @@ export function useDndCanvas({
 					return;
 				}
 
-				let newX = sourceColumn.position_x + canvasDelta.x;
-				let newY = sourceColumn.position_y + canvasDelta.y;
+				if (!activeCardPosition) {
+					console.warn('Missing activeCardPostion for column card extraction');
+					clearDragPositions();
+					setPotentialColumnTarget(null);
+					setActiveId(null);
+					setActiveDragType(null);
+					return;
+				}
+
+				let newX = activeCardPosition.x + canvasDelta.x;
+				let newY = activeCardPosition.y + canvasDelta.y;
 
 				// Apply grid snapping if enabled
 				if (snapToGrid) {
@@ -894,6 +907,8 @@ export function useDndCanvas({
 				console.log(`Extracting card to canvas at (${newX}, ${newY})`);
 
 				timer.mark('CardService.extractCardFromColumn start');
+
+				clearDragPositions();
 
 				await CardService.extractCardFromColumn({
 					cardId: active.id as string,
@@ -912,7 +927,6 @@ export function useDndCanvas({
 				timer.mark('CardService.bringCardsToFront complete');
 				timer.mark('Clear drag state');
 
-				clearDragPositions();
 				setPotentialColumnTarget(null);
 				setActiveId(null);
 				setActiveDragType(null);
@@ -1000,6 +1014,7 @@ export function useDndCanvas({
 		snapToGrid,
 		columnInsertionIndexTarget,
 		setColumnInsertionIndexTarget,
+		activeCardPosition,
 	]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {

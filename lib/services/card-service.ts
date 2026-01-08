@@ -1080,12 +1080,157 @@ export async function moveCardsToBoardBatch(
 }
 
 // ============================================================================
+// DRAWING CARD CREATION
+// ============================================================================
+
+export interface CreateDrawingCardParams {
+	boardId: string;
+	position: { x: number; y: number };
+	width: number;
+	height: number;
+	strokes: Array<{
+		points: number[][];
+		color: string;
+		size: number;
+		timestamp: number;
+	}>;
+	withUndo?: boolean;
+}
+
+/**
+ * Create a new drawing card with strokes
+ *
+ * @example
+ * await CardService.createDrawingCard({
+ *   boardId: 'board-123',
+ *   position: { x: 100, y: 100 },
+ *   width: 400,
+ *   height: 300,
+ *   strokes: [...],
+ * });
+ */
+export async function createDrawingCard(params: CreateDrawingCardParams): Promise<string> {
+	const {
+		boardId,
+		position,
+		width,
+		height,
+		strokes,
+		withUndo = true,
+	} = params;
+
+	const cardId = generateId();
+	const orderKey = await generateOrderKey(boardId);
+
+	const cardData = {
+		board_id: boardId,
+		card_type: 'drawing' as const,
+		position_x: position.x,
+		position_y: position.y,
+		width,
+		height,
+		order_key: orderKey,
+		drawing_strokes: strokes,
+	};
+
+	const now = Date.now();
+	await db.transact([
+		db.tx.cards[cardId].update({
+			...cardData,
+			created_at: now,
+			updated_at: now,
+		}),
+		db.tx.boards[boardId].update({ updated_at: now }),
+		db.tx.cards[cardId].link({ board: boardId }),
+	]);
+
+	// Add undo action
+	if (withUndo) {
+		useUndoStore.getState().addAction({
+			type: 'card_create',
+			timestamp: now,
+			description: 'Create drawing',
+			do: async () => {
+				// Already created
+			},
+			undo: () => deleteCard(cardId, boardId, { withUndo: false }),
+		});
+	}
+
+	return cardId;
+}
+
+/**
+ * Update an existing drawing card's strokes
+ *
+ * @example
+ * await CardService.updateDrawingCard('card-123', newStrokes);
+ */
+export async function updateDrawingCard(
+	cardId: string,
+	strokes: Array<{
+		points: number[][];
+		color: string;
+		size: number;
+		timestamp: number;
+	}>,
+	withUndo: boolean = true
+): Promise<void> {
+	const now = Date.now();
+
+	// Get the current card data for undo
+	let previousStrokes: typeof strokes | null = null;
+	if (withUndo) {
+		const result = await db.queryOnce({ cards: { $: { where: { id: cardId } } } });
+		const card = result.data.cards[0];
+		if (card?.drawing_strokes) {
+			previousStrokes = card.drawing_strokes as typeof strokes;
+		}
+	}
+
+	// Update the card
+	await db.transact([
+		db.tx.cards[cardId].update({
+			drawing_strokes: strokes,
+			updated_at: now,
+		}),
+	]);
+
+	// Add undo action
+	if (withUndo && previousStrokes) {
+		useUndoStore.getState().addAction({
+			type: 'card_content',
+			timestamp: now,
+			description: 'Update drawing',
+			do: async () => {
+				await db.transact([
+					db.tx.cards[cardId].update({
+						drawing_strokes: strokes,
+						updated_at: Date.now(),
+					}),
+				]);
+			},
+			undo: async () => {
+				await db.transact([
+					db.tx.cards[cardId].update({
+						drawing_strokes: previousStrokes,
+						updated_at: Date.now(),
+					}),
+				]);
+			},
+		});
+	}
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
 export const CardService = {
 	CardTransaction,
 	createCard,
+	createDrawingCard,
+	updateDrawingCard,
 	updateCardTransform,
 	updateCardContent,
 	updateNoteCard,

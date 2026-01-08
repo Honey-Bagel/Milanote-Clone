@@ -179,6 +179,23 @@ export const CARD_BEHAVIORS: Record<Card['card_type'], CardBehaviorConfig> = {
 		canConnectFrom: false,
 		canConnectTo: false,
 	},
+
+	drawing: {
+		resizable: 'full',
+		draggable: true,
+		editable: true, // Double-click to edit
+		selectable: true,
+		heightMode: 'fixed',
+		maintainAspectRatio: false,
+		canContainCards: false,
+		canBeContained: true,
+		canConnectFrom: true,
+		canConnectTo: true,
+		minWidth: 100,
+		maxWidth: 1200,
+		minHeight: 100,
+		maxHeight: 1200,
+	},
 };
 
 // ============================================================================

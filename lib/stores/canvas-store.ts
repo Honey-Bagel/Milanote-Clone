@@ -50,7 +50,8 @@ export type InteractionMode =
 	| { mode: 'resizing'; cardId: string; handle: ResizeHandle }
 	| { mode: 'editing'; cardId: string }
 	| { mode: 'connecting'; fromCardId: string }
-	| { mode: 'panning' };
+	| { mode: 'panning' }
+	| { mode: 'drawing'; editingCardId?: string };
 
 export interface DragPreviewState {
 	cardType?: Card['card_type'];
