@@ -128,7 +128,7 @@ export default function ElementToolbar({
 		<>
 			<TooltipProvider>
 				<div
-					className="bg-[#0f172a]/95 backdrop-blur-sm border-b border-white/10 px-6 py-2 flex items-center shrink-0 z-40"
+					className="bg-[#0f172a]/95 backdrop-blur-sm border-b border-white/10 px-6 py-2 flex items-center justify-between shrink-0 z-40"
 					onDrag={handleDrag}
 				>
 					<div className="flex items-center space-x-2">
@@ -262,7 +262,7 @@ export default function ElementToolbar({
 							</TooltipContent>
 						</Tooltip>
 					</div>
-					<div className="flex-1">
+					<div className="flex items-center">
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button

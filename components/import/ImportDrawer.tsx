@@ -21,7 +21,7 @@ export function ImportDrawer({ isOpen, onClose, boardId }: ImportDrawerProps) {
 	if (!isOpen) return null;
 
 	return (
-		<div className="fixed right-0 top-0 h-full w-96 bg-slate-900 border-l border-slate-700 shadow-2xl z-40 flex-flex-col">
+		<div className="absolute right-0 top-0 h-full w-96 bg-slate-900 border-l border-slate-700 shadow-2xl z-40 flex flex-col">
 			<div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
 				<div className="flex items-center gap-2">
 					<Link2 size={20} className="text-indigo-400" />

@@ -45,7 +45,7 @@ export function FileCardComponent({
 	// ========================================================================
 
 	return (
-		<div className="file-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 rounded-lg w-full h-full">
+		<div className="file-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 w-full h-full">
 			<a
 				href={card.file_url}
 				target="_blank"

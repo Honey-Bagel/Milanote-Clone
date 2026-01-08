@@ -57,9 +57,9 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 							enableSelectionBox={true}
 							isPublicView={false}
 						/>
+						<ImportDrawer boardId={id} onClose={() => setImportDrawerOpen(false)} isOpen={importDrawerOpen} />
 					</main>
 				</div>
-				<ImportDrawer boardId={id} onClose={() => setImportDrawerOpen(false)} isOpen={importDrawerOpen} />
 			</DndContextProvider>
 		</db.SignedIn>
 	);

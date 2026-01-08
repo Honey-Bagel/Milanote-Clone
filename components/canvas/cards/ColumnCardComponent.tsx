@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useMemo, useCallback, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import type { ColumnCard, Card, CardData } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useOptionalCardContext } from './CardContext';
@@ -53,6 +53,7 @@ export function ColumnCardComponent({
 		saveContent: () => {},
 		saveContentImmediate: async () => {},
 	};
+	const [localTitle, setLocalTitle] = useState(card.column_title || '');
 
 	const { setNodeRef, over, active } = useDroppable({
 		id: card.id,
@@ -125,7 +126,10 @@ export function ColumnCardComponent({
 
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		saveContent({ column_title: e.target.value });
+		const newTitle = e.target.value;
+		setLocalTitle(newTitle);
+
+		saveContent({ column_title: newTitle });
 	}, [saveContent]);
 
 	const handleRemoveCard = useCallback(async (cardId: string) => {
@@ -185,7 +189,7 @@ export function ColumnCardComponent({
 						{isEditing ? (
 							<input
 								type="text"
-								value={card.column_title}
+								value={localTitle}
 								onChange={handleTitleChange}
 								className="w-full px-3 py-1.5 text-sm font-semibold text-center bg-white/5 text-white border border-white/10 rounded-lg focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent outline-none transition-all"
 								placeholder="Column Title"
