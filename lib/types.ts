@@ -133,6 +133,7 @@ export interface ContextMenuProps {
 			y: number;
 		};
 	};
+	allCards: Map<string, CardData>;
 	onClose: () => void;
 }
 

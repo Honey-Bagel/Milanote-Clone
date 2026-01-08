@@ -9,9 +9,9 @@ import { deleteCard as deleteCardDB, duplicateCard } from '@/lib/instant/card-mu
 import { useUndoStore } from '@/lib/stores/undo-store';
 import { CardService } from '@/lib/services/card-service';
 
-export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
+export default function ContextMenu({ isOpen, data, allCards, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
-	const { setEditingCardId, deleteCard, bringToFront, sendToBack } = useCanvasStore();
+	const { setEditingCardId, deleteCard } = useCanvasStore();
 
 	useLayoutEffect(() => {
 		if (isOpen && contextMenuRef.current) {
@@ -97,13 +97,27 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 		onClose();
 	};
 
-	const handleBringToFront = () => {
-		bringToFront(data?.card?.id);
+	const handleBringToFront = async() => {
+		const cardId = data?.card?.id;
+		const boardId = data?.card?.board_id;
+
+		if (!cardId || !boardId) return;
+
+		const allCardsArray = Array.from(allCards.values());
+		CardService.bringCardsToFront([cardId], boardId, allCardsArray);
+
 		onClose();
 	};
 
 	const handleSendToBack = () => {
-		sendToBack(data?.card?.id);
+		const cardId = data?.card?.id;
+		const boardId = data?.card?.board_id;
+
+		if (!cardId || !boardId) return;
+
+		const allCardsArray = Array.from(allCards.values());
+		CardService.sendCardsToBack([cardId], boardId, allCardsArray);
+
 		onClose();
 	};
 

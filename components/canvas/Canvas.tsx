@@ -610,7 +610,12 @@ export function Canvas({
 				)}
 
 				<SelectionBox />
-				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)} />
+				<ContextMenu
+					isOpen={cardContextMenuVisible}
+					data={cardContextMenuData}
+					allCards={allCardsMap}
+					onClose={() => setCardContextMenuVisible(false)}
+				/>
 				<CanvasContextMenu
 					cards={allCardsMap}
 					isOpen={canvasContextMenuData.open}

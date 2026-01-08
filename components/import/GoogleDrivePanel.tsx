@@ -22,7 +22,12 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 		{ id: 'root', name: 'My Drive' }
 	]);
 
-	const { files, isLoading, error } = useGoogleDriveFiles(currentFolderId);
+	const { files, isLoading, isValidating, error } = useGoogleDriveFiles(currentFolderId);
+
+	// Show loading spinner only if we have no cached data to show
+	const showLoadingSpinner = isLoading && files.length === 0;
+	// Optional: Show a subtle refresh indicator during background refresh
+	const showRefreshIndicator = isValidating && files.length > 0;
 
 	// Handle folder navigation
 	const navigateToFolder = (folderId: string, folderName: string) => {
@@ -102,8 +107,8 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 			</div>
 
 			{/* File list */}
-			<div className="flex-1 overflow-y-auto min-h-0">
-				{isLoading ? (
+			<div className="flex-1 overflow-y-auto min-h-0 relative">
+				{showLoadingSpinner ? (
 					<div className="flex items-center justify-center h-full min-h-[200px]">
 						<Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
 					</div>
@@ -119,9 +124,17 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 						<p className="text-sm text-slate-400">This folder is empty</p>
 					</div>
 				) : (
-					<div className="p-3 space-y-2">
-						{/* Folders first */}
-						{files
+					<>
+						{/* Optional: Subtle background refresh indicator */}
+						{showRefreshIndicator && (
+							<div className="absolute top-2 right-2 z-10">
+								<Loader2 className="w-3 h-3 text-indigo-400/50 animate-spin" />
+							</div>
+						)}
+
+						<div className="p-3 space-y-2">
+							{/* Folders first */}
+							{files
 							.filter(file => file.mimeType === 'application/vnd.google-apps.folder')
 							.map(folder => (
 								<button
@@ -148,7 +161,8 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 									boardId={boardId}
 								/>
 							))}
-					</div>
+						</div>
+					</>
 				)}
 			</div>
 
