@@ -222,12 +222,58 @@ export function convertStrokesToViewport(
 	strokes: DrawingStroke[],
 	viewport: Viewport,
 ): DrawingStroke[] {
-	return strokes.map((stroke) => {
-		stroke.points = stroke.points.map((point) => {
-			point[0] = (point[0] - viewport.x) / viewport.zoom;
-			point[1] = (point[1] - viewport.y) / viewport.zoom;
-			return point;
-		})
-		return stroke;
+	return strokes.map((stroke) => ({
+		...stroke,
+		points: stroke.points.map(([x, y, pressure]) => [
+			(x - viewport.x) / viewport.zoom,
+			(y - viewport.y) / viewport.zoom,
+			pressure
+		]),
+	}));
+}
+
+/**
+ * Calculate bounding box of multiple strokes
+ * Assumes strokes are in the same coordinate space
+ */
+export function calculateStrokeBounds(strokes: DrawingStroke[]): {
+	minX: number;
+	minY: number;
+	maxX: number;
+	maxY: number;
+	width: number;
+	height: number;
+} {
+	if (strokes.length === 0) {
+		return { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 };
+	}
+
+	let minX = Infinity;
+	let minY = Infinity;
+	let maxX = -Infinity;
+	let maxY = -Infinity;
+
+	let maxStrokeSize = 0;
+
+	strokes.forEach((stroke) => {
+		maxStrokeSize = Math.max(maxStrokeSize, stroke.size);
+
+		stroke.points.forEach(([x, y]) => {
+			minX = Math.min(minX, x);
+			minY = Math.min(minY, y);
+			maxX = Math.max(maxX, x);
+			maxY = Math.max(maxY, y);
+		});
 	});
+
+	const padding = maxStrokeSize / 2;
+
+	return {
+		minX: minX - padding,
+		minY: minY - padding,
+		maxX: maxX + padding,
+		maxY: maxY + padding,
+		width: (maxX + padding) - (minX - padding),
+		height: (maxY + padding) - (minY - padding),
+	};
 }

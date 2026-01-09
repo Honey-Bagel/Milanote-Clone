@@ -6,7 +6,7 @@
 
 import { db, generateId, withBoardUpdate, updateEntity, deleteEntity } from '@/lib/db/client';
 import { useUndoStore } from '@/lib/stores/undo-store';
-import type { CardData } from '@/lib/types';
+import type { CardData, DrawingStroke } from '@/lib/types';
 import {
 	bringToFront as orderKeyBringToFront,
 	sendToBack as orderKeySendToBack,
@@ -1085,6 +1085,7 @@ export async function moveCardsToBoardBatch(
 
 export interface CreateDrawingCardParams {
 	boardId: string;
+	orderKey: string;
 	position: { x: number; y: number };
 	width: number;
 	height: number;
@@ -1112,6 +1113,7 @@ export interface CreateDrawingCardParams {
 export async function createDrawingCard(params: CreateDrawingCardParams): Promise<string> {
 	const {
 		boardId,
+		orderKey,
 		position,
 		width,
 		height,
@@ -1120,7 +1122,6 @@ export async function createDrawingCard(params: CreateDrawingCardParams): Promis
 	} = params;
 
 	const cardId = generateId();
-	const orderKey = await generateOrderKey(boardId);
 
 	const cardData = {
 		board_id: boardId,
@@ -1222,6 +1223,94 @@ export async function updateDrawingCard(
 	}
 }
 
+export interface UpdateDrawingCardCompleteParams {
+	cardId: string;
+	boardId: string;
+	position: { x: number; y: number; };
+	width: number;
+	height: number;
+	strokes: DrawingStroke[];
+	withUndo?: boolean;
+	previousState?: {
+		position_x: number;
+		position_y: number;
+		width: number;
+		height: number;
+		drawing_strokes: DrawingStroke[];
+	};
+};
+
+export async function updateDrawingCardComplete(
+	params: UpdateDrawingCardCompleteParams
+): Promise<void> {
+	const { cardId, boardId, position, width, height, strokes, withUndo = true, previousState } = params;
+	const now = Date.now();
+
+	// Get current card data for undo if not provided
+	let currentState = previousState;
+	if (withUndo && !currentState) {
+		const result = await db.queryOnce({ cards: { $: { where: { id: cardId } } } });
+		const card = result.data.cards[0];
+		if (card) {
+			currentState = {
+				position_x: card.position_x,
+				position_y: card.position_y,
+				width: card.width,
+				height: card.height,
+				drawing_strokes: card.drawing_strokes as DrawingStroke[],
+			};
+		}
+	}
+
+	// Single atomic transaction updating all fields
+	await db.transact([
+		db.tx.cards[cardId].update({
+			position_x: position.x,
+			position_y: position.y,
+			width,
+			height,
+			drawing_strokes: strokes,
+			updated_at: now,
+		}),
+		db.tx.boards[boardId].update({ updated_at: now }),
+	]);
+
+	// Add undo action
+	if (withUndo && currentState) {
+		useUndoStore.getState().addAction({
+			type: 'card_content',
+			timestamp: now,
+			description: 'Edit drawing',
+			do: async () => {
+				await db.transact([
+					db.tx.cards[cardId].update({
+						position_x: position.x,
+						position_y: position.y,
+						width,
+						height,
+						drawing_strokes: strokes,
+						updated_at: Date.now(),
+					}),
+					db.tx.boards[boardId].update({ updated_at: Date.now() }),
+				]);
+			},
+			undo: async () => {
+				await db.transact([
+					db.tx.cards[cardId].update({
+						position_x: currentState.position_x,
+						position_y: currentState.position_y,
+						width: currentState.width,
+						height: currentState.height,
+						drawing_strokes: currentState.drawing_strokes,
+						updated_at: Date.now(),
+					}),
+					db.tx.boards[boardId].update({ updated_at: Date.now() }),
+				]);
+			},
+		});
+	}
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -1253,4 +1342,5 @@ export const CardService = {
 	extractCardFromColumn,
 	transferCardBetweenColumns,
 	moveCardsToBoardBatch,
+	updateDrawingCardComplete,
 };

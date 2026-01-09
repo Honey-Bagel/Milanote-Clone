@@ -93,8 +93,11 @@ export function DrawingCardComponent({
 		let minY = Infinity;
 		let maxX = -Infinity;
 		let maxY = -Infinity;
+		let maxStrokeSize = 0;
 
 		card.drawing_strokes.forEach((stroke) => {
+			maxStrokeSize = Math.max(maxStrokeSize, stroke.size);
+
 			stroke.points.forEach(([x, y]) => {
 				minX = Math.min(minX, x);
 				minY = Math.min(minY, y);
@@ -104,7 +107,7 @@ export function DrawingCardComponent({
 		});
 
 		// Add padding for stroke width
-		const padding = 20;
+		const padding = maxStrokeSize / 2;
 		return {
 			minX: minX - padding,
 			minY: minY - padding,

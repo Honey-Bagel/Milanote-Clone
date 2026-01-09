@@ -79,11 +79,6 @@ export function DrawingLayer({
 
 	const viewport = useCanvasStore((state) => state.viewport);
 
-	// Update strokes when initialStrokes changes (e.g., when editing a card)
-	useEffect(() => {
-		setStrokes(initialStrokes);
-	}, [initialStrokes]);
-
 	// ========================================================================
 	// COORDINATE CONVERSION
 	// ========================================================================
@@ -95,9 +90,12 @@ export function DrawingLayer({
 			const svg = svgRef.current;
 			const rect = svg.getBoundingClientRect();
 
+			const screenX = clientX - rect.left;
+			const screenY = clientY - rect.top;
+
 			// Convert screen coordinates to canvas coordinates
-			const canvasX = (clientX - rect.left) / viewport.zoom;
-			const canvasY = (clientY - rect.top) / viewport.zoom;
+			const canvasX = (screenX - viewport.x) / viewport.zoom;
+			const canvasY = (screenY - viewport.y) / viewport.zoom;
 
 			return [canvasX, canvasY];
 		},

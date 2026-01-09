@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { createViewportMatrix, screenToCanvas } from '@/lib/utils/transform';
 import { useCanvasInteractions } from '@/lib/hooks/useCanvasInteractions';
@@ -25,8 +25,9 @@ import type { Point } from '@/lib/utils/connection-path';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { CardProvider, CardRenderer } from './cards';
 import { DrawingLayer } from './drawing/DrawingLayer';
-import { clusterStrokes, makeStrokesRelative, makeStrokesAbsolute, convertStrokesToViewport } from '@/lib/utils/stroke-clustering';
+import { clusterStrokes, makeStrokesRelative, makeStrokesAbsolute, convertStrokesToViewport, calculateStrokeBounds, StrokeCluster } from '@/lib/utils/stroke-clustering';
 import { CardService } from '@/lib/services/card-service';
+import { cardsToOrderKeyList, getOrderKeyForNewCard } from '@/lib/utils/order-key-manager';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -65,7 +66,10 @@ export function Canvas({
 	});
 
 	const { cards: cardArray, isLoading } = useBoardCards(boardId);
-	const cards: Map<string, CardData> = new Map(cardArray.map((card) => [card.id, card]));
+	const cards: Map<string, CardData> = useMemo(
+		() => new Map(cardArray.map((card) => [card.id, card])),
+		[cardArray]
+	)
 
 	const {
 		viewport,
@@ -163,17 +167,74 @@ export function Canvas({
 		setCurrentDrawingStrokes([]);
 
 		if (editingCardId) {
-			// Update existing drawing card
+			const clusters = clusterStrokes(strokes, 50);
+
+			// Find the primary cluster (closest to original card position)
 			const card = (cards.get(editingCardId) as unknown) as DrawingCard;
-			if (card) {
-				// Convert absolute strokes back to relative coordinates
-				const relativeStrokes = makeStrokesRelative(strokes, card.position_x, card.position_y);
-				await CardService.updateDrawingCard(editingCardId, relativeStrokes);
+			if (!card) return;
+
+			let primaryCluster: StrokeCluster | null = null;
+			let minDistance = Infinity;
+
+			for (const cluster of clusters) {
+				const distance = Math.sqrt(
+					Math.pow(cluster.position.x - card.position_x, 2) +
+					Math.pow(cluster.position.y - card.position_y, 2)
+				);
+				if (distance < minDistance) {
+					minDistance = distance;
+					primaryCluster = cluster;
+				}
+			}
+			if (primaryCluster) {
+				// Update original card with primary cluster
+				const relativeStrokes = makeStrokesRelative(
+					primaryCluster.strokes,
+					primaryCluster.position.x,
+					primaryCluster.position.y
+				);
+
+				CardService.updateDrawingCardComplete({
+					cardId: editingCardId,
+					boardId: card.board_id,
+					position: { x: primaryCluster.position.x, y: primaryCluster.position.y },
+					width: Math.max(20, primaryCluster.width),
+					height: Math.max(20, primaryCluster.height),
+					strokes: relativeStrokes,
+					withUndo: true,
+					previousState: {
+						position_x: card.position_x,
+						position_y: card.position_y,
+						width: card.width,
+						height: card.height,
+						drawing_strokes: card.drawing_strokes,
+					},
+				});
+
+				// Create new cards for additional clusters
+				for (const cluster of clusters) {
+					if (cluster !== primaryCluster) {
+						const relativeStrokes = makeStrokesRelative(
+							cluster.strokes,
+							cluster.position.x,
+							cluster.position.y,
+						);
+
+						const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cardArray));
+
+						CardService.createDrawingCard({
+							boardId,
+							orderKey,
+							position: cluster.position,
+							width: Math.max(20, cluster.width),
+							height: Math.max(20, cluster.height),
+							strokes: relativeStrokes,
+						});
+					}
+				}
 			}
 		} else {
-			const viewportStrokes = convertStrokesToViewport(strokes, viewport);
-			// Create new drawing cards from clusters
-			const clusters = clusterStrokes(viewportStrokes, 50);
+			const clusters = clusterStrokes(strokes, 50);
 
 			for (const cluster of clusters) {
 				const relativeStrokes = makeStrokesRelative(
@@ -182,16 +243,19 @@ export function Canvas({
 					cluster.position.y
 				);
 
-				await CardService.createDrawingCard({
+				const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cardArray));
+
+				CardService.createDrawingCard({
 					boardId,
+					orderKey,
 					position: cluster.position,
-					width: Math.max(100, cluster.width),
-					height: Math.max(100, cluster.height),
+					width: Math.max(20, cluster.width),
+					height: Math.max(20, cluster.height),
 					strokes: relativeStrokes,
 				});
 			}
 		}
-	}, [boardId, interactionMode, setInteractionMode, setCurrentDrawingStrokes, cards, viewport, convertStrokesToViewport]);
+	}, [boardId, interactionMode, setInteractionMode, setCurrentDrawingStrokes, cards, viewport, convertStrokesToViewport, cardArray]);
 
 	const handleCancelDrawing = useCallback(() => {
 		setInteractionMode({ mode: 'idle' });
@@ -591,6 +655,7 @@ export function Canvas({
 				{/* Drawing Layer - shown when in drawing mode */}
 				{isDrawingMode && (
 					<DrawingLayer
+						key={interactionMode.mode === 'drawing' ? interactionMode.editingCardId || 'new' : 'drawing'}
 						onSave={handleSaveDrawing}
 						onCancel={handleCancelDrawing}
 						initialStrokes={
