@@ -13,6 +13,7 @@
 import { Paintbrush, Eraser, Save, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useRef } from 'react';
 
 // ============================================================================
 // TYPES
@@ -38,7 +39,7 @@ interface DrawingToolbarProps {
 const BRUSH_SIZES = [2, 4, 8, 12, 16];
 
 const COLORS = [
-	{ name: 'Black', value: '#000000' },
+	{ name: 'White', value: '#FFFFFF' },
 	{ name: 'Red', value: '#ef4444' },
 	{ name: 'Orange', value: '#f97316' },
 	{ name: 'Yellow', value: '#eab308' },
@@ -58,6 +59,7 @@ export default function DrawingToolbar({
 	onSave,
 	onCancel,
 }: DrawingToolbarProps) {
+	const colorInputRef = useRef<HTMLInputElement>(null);
 	return (
 		<TooltipProvider>
 			<div className="fixed top-16 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-2 p-2 bg-[#0f172a] border border-white/10 rounded-lg shadow-xl backdrop-blur-xl">
@@ -145,6 +147,34 @@ export default function DrawingToolbar({
 								<TooltipContent>{color.name}</TooltipContent>
 							</Tooltip>
 						))}
+						{/* Custom color picker */}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<button
+									className={`h-8 w-8 rounded border-2 transition-all relative overflow-hidden ${
+										COLORS.find(c => c.value === tool.color)
+											? 'border-transparent hover:border-white/50'
+											: 'border-white scale-110'
+									}`}
+									style={{
+										background: COLORS.find(c => c.value === tool.color)
+											? 'conic-gradient(from 0deg, #ef4444, #f97316, #eab308, #22c55e, #3b82f6, #a855f7, #ef4444)'
+											: tool.color
+									}}
+									onClick={() => colorInputRef.current?.click()}
+								>
+									<input
+										ref={colorInputRef}
+										type="color"
+										value={tool.color}
+										onChange={(e) => onToolChange({ color: e.target.value })}
+										className="absolute inset-0 opacity-0 cursor-pointer"
+										onClick={(e) => e.stopPropagation()}
+									/>
+								</button>
+							</TooltipTrigger>
+							<TooltipContent>Custom Color</TooltipContent>
+						</Tooltip>
 					</div>
 				)}
 

@@ -116,10 +116,12 @@ export function ColumnCardComponent({
 
 		const meta = active.data?.current;
 
-		const cardType = meta?.card?.card_type;
+		const cardType = meta?.type;
 
 		if (!cardType) return false;
-		const NOT_ALLOWED_TYPES = ["column", "line"];
+		const NOT_ALLOWED_TYPES = ["column"];
+
+		if (active.id === card.id) return false;
 
 		return !NOT_ALLOWED_TYPES.includes(cardType);
 	}, [active]);
@@ -161,7 +163,7 @@ export function ColumnCardComponent({
 
 	const itemCount = columnItems.length;
 
-	const showInsertionLines = isOverThisColumn && !isActiveFromThisColumn;
+	const showInsertionLines = isOverThisColumn && !isActiveFromThisColumn && isAllowedInColumn;
 
 	// ========================================================================
 	// RENDER

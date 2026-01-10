@@ -76,6 +76,7 @@ export function DrawingLayer({
 	const [strokes, setStrokes] = useState<DrawingStroke[]>(initialStrokes);
 	const [currentStroke, setCurrentStroke] = useState<CurrentStroke | null>(null);
 	const [isDrawing, setIsDrawing] = useState(false);
+	const [hoveredStrokeIndex, setHoveredStrokeIndex] = useState<number | null>(null);
 
 	const viewport = useCanvasStore((state) => state.viewport);
 
@@ -145,6 +146,34 @@ export function DrawingLayer({
 		[isDrawing, currentStroke, screenToCanvas]
 	);
 
+	const handlePointerHover = useCallback(
+		(e: React.PointerEvent<SVGSVGElement>) => {
+			if (tool.type !== 'eraser' || isDrawing) {
+				if (hoveredStrokeIndex !== null) {
+					setHoveredStrokeIndex(null);
+				}
+				return;
+			}
+
+			const [x, y] = screenToCanvas(e.clientX, e.clientY);
+
+			for (let i = strokes.length - 1; i >= 0; i--) {
+				if (isPointInStroke([x, y], strokes[i])) {
+					if (hoveredStrokeIndex !== i) {
+						setHoveredStrokeIndex(i);
+					}
+					return;
+				}
+			}
+			
+			// No stroke hovered
+			if (hoveredStrokeIndex !== null) {
+				setHoveredStrokeIndex(null);
+			}
+		},
+		[tool.type, isDrawing, screenToCanvas, strokes, hoveredStrokeIndex]
+	);
+
 	const handlePointerUp = useCallback(
 		(e: React.PointerEvent<SVGSVGElement>) => {
 			if (!currentStroke) return;
@@ -160,22 +189,18 @@ export function DrawingLayer({
 			};
 
 			if (tool.type === 'eraser') {
-				// Eraser mode: remove strokes that intersect with this stroke
-				// For simplicity, we'll check bounding box intersection
-				const eraserBounds = getStrokeBounds(finalizedStroke);
-				setStrokes((prev) => {
-					const newStrokes = prev.filter((stroke) => {
-						const strokeBounds = getStrokeBounds(stroke);
-						return !boundsIntersect(eraserBounds, strokeBounds);
+				// Delete the hovered stroke on click
+				if (hoveredStrokeIndex !== null) {
+					setStrokes((prev) => {
+						const newStrokes = prev.filter((_, index) => index !== hoveredStrokeIndex);
+						return newStrokes;
 					});
-					onStrokesChange?.(newStrokes);
-					return newStrokes;
-				});
+					setHoveredStrokeIndex(null);
+				}
 			} else {
 				// Pen mode: add the stroke
 				setStrokes((prev) => {
 					const newStrokes = [...prev, finalizedStroke];
-					onStrokesChange?.(newStrokes);
 					return newStrokes;
 				});
 			}
@@ -186,7 +211,7 @@ export function DrawingLayer({
 			// Release pointer capture
 			(e.target as SVGSVGElement).releasePointerCapture(e.pointerId);
 		},
-		[currentStroke, tool.type, onStrokesChange]
+		[currentStroke, tool.type, hoveredStrokeIndex]
 	);
 
 	// ========================================================================
@@ -218,6 +243,10 @@ export function DrawingLayer({
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	}, [onCancel, onSave, strokes]);
 
+	useEffect(() => {
+		onStrokesChange?.(strokes);
+	}, [strokes, onStrokesChange]);
+
 	// ========================================================================
 	// RENDER STROKE
 	// ========================================================================
@@ -231,16 +260,31 @@ export function DrawingLayer({
 		});
 
 		const pathData = getSvgPathFromStroke(strokeOutline);
+		const isHovered = hoveredStrokeIndex === index;
 
 		return (
-			<path
-				key={index}
-				d={pathData}
-				fill={drawingStroke.color}
-				strokeWidth={0}
-			/>
+			<g key={index}>
+				{/* Highlight outline when hovered in eraser mode */}
+				{isHovered && tool.type === 'eraser' && (
+					<path
+						d={pathData}
+						fill="none"
+						stroke="#ef4444"
+						strokeWidth={2}
+						opacity={0.8}
+						pointerEvents="none"
+					/>
+				)}
+				{/* Actual stroke */}
+				<path
+					d={pathData}
+					fill={drawingStroke.color}
+					strokeWidth={0}
+					opacity={isHovered && tool.type === 'eraser' ? 0.5 : 1}
+				/>
+			</g>
 		);
-	}, []);
+	}, [hoveredStrokeIndex, tool.type]);
 
 	const renderCurrentStroke = useCallback(() => {
 		if (!currentStroke || currentStroke.points.length < 2) return null;
@@ -279,7 +323,10 @@ export function DrawingLayer({
 				ref={svgRef}
 				className="w-full h-full"
 				onPointerDown={handlePointerDown}
-				onPointerMove={handlePointerMove}
+				onPointerMove={(e) => {
+					handlePointerMove(e);
+					handlePointerHover(e);
+				}}
 				onPointerUp={handlePointerUp}
 				onPointerLeave={handlePointerUp}
 				style={{
@@ -334,4 +381,31 @@ function getStrokeBounds(stroke: DrawingStroke): Bounds {
 
 function boundsIntersect(a: Bounds, b: Bounds): boolean {
 	return !(a.maxX < b.minX || a.minX > b.maxX || a.maxY < b.minY || a.minY > b.maxY);
+}
+
+/**
+ * Check if a point is within a stroke's rendered path
+ */
+function isPointInStroke(
+	point: [number, number],
+	stroke: DrawingStroke,
+	threshold: number = 10
+): boolean {
+	const bounds = getStrokeBounds(stroke);
+	if (
+		point[0] < bounds.minX - threshold ||
+		point[0] > bounds.maxX + threshold ||
+		point[1] < bounds.minY - threshold ||
+		point[1] > bounds.maxY + threshold
+	) {
+		return false;
+	}
+
+	// Check if point is near any point in the stroke
+	return stroke.points.some(([x, y]) => {
+		const distance = Math.sqrt(
+			Math.pow(point[0] - x, 2) + Math.pow(point[1] - y, 2)
+		);
+		return distance <= stroke.size / 2 + threshold;
+	})
 }

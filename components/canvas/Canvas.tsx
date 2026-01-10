@@ -100,17 +100,33 @@ export function Canvas({
 	// Mouse position tracking for connection preview
 	const [mousePosition, setMousePosition] = useState<Point | null>(null);
 	const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+	
+	const getColorFromLocalStorage = () => {
+		const savedColor = localStorage.getItem('drawing-color');
+		if (savedColor && /^#[0-9A-Fa-f]{6}$/i.test(savedColor)) {
+			return savedColor;
+		}
+		return '#ffffff';
+	}
 
 	// Drawing mode state
 	const isDrawingMode = interactionMode.mode === 'drawing';
 	const [drawingTool, setDrawingTool] = useState({
 		type: 'pen' as 'pen' | 'eraser',
-		color: '#000000',
+		color: getColorFromLocalStorage(),
 		size: 4,
 	});
 	const [currentDrawingStrokes, setCurrentDrawingStrokes] = useState<DrawingStroke[]>([]);
 
 	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop(boardId || '');
+
+	useEffect(() => {
+		try {
+			localStorage.setItem('drawing-color', drawingTool.color);
+		} catch (error) {
+			console.warn('Failed to save color preference:', error);
+		}
+	}, [drawingTool.color]);
 
 	// ============================================================================
 	// EXISTING EVENT HANDLERS
@@ -156,6 +172,7 @@ export function Canvas({
 		if (!boardId || strokes.length === 0) {
 			setInteractionMode({ mode: 'idle' });
 			setCurrentDrawingStrokes([]);
+			setDrawingTool(prev => ({ ...prev, type: 'pen' }));
 			return;
 		}
 
@@ -165,6 +182,7 @@ export function Canvas({
 		// Exit drawing mode immediately to prevent overlap
 		setInteractionMode({ mode: 'idle' });
 		setCurrentDrawingStrokes([]);
+		setDrawingTool(prev => ({ ...prev, type: 'pen' }));
 
 		if (editingCardId) {
 			const clusters = clusterStrokes(strokes, 50);
@@ -255,11 +273,12 @@ export function Canvas({
 				});
 			}
 		}
-	}, [boardId, interactionMode, setInteractionMode, setCurrentDrawingStrokes, cards, viewport, convertStrokesToViewport, cardArray]);
+	}, [boardId, interactionMode, setInteractionMode, setCurrentDrawingStrokes, cards, cardArray]);
 
 	const handleCancelDrawing = useCallback(() => {
 		setInteractionMode({ mode: 'idle' });
 		setCurrentDrawingStrokes([]);
+		setDrawingTool(prev => ({ ...prev, type: 'pen' }));
 	}, [setInteractionMode, setCurrentDrawingStrokes]);
 
 	useEffect(() => {
