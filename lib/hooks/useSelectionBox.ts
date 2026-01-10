@@ -9,6 +9,9 @@ import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { screenToCanvas, boxesIntersect, getNormalizedBox } from '@/lib/utils/transform';
 import { getDefaultCardDimensions } from '../utils';
 import { useBoardCards } from './cards';
+import { bezierPathIntersectsRect } from '@/lib/utils/line-selection';
+import type { LineCard } from '@/lib/types';
+import { calculateLineEndpoints } from '../utils/line-endpoint-calculator';
 
 interface UseSelectionBoxOptions {
 	/**
@@ -35,6 +38,7 @@ export function useSelectionBox(
 		isPanning,
 		isDragging,
 		editingCardId,
+		dragPositions
 	} = useCanvasStore();
 	const { cards: cardArray } = useBoardCards(boardId);
 
@@ -136,48 +140,64 @@ export function useSelectionBox(
 				let cardBounds: { x: number; y: number; width: number; height: number };
 				if (card.position_x === null || card.position_y === null) return;
 				const rect = canvas.getBoundingClientRect();
+				const ox = rect.left / viewport.zoom;
+				const oy = rect.top / viewport.zoom;
 
-				// Special handling for line cards - use their start/end points and control point
+				// Special handling for line cards - use accurate path intersection
 				if (card.card_type === 'line') {
-					const lineData = card;
-					const absStartX = card.position_x + lineData.line_start_x;
-					const absStartY = card.position_y + lineData.line_start_y;
-					const absEndX = card.position_x + lineData.line_end_x;
-					const absEndY = card.position_y + lineData.line_end_y;
+					const lineCard = card as unknown as LineCard;
 
-					// Calculate control point position for curved lines
-					const dx = absEndX - absStartX;
-					const dy = absEndY - absStartY;
-					const distance = Math.sqrt(dx * dx + dy * dy);
-					const midX = (absStartX + absEndX) / 2;
-					const midY = (absStartY + absEndY) / 2;
+					// Calculate accuratae endpoint positions
+					const endpoints = calculateLineEndpoints(lineCard, cards, dragPositions);
 
-					let controlX = midX;
-					let controlY = midY;
+					const adjustedStart = {
+						x: endpoints.start.x + ox,
+						y: endpoints.start.y + oy,
+					};
+					const adjustedEnd = {
+						x: endpoints.end.x + ox,
+						y: endpoints.end.y + oy,
+					};
 
-					if (distance > 0 && lineData.line_control_point_offset) {
-						const nx = -dy / distance;
-						const ny = dx / distance;
-						controlX = midX + nx * lineData.line_control_point_offset;
-						controlY = midY + ny * lineData.line_control_point_offset;
+					// Get curve control (handle backward compatibility)
+					let curveControl = { curvature: 0, directionalBias: 0 };
+					if (lineCard.line_curvature !== undefined && lineCard.line_directional_bias !== undefined) {
+						curveControl = {
+							curvature: lineCard.line_curvature,
+							directionalBias: lineCard.line_directional_bias
+						};
+					} else if (lineCard.line_control_point_offset !== undefined) {
+						// Convert legacy offset to new format
+						curveControl = {
+							curvature: lineCard.line_control_point_offset * 2,
+							directionalBias: 0
+						};
 					}
 
-					// Include reroute nodes in bounds
-					const rerouteNodes = lineData.line_reroute_nodes || [];
-					const allX = [absStartX, absEndX, controlX, ...rerouteNodes.map((n: any) => n ? card.position_x + n.x : midX)];
-					const allY = [absStartY, absEndY, controlY, ...rerouteNodes.map((n: any) => n ? card.position_y + n.y : midY)];
+					// Get reroute nodes (convert to absolute coordinates)
+					const lineDragPos = dragPositions.get(card.id);
+					const linePosX = lineDragPos?.x ?? card.position_x;
+					const linePosY = lineDragPos?.y ?? card.position_y;
 
-					const minX = Math.min(...allX);
-					const minY = Math.min(...allY);
-					const maxX = Math.max(...allX);
-					const maxY = Math.max(...allY);
+					const rerouteNodes = (Array.isArray(lineCard.line_reroute_nodes) ? lineCard.line_reroute_nodes : [])
+						.filter((n: any) => n != null)
+						.map((n: any) => ({
+							x: linePosX + (n.x ?? 0),
+							y: linePosY + (n.y ?? 0)
+						}));
 
-					cardBounds = {
-						x: minX + rect.left / viewport.zoom,
-						y: minY + rect.top / viewport.zoom,
-						width: Math.max(maxX - minX, 10), // Minimum width for selection
-						height: Math.max(maxY - minY, 10), // Minimum height for selection
-					};
+					const intersects = bezierPathIntersectsRect(
+						adjustedStart,
+						adjustedEnd,
+						curveControl,
+						rerouteNodes,
+						selectionBounds as { x: number; y: number; width: number; height: number },
+						lineCard.line_stroke_width ?? 2
+					);
+
+					if (intersects) intersectingCardIds.push(id);
+
+					return; // Skip the cardBounds assignment and intersection test below
 				} else {
 					let cardHeight: number;
 
@@ -239,6 +259,7 @@ export function useSelectionBox(
 		setSelectionBox,
 		selectCards,
 		clearSelection,
-		canvasRef
+		canvasRef,
+		dragPositions
 	]);
 }

@@ -23,6 +23,41 @@ import { CardFrame } from './cards/CardFrame';
 import { useDraggable } from '@dnd-kit/core';
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Check if a card is inside a column
+ */
+function isCardInAnyColumn(cardId: string, allCards: Map<string, Card | CardData>): boolean {
+	for (const c of allCards.values()) {
+		if (c.card_type === 'column') {
+			const items = (c as any).column_items as any[] | undefined;
+			if (items?.some(item => item.card_id === cardId)) return true;
+		}
+	}
+	return false;
+}
+
+function hasBlockedAttachments(lineCard: LineCard, allCards: Map<string, Card | CardData>): boolean {
+	const attachedIds = [
+		lineCard.line_start_attached_card_id,
+		lineCard.line_end_attached_card_id,
+	].filter(Boolean) as string[];
+
+	for (const attachedId of attachedIds) {
+		const attachedCard = allCards.get(attachedId);
+		if (!attachedCard) continue;
+
+		const cannotMove = attachedCard.is_position_locked || isCardInAnyColumn(attachedId, allCards);
+		if (cannotMove) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -51,10 +86,17 @@ interface CardOptions {
 
 export function useCardZIndex(card: Card, allCards: Map<string, Card | CardData>): number {
 	const sortedCards = Array.from(allCards.values())
-		.sort((a, b) => a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0);
+		.sort((a, b) => a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1
+			: 0);
 
 	const index = sortedCards.findIndex(c => c.id === card.id);
-	return index >= 0 ? index : 0;
+	const baseZIndex = index >= 0 ? index : 0;
+
+	if (card.card_type === 'line') {
+		return baseZIndex + 10000;
+	}
+
+	return baseZIndex;
 }
 
 // ============================================================================
@@ -97,12 +139,15 @@ export const CanvasElement = memo(function CanvasElement({
 	// Z-index calculation
 	const cssZIndex = useCardZIndex(card, allCards);
 
+	const isLineWithBlockedAttachments =
+		card.card_type === "line" && hasBlockedAttachments(card as LineCard, allCards);
+
 	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform} = useDraggable({
 		id: card.id,
 		data: {
 			type: 'canvas-card',
 		},
-		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint || card.is_position_locked,
+		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint || card.is_position_locked || isLineWithBlockedAttachments,
 	});
 
 	// Event handlers
@@ -139,11 +184,6 @@ export const CanvasElement = memo(function CanvasElement({
 		});
 	}, [card.id, card.card_type, isReadOnly, setEditingCardId, setInteractionMode, onCardDoubleClick]);
 
-	// Hide drawing cards when being edited in drawing mode
-	if (isBeingEditedInDrawingMode) {
-		return null;
-	}
-
 	const handleContextMenu = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();
 		if (isReadOnly) return;
@@ -151,33 +191,14 @@ export const CanvasElement = memo(function CanvasElement({
 		onContextMenu?.(e, card);
 	}, [card, isReadOnly, onContextMenu]);
 
-	const handleMouseDown = useCallback((e: React.MouseEvent) => {
-		if (isReadOnly) {
-			e.stopPropagation();
-			return;
-		}
-
-		// If editing, don't interfere with text selection
-		if (isEditing) {
-			e.stopPropagation();
-			return;
-		}
-
-		// For line cards, disable dragging if either endpoint is attached to a card
-		if (card.card_type === 'line') {
-			const lineCard = card as LineCard;
-			if (lineCard.line_start_attached_card_id || lineCard.line_end_attached_card_id) {
-				e.stopPropagation();
-				return;
-			}
-		}
-
-		// Allow dragging (even from inside column - useDraggable handles extraction)
-	}, [card, isReadOnly, isEditing]);
-
 	const handleEditorReady = useCallback((editor: Editor) => {
 		onEditorReady?.(card.id, editor);
 	}, [card.id, onEditorReady]);
+
+	// Hide drawing cards when being edited in drawing mode
+	if (isBeingEditedInDrawingMode) {
+		return null;
+	}
 
 	// ========================================================================
 	// IN-COLUMN RENDERING

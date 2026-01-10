@@ -15,6 +15,7 @@ import { CardService } from '@/lib/services';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { getRayRectangleIntersection } from '@/lib/utils/line-intersection';
 import { findSnapTarget, type SnapTarget } from '@/lib/utils/line-helpers';
+import { getCardScreenPosition } from '@/lib/utils/card-position';
 import {
   type CurveControl,
   handlePositionToCurveControl,
@@ -23,6 +24,7 @@ import {
   offsetToCurveControl,
   calculateLocalFrame
 } from '@/lib/utils/bezier-curve';
+import { calculateLineEndpoints } from '@/lib/utils/line-endpoint-calculator';
 
 interface LineCardComponentProps {
   card: LineCard;
@@ -58,70 +60,24 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
 
   const lineData = card;
 
-  // Helper to calculate endpoint position with ray-rectangle intersection for attached cards
-  const calculateEndpointPosition = useCallback((
-    attachedCardId: string | null,
-    fallbackX: number,
-    fallbackY: number,
-    otherEndpointX: number,
-    otherEndpointY: number
-  ) => {
-    if (attachedCardId) {
-      const attachedCard = cards.get(attachedCardId);
-      if (attachedCard && attachedCard.card_type !== 'line') {
-        // Check if the attached card is being dragged
-        const dragPosition = dragPositions.get(attachedCardId);
-
-        // Use drag position if available, otherwise use card's position
-        const posX = dragPosition ? dragPosition.x : attachedCard.position_x;
-        const posY = dragPosition ? dragPosition.y : attachedCard.position_y;
-
-        const width = attachedCard.width;
-        const height = attachedCard.height || 150;
-
-        // Calculate card center (in canvas coordinates)
-        const centerX = posX + width / 2;
-        const centerY = posY + height / 2;
-
-        // Get other endpoint position (in canvas coordinates)
-        const otherX = card.position_x + otherEndpointX;
-        const otherY = card.position_y + otherEndpointY;
-
-        // Calculate ray-rectangle intersection
-        // Ray goes from card center toward the other endpoint
-        const intersection = getRayRectangleIntersection(
-          { x: posX, y: posY, width, height },
-          { x: centerX, y: centerY },
-          { x: otherX, y: otherY }
-        );
-
-        // Convert back to local coordinates relative to this line card
-        return { x: intersection.x - card.position_x, y: intersection.y - card.position_y };
-      }
-    }
-    return { x: fallbackX, y: fallbackY };
-  }, [cards, card.position_x, card.position_y, dragPositions]);
-
-  // Calculate positions - handle circular dependency between start and end
-  // First pass: use raw positions
-  const rawStartPos = { x: lineData.line_start_x, y: lineData.line_start_y };
-  const rawEndPos = { x: lineData.line_end_x, y: lineData.line_end_y };
-
-  // Second pass: calculate with attachments using the other endpoint's position
-  const startPos = calculateEndpointPosition(
-    lineData.line_start_attached_card_id,
-    rawStartPos.x,
-    rawStartPos.y,
-    rawEndPos.x,
-    rawEndPos.y
+  const endpoints = useMemo(
+	() => calculateLineEndpoints(card, cards, dragPositions),
+	[card, cards, dragPositions]
   );
-  const endPos = calculateEndpointPosition(
-    lineData.line_end_attached_card_id,
-    rawEndPos.x,
-    rawEndPos.y,
-    startPos.x,
-    startPos.y
-  );
+
+  const lineDragPos = dragPositions.get(card.id);
+  const linePosX = lineDragPos?.x ?? card.position_x;
+  const linePosY = lineDragPos?.y ?? card.position_y;
+
+  // Convert from absolute canvas to relative line card
+  const startPos = {
+	x: endpoints.start.x - linePosX,
+	y: endpoints.start.y - linePosY,
+  };
+  const endPos = {
+	x: endpoints.end.x - linePosX,
+	y: endpoints.end.y - linePosY,
+  };
 
   // Use local state during drag for immediate visual feedback, otherwise use DB values
   const startX = localStartX !== null ? localStartX : startPos.x;
@@ -349,8 +305,8 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
 
       // Handle reroute node drag
       if (typeof dragTarget === 'object' && 'type' in dragTarget && dragTarget.type === 'reroute') {
-        const relX = canvasX - card.position_x;
-        const relY = canvasY - card.position_y;
+        const relX = canvasX - linePosX;
+        const relY = canvasY - linePosY;
 
         const newNodes = [...(localRerouteNodes || lineData.line_reroute_nodes || [])];
         newNodes[dragTarget.index] = {
@@ -368,9 +324,9 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
 
         // Build all points array
         const allPoints = [
-          { x: startX + card.position_x, y: startY + card.position_y },
-          ...rerouteNodes.map(n => ({ x: n.x + card.position_x, y: n.y + card.position_y })),
-          { x: endX + card.position_x, y: endY + card.position_y }
+          { x: startX + linePosX, y: startY + linePosY },
+          ...rerouteNodes.map(n => ({ x: n.x + linePosX, y: n.y + linePosY })),
+          { x: endX + linePosX, y: endY + linePosY }
         ];
 
         const from = allPoints[segIndex];
@@ -399,8 +355,8 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       if (dragTarget === 'control') {
         // Convert mouse position to new 2-DOF curve control
         const mousePos = { x: canvasX, y: canvasY };
-        const start = { x: startX + card.position_x, y: startY + card.position_y };
-        const end = { x: endX + card.position_x, y: endY + card.position_y };
+        const start = { x: startX + linePosX, y: startY + linePosY };
+        const end = { x: endX + linePosX, y: endY + linePosY };
 
         const newControl = handlePositionToCurveControl(start, end, mousePos);
         setLocalCurveControl(newControl);
@@ -413,8 +369,8 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
 
       // Always use mouse position for dragging (snap preview is just visual)
       // Update relative position for immediate visual feedback
-      const relX = canvasX - card.position_x;
-      const relY = canvasY - card.position_y;
+      const relX = canvasX - linePosX;
+      const relY = canvasY - linePosY;
 
       if (dragTarget === 'start') {
         setLocalStartX(relX);
@@ -625,8 +581,8 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
       {/* Snap preview indicator - show at card center when snapping */}
       {snapPreview && (
         <circle
-          cx={snapPreview.centerX - card.position_x}
-          cy={snapPreview.centerY - card.position_y}
+          cx={snapPreview.centerX - linePosX}
+          cy={snapPreview.centerY - linePosY}
           r={15}
           fill="rgba(34, 197, 94, 0.2)"
           stroke="#22c55e"

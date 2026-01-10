@@ -17,7 +17,7 @@ import type { DragStartEvent, DragMoveEvent, DragEndEvent, DragOverEvent, Over, 
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import { CardService, CardTransaction } from '@/lib/services/card-service';
-import type { CardData } from '@/lib/types';
+import type { CardData, LineCard } from '@/lib/types';
 import { GRID_SIZE } from '../constants/defaults';
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { closestCenter, KeyboardSensor } from '@dnd-kit/core';
@@ -323,6 +323,60 @@ export function useDndCanvas({
 		return null;
 	}, []);
 
+	const isCardInAnyColumn = useCallback((cardId: string): boolean => {
+		for (const c of allCardsMap.values()) {
+			if (c.card_type === 'column') {
+				const items = (c as any).column_items as any[] | undefined;
+				if (items?.some(item => item.card_id === cardId)) return true;
+			}
+		}
+		return false;
+	}, [allCardsMap]);
+
+	type ExpandDragGroupResult = {
+		dragIds: string[];
+		blocked: boolean;
+		isImplicitLineAttachmentDrag: boolean;
+	};
+
+	const expandDragGroupWithLineAttachments = useCallback((
+		baseIds: string[],
+		activeId: string
+	): ExpandDragGroupResult => {
+		const baseSet = new Set(baseIds);
+		const dragSet = new Set(baseIds);
+		let blocked = false;
+
+		for (const id of baseIds) {
+			const card = allCardsMap.get(id);
+			if (!card || card.card_type !== 'line') continue;
+
+			const line = card as any;
+			const attachedIds = [line.line_start_attached_card_id, line.line_end_attached_card_id].filter(Boolean) as string[];
+			for (const attachedId of attachedIds) {
+				const attached = allCardsMap.get(attachedId);
+				if (!attached) continue;
+
+				const cannotMove = attached.is_position_locked || isCardInAnyColumn(attachedId);
+				if (cannotMove) {
+					blocked = true;
+					continue;
+				}
+
+				dragSet.add(attachedId);
+			}
+		}
+
+		const expandedIds = Array.from(dragSet);
+		const isImplicitLineAttachmentDrag = activeId !== null && (() => {
+			const activeCard = allCardsMap.get(activeId);
+			if (!activeCard || activeCard.card_type !== 'line') return false;
+			return expandedIds.some(id => !baseSet.has(id));
+		})();
+
+		return { dragIds: expandedIds, blocked, isImplicitLineAttachmentDrag };
+	}, [allCardsMap, isCardInAnyColumn]);
+
 	// ============================================================================
 	// EVENT HANDLERS
 	// ============================================================================
@@ -363,6 +417,20 @@ export function useDndCanvas({
 			} else {
 				cardsToDrag = activeCard?.is_position_locked ? [] : [active.id as string];
 			}
+
+			const expandedDragGroup = expandDragGroupWithLineAttachments(cardsToDrag, active.id as string);
+
+			if (expandedDragGroup.blocked) {
+				const activeCardFrozen = allCardsMap.get(active.id as string);
+				if (activeCardFrozen) {
+					const frozen = new Map<string, { x: number, y: number }>();
+					frozen.set(active.id as string, { x: activeCardFrozen.position_x, y: activeCardFrozen.position_y });
+					setDragPositions(frozen);
+				}
+				return;
+			}
+
+			cardsToDrag = expandedDragGroup.dragIds;
 
 			// Special case: locked card in column → drag column instead
 			if (cardsToDrag.length === 0 && activeCard?.is_position_locked) {
@@ -442,7 +510,7 @@ export function useDndCanvas({
 			selectCard(active.id as string, false);
 		}
 
-	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard, viewport]);
+	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard, viewport, expandDragGroupWithLineAttachments]);
 
 	const handleDragMove = useCallback((event: DragMoveEvent) => {
 		const { active, delta, over, activatorEvent } = event;
@@ -461,35 +529,41 @@ export function useDndCanvas({
   		// ========================================================================
 
 		if (activeData?.type === "canvas-card" || activeData?.type === "column-card") {
-			const columnId =
-				overData?.type === "column" ? overData.columnId :
-				overData?.type === "column-card" ? overData.columnId :
-				null;
+			const card = allCardsMap.get(active.id as string);
 
-			if (columnId) {
-				const column = allCardsMap.get(columnId);
-				const columnItems = column?.card_type === "column" ? column.column_items : [];
-				const items = columnItems?.map((value) => value.card_id);
-				const clientY = activatorEvent.clientY + canvasDelta.y;
-
-				if (clientY != null) {
-					const index = getInsertionIndex({
-						items,
-						overId: String(over.id),
-						pointerY: clientY,
-						overRect: over.rect ?? null
-					});
-
-					if (index !== -1) setColumnInsertionIndexTarget(index);
-				}
-			} else {
+			if (!card || card.card_type === "column" || card.card_type === "line") {
 				setColumnInsertionIndexTarget(null);
+			} else {
+				const columnId =
+					overData?.type === "column" ? overData.columnId :
+					overData?.type === "column-card" ? overData.columnId :
+					null;
+
+				if (columnId) {
+					const column = allCardsMap.get(columnId);
+					const columnItems = column?.card_type === "column" ? column.column_items : [];
+					const items = columnItems?.map((value) => value.card_id);
+					const clientY = activatorEvent.clientY + canvasDelta.y;
+
+					if (clientY != null) {
+						const index = getInsertionIndex({
+							items,
+							overId: String(over.id),
+							pointerY: clientY,
+							overRect: over.rect ?? null
+						});
+
+						if (index !== -1) setColumnInsertionIndexTarget(index);
+					}
+				}
 			}
+		} else {
+			setColumnInsertionIndexTarget(null);
 		}
 
 		if (dragType === 'canvas-card') {
 			// Determine which cards are being dragged - filter out locked cards
-			const cardsToDrag = selectedCardIds.has(active.id as string)
+			let cardsToDrag = selectedCardIds.has(active.id as string)
 				? Array.from(selectedCardIds).filter(id => {
 					const card = allCardsMap.get(id);
 					return !card?.is_position_locked;
@@ -502,6 +576,9 @@ export function useDndCanvas({
 
 			const activeCard = allCardsMap.get(active.id as string);
 			if (!activeCard) return;
+
+			const expandedDragGroup = expandDragGroupWithLineAttachments(cardsToDrag, active.id as string);
+			cardsToDrag = expandedDragGroup.dragIds;
 
 			// Calculate active card's new position
 			let activeCardNewX = activeCard.position_x + canvasDelta.x;
@@ -530,6 +607,11 @@ export function useDndCanvas({
 			});
 
 			setDragPositions(newPositions);
+
+			if (expandedDragGroup.isImplicitLineAttachmentDrag) {
+				setPotentialColumnTarget(null);
+				return;
+			}
 
 			// Check for column overlap
 			const overlappingColumns = findOverlappingColumns(active.id as string, allCardsMap);
@@ -574,8 +656,7 @@ export function useDndCanvas({
 				}
 			}
 		}
-
-	}, [selectedCardIds, allCardsMap, setDragPositions, setPotentialColumnTarget, snapToGrid, setColumnInsertionIndexTarget]);
+	}, [selectedCardIds, allCardsMap, setDragPositions, setPotentialColumnTarget, snapToGrid, setColumnInsertionIndexTarget, expandDragGroupWithLineAttachments]);
 
 	const handleDragEnd = useCallback(async (event: DragEndEvent) => {
 		const { active, over, delta, activatorEvent } = event;
@@ -597,7 +678,7 @@ export function useDndCanvas({
 			const timer = new PerformanceTimer('[DND DROP] Canvas card → Column');
 			dropTimestampRef.current = performance.now();
 
-			const draggedCardIds = selectedCardIds.has(active.id as string)
+			let draggedCardIds = selectedCardIds.has(active.id as string)
 			? Array.from(selectedCardIds).filter(id => {
 				const card = allCardsMap.get(id);
 				return !card?.is_position_locked;
@@ -613,7 +694,21 @@ export function useDndCanvas({
 				return;
 			}
 
-			const targetColumnId = getColumnIdFromOver(over);
+			const expandedDragGroup = expandDragGroupWithLineAttachments(draggedCardIds, active.id as string);
+
+			if (expandedDragGroup.blocked) {
+				clearDragPositions();
+				setPotentialBoardTarget(null);
+				setPotentialColumnTarget(null);
+				setActiveId(null);
+				setActiveDragType(null);
+				return;
+			}
+
+			draggedCardIds = expandedDragGroup.dragIds;
+			const forceCanvasMoveOnly = expandedDragGroup.isImplicitLineAttachmentDrag;
+
+			const targetColumnId = forceCanvasMoveOnly ? null : getColumnIdFromOver(over);
 			const targetIndex = over?.data?.current?.sortable?.index;
 			
 			if (targetColumnId && boardId) {
@@ -628,7 +723,10 @@ export function useDndCanvas({
 						card => card.card_type === 'column'
 					);
 
-					if (!isDraggingColumn) {
+					const activeCard = allCardsMap.get(active.id as string);
+					const isDraggingLine = activeCard?.card_type === "line";
+
+					if (!isDraggingColumn && !isDraggingLine) {
 						timer.mark('CardService.addCardsToColumnBatch start');
 						// Batch add all cards to column with optimistic update
 						await CardService.addCardsToColumnBatch({
@@ -1015,6 +1113,7 @@ export function useDndCanvas({
 		columnInsertionIndexTarget,
 		setColumnInsertionIndexTarget,
 		activeCardPosition,
+		expandDragGroupWithLineAttachments,
 	]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {
