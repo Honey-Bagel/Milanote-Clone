@@ -84,7 +84,9 @@ export function calculateLocalFrame(start: Point, end: Point): LocalFrame {
 export function controlVectorToCubicBezier(
   start: Point,
   end: Point,
-  control: CurveControl
+  control: CurveControl,
+  startTangentDist?: number,  // Optional override for start tangent distance
+  endTangentDist?: number      // Optional override for end tangent distance
 ): { cp1: Point; cp2: Point } {
   const frame = calculateLocalFrame(start, end);
 
@@ -121,7 +123,9 @@ export function controlVectorToCubicBezier(
   // 6*p_offset / 8 = handlePos - (start + end) / 2
   // p_offset = (4/3) * (handlePos - midpoint)
 
-  const tangentDistance = frame.length / 3;
+  // Use dynamic distances if provided, otherwise default to 1/3
+  const tangentDistanceStart = startTangentDist ?? frame.length / 3;
+  const tangentDistanceEnd = endTangentDist ?? frame.length / 3;
 
   // Scale the offset vector so the curve passes exactly through the handle
   const offsetVector = {
@@ -130,13 +134,13 @@ export function controlVectorToCubicBezier(
   };
 
   const cp1 = {
-    x: start.x + frame.tangent.x * tangentDistance + offsetVector.x,
-    y: start.y + frame.tangent.y * tangentDistance + offsetVector.y
+    x: start.x + frame.tangent.x * tangentDistanceStart + offsetVector.x,
+    y: start.y + frame.tangent.y * tangentDistanceStart + offsetVector.y
   };
 
   const cp2 = {
-    x: end.x - frame.tangent.x * tangentDistance + offsetVector.x,
-    y: end.y - frame.tangent.y * tangentDistance + offsetVector.y
+    x: end.x - frame.tangent.x * tangentDistanceEnd + offsetVector.x,
+    y: end.y - frame.tangent.y * tangentDistanceEnd + offsetVector.y
   };
 
   return { cp1, cp2 };

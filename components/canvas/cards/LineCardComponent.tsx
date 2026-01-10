@@ -8,6 +8,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { constrainCurveControl } from '@/lib/utils/line-constraints';
 import type { LineCard, Card, RerouteNode } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useDebouncedCallback } from 'use-debounce';
@@ -60,9 +61,38 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
 
   const lineData = card;
 
+  const currentCurveControl = useMemo((): CurveControl => {
+	if (card.line_curvature !== undefined && card.line_directional_bias !== undefined) {
+		return {
+			curvature: card.line_curvature,
+			directionalBias: card.line_directional_bias
+		};
+	}
+
+	// Backward compatibility
+	if (card.line_control_point_offset !== undefined) {
+		const frame = calculateLocalFrame(
+			{ x: card.line_start_x, y: card.line_start_y },
+			{ x: card.line_end_x, y: card.line_end_y }
+		);
+		return offsetToCurveControl(card.line_control_point_offset, frame.length);
+	}
+
+	return { curvature: 0, directionalBias: 0 };
+  }, [card.line_curvature, card.line_directional_bias, card.line_control_point_offset, card.line_start_x, card.line_start_y, card.line_end_x, card.line_end_y]);
+
+  const activeCurveControl = useMemo((): CurveControl => {
+	// During control point drag, use the local (dragging) value
+	if (localCurveControl !== null) {
+		return localCurveControl;
+	}
+
+	return currentCurveControl;
+  }, [localCurveControl, currentCurveControl]);
+
   const endpoints = useMemo(
-	() => calculateLineEndpoints(card, cards, dragPositions),
-	[card, cards, dragPositions]
+	() => calculateLineEndpoints(card, cards, dragPositions, activeCurveControl),
+	[card, cards, dragPositions, activeCurveControl]
   );
 
   const lineDragPos = dragPositions.get(card.id);
@@ -359,7 +389,10 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
         const end = { x: endX + linePosX, y: endY + linePosY };
 
         const newControl = handlePositionToCurveControl(start, end, mousePos);
-        setLocalCurveControl(newControl);
+
+		// Apply constraints
+		const constrained = constrainCurveControl(start, end, newControl);
+        setLocalCurveControl(constrained);
         return;
       }
 
@@ -467,6 +500,47 @@ export function LineCardComponent({ card, boardId, isEditing, isSelected }: Line
   const maxY = Math.max(...allYPoints) + padding;
   const svgWidth = maxX - minX;
   const svgHeight = maxY - minY;
+
+  const shouldHideLine = useMemo(() => {
+		const points: { x: number; y: number }[] = [
+			{ x: startX, y: startY },
+			{ x: endX, y: endY },
+		];
+
+		// Include curve control handle (important for curved lines)
+		if (rerouteNodes.length === 0) {
+			points.push(controlHandlePosition);
+		}
+
+		// Include reroute nodes
+		for (const node of rerouteNodes) {
+			points.push({ x: node.x, y: node.y });
+		}
+
+		const minX = Math.min(...points.map(p => p.x));
+		const maxX = Math.max(...points.map(p => p.x));
+		const minY = Math.min(...points.map(p => p.y));
+		const maxY = Math.max(...points.map(p => p.y));
+
+		const width = maxX - minX;
+		const height = maxY - minY;
+
+		// Threshold should roughly match card padding / endpoint radius
+		const MIN_EXTENT = 14;
+
+		return width < MIN_EXTENT && height < MIN_EXTENT;
+	}, [
+		startX,
+		startY,
+		endX,
+		endY,
+		controlHandlePosition,
+		rerouteNodes,
+	]);
+
+  if (shouldHideLine) {
+	return null;
+  }
 
   return (
     <svg
