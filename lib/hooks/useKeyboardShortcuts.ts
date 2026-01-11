@@ -213,6 +213,7 @@ export function useKeyboardShortcuts(
 		zoomIn,
 		zoomOut,
 		resetViewport,
+		enterPresentationMode,
 	} = useCanvasStore();
 
 	const { undo, redo } = useUndoStore();
@@ -440,6 +441,30 @@ export function useKeyboardShortcuts(
 						return;
 					}
 				}
+			}
+
+			// ============================================================================
+			// PRESENTATION MODE
+			// ============================================================================
+
+			// Shift + F5: Always start basic presentation mode (fullscreen with pan/zoom)
+			if (e.key === 'F5' && e.shiftKey) {
+				e.preventDefault();
+				enterPresentationMode('basic');
+				return;
+			}
+
+			// F5 or Cmd/Ctrl + Enter: Start presentation (advanced if nodes exist, basic otherwise)
+			if (e.key === 'F5' || (isMod && e.key === 'Enter')) {
+				e.preventDefault();
+				const presentationNodes = cards.filter(c => c.card_type === 'presentation_node');
+
+				if (presentationNodes.length > 0) {
+					enterPresentationMode('advanced');
+				} else {
+					enterPresentationMode('basic');
+				}
+				return;
 			}
 
 			// ============================================================================

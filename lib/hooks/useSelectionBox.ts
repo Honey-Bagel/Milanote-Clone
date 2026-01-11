@@ -139,6 +139,10 @@ export function useSelectionBox(
 			cards.forEach((card, id) => {
 				let cardBounds: { x: number; y: number; width: number; height: number };
 				if (card.position_x === null || card.position_y === null) return;
+
+				// Skip presentation nodes - they should never be selectable via selection box
+				if (card.card_type === 'presentation_node') return;
+
 				const rect = canvas.getBoundingClientRect();
 				const ox = rect.left / viewport.zoom;
 				const oy = rect.top / viewport.zoom;

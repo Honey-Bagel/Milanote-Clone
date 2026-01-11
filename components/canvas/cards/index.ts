@@ -13,6 +13,7 @@ export { ColumnCardComponent } from './ColumnCardComponent';
 export { BoardCardComponent } from './BoardCardComponent';
 export { LineCardComponent } from './LineCardComponent';
 export { DrawingCardComponent } from './DrawingCardComponent';
+export { PresentationNodeComponent } from './PresentationNodeComponent';
 
 // Core Architecture
 export { CardRenderer } from './CardRenderer';

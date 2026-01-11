@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
-import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen, Pencil } from 'lucide-react';
+import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen, Pencil, Presentation } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from '@/app/ui/board/add-element-modal';
@@ -23,9 +23,9 @@ export default function ElementToolbar({
 	isPublicView = false,
 	isViewerOnly = false,
 }: ElementToolbarProps) {
-	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode, interactionMode, setInteractionMode } = useCanvasStore();
+	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode, interactionMode, setInteractionMode, enterPresentationMode } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
-	const { importDrawerOpen, setImportDrawerOpen } = useBoardStore();
+	const { importDrawerOpen, setImportDrawerOpen, presentationSidebarOpen, setPresentationSidebarOpen } = useBoardStore();
 
 	const isDrawingMode = interactionMode.mode === 'drawing';
 	
@@ -252,6 +252,24 @@ export default function ElementToolbar({
 							<TooltipContent>
 								<p>{isConnectionMode ? "Exit Connection Mode" : "Enter Connection Mode"}</p>
 								<p className="text-xs text-secondary-foreground">Click card anchors to connect</p>
+							</TooltipContent>
+						</Tooltip>
+
+						{/* Presentation Mode */}
+						<Tooltip>
+							<TooltipTrigger asChild>
+								<Button
+									onClick={() => setPresentationSidebarOpen(!presentationSidebarOpen)}
+									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${presentationSidebarOpen ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
+									variant={"ghost"}
+									size={"sm"}
+								>
+									<Presentation className="w-4 h-4" />
+								</Button>
+							</TooltipTrigger>
+							<TooltipContent>
+								<p>Presentation Mode</p>
+								<p className="text-xs text-secondary-foreground">Manage presentation nodes and slides</p>
 							</TooltipContent>
 						</Tooltip>
 

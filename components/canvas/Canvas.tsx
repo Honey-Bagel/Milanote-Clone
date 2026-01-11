@@ -10,7 +10,7 @@ import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
 import { ConnectionLayer } from './ConnectionLayer';
-import type { Card, CardData, LineCard, DrawingCard, DrawingStroke } from '@/lib/types';
+import type { Card, CardData, LineCard, DrawingCard, DrawingStroke, PresentationNodeCard } from '@/lib/types';
 import { type Editor } from '@tiptap/react';
 import ElementToolbar from '@/app/ui/board/toolbars/element-toolbar';
 import TextEditorToolbar from '@/app/ui/board/toolbars/text-editor-toolbar';
@@ -28,6 +28,8 @@ import { DrawingLayer } from './drawing/DrawingLayer';
 import { clusterStrokes, makeStrokesRelative, makeStrokesAbsolute, convertStrokesToViewport, calculateStrokeBounds, StrokeCluster } from '@/lib/utils/stroke-clustering';
 import { CardService } from '@/lib/services/card-service';
 import { cardsToOrderKeyList, getOrderKeyForNewCard } from '@/lib/utils/order-key-manager';
+import { PresentationOverlay } from '@/components/presentation/PresentationOverlay';
+import { CameraAnimator } from '@/lib/utils/presentation-animator';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -54,6 +56,7 @@ export function Canvas({
 }: CanvasProps) {
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const canvasViewportRef = useRef<HTMLDivElement>(null);
+	const animatorRef = useRef(new CameraAnimator());
 	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
 	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
 	const [cardContextMenuData, setCardContextMenuData] = useState<{
@@ -73,6 +76,7 @@ export function Canvas({
 
 	const {
 		viewport,
+		setViewport,
 		connections,
 		clearSelection,
 		setEditingCardId,
@@ -88,6 +92,7 @@ export function Canvas({
 		setBoardId,
 		interactionMode,
 		setInteractionMode,
+		presentationMode,
 	} = useCanvasStore();
 
 	if (boardId) setBoardId(boardId);
@@ -127,6 +132,44 @@ export function Canvas({
 			console.warn('Failed to save color preference:', error);
 		}
 	}, [drawingTool.color]);
+
+	// ============================================================================
+	// PRESENTATION MODE ANIMATION
+	// ============================================================================
+
+	useEffect(() => {
+		if (
+			presentationMode.type === 'advanced' &&
+			presentationMode.isTransitioning
+		) {
+			const nodeId =
+				presentationMode.nodeSequence[presentationMode.currentNodeIndex];
+			const node = cards.get(nodeId) as PresentationNodeCard | undefined;
+
+			if (node) {
+				animatorRef.current.animate(viewport, node, {
+					duration: node.presentation_transition_duration,
+					easingType: node.presentation_transition_type,
+					curvePath: node.presentation_curve_path || undefined,
+					onUpdate: (newViewport) => setViewport(newViewport),
+					onComplete: () => {
+						useCanvasStore.getState().onTransitionComplete(node);
+					},
+				});
+			} else {
+				console.warn('[Presentation] Node not found:', nodeId, 'Available nodes:', Array.from(cards.keys()));
+				// Still mark transition as complete to avoid getting stuck
+				useCanvasStore.getState().onTransitionComplete(null);
+			}
+		}
+
+		return () => {
+			animatorRef.current.cancel();
+		};
+	// Note: viewport, setViewport, and cards are intentionally excluded to prevent infinite animation loop
+	// cards is excluded because we only need to read from it when the effect runs, not react to changes
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [presentationMode.currentNodeIndex, presentationMode.isTransitioning, presentationMode.type]);
 
 	// ============================================================================
 	// EXISTING EVENT HANDLERS
@@ -303,8 +346,8 @@ export function Canvas({
 	}, [editingCardId]);
 
 	useCanvasInteractions(canvasRef, { enablePan, enableZoom });
-	useKeyboardShortcuts(boardId, { enabled: enableKeyboardShortcuts });
-	useSelectionBox(canvasRef, { enabled: enableSelectionBox });
+	useKeyboardShortcuts(boardId, { enabled: enableKeyboardShortcuts && !presentationMode.isActive });
+	useSelectionBox(canvasRef, { enabled: enableSelectionBox && !presentationMode.isActive });
 
 	const handleCardClick = (cardId: string, isMultiSelect: boolean = false) => {
 		selectCard(cardId, isMultiSelect);
@@ -482,26 +525,28 @@ export function Canvas({
 	return (
 		<div className="flex flex-col h-screen bg-[#020617] text-foreground">
 			{/* Toolbar */}
-			<div className="h-[56px] flex-shrink-0 z-40">
-				{isDrawingMode ? (
-					<DrawingToolbar
-						tool={drawingTool}
-						onToolChange={(changes) => setDrawingTool({ ...drawingTool, ...changes })}
-						onSave={() => handleSaveDrawing(currentDrawingStrokes)}
-						onCancel={handleCancelDrawing}
-					/>
-				) : selectedEditor ? (
-					<TextEditorToolbar editor={selectedEditor} />
-				) : selectedLineCard ? (
-					<LinePropertiesToolbar card={selectedLineCard} />
-				) : (
-					<ElementToolbar
-						onCreateCard={() => {}}
-						canvasRef={canvasViewportRef}
-						isPublicView={isPublicView}
-					/>
-				)}
-			</div>
+			{!presentationMode.isActive && (
+				<div className="h-[56px] flex-shrink-0 z-40">
+					{isDrawingMode ? (
+						<DrawingToolbar
+							tool={drawingTool}
+							onToolChange={(changes) => setDrawingTool({ ...drawingTool, ...changes })}
+							onSave={() => handleSaveDrawing(currentDrawingStrokes)}
+							onCancel={handleCancelDrawing}
+						/>
+					) : selectedEditor ? (
+						<TextEditorToolbar editor={selectedEditor} />
+					) : selectedLineCard ? (
+						<LinePropertiesToolbar card={selectedLineCard} />
+					) : (
+						<ElementToolbar
+							onCreateCard={() => {}}
+							canvasRef={canvasViewportRef}
+							isPublicView={isPublicView}
+						/>
+					)}
+				</div>
+			)}
 
 			{/* Canvas */}
 			<div
@@ -706,6 +751,8 @@ export function Canvas({
 					position={canvasContextMenuData.position}
 					onClose={() => setCanvasContextMenuData({ open: false, position: { x: 0, y: 0 } })}
 				/>
+
+				<PresentationOverlay />
 			</div>
 		</div>
 	);

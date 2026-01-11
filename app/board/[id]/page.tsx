@@ -11,13 +11,16 @@ import { useBoardCards } from "@/lib/hooks/cards";
 import type { CardData } from "@/lib/types";
 import { useBoardStore } from "@/lib/stores/board-store";
 import { ImportDrawer } from "@/components/import/ImportDrawer";
+import { PresentationSidebar } from "@/components/presentation";
+import { useCanvasStore } from "@/lib/stores/canvas-store";
 
 export default function BoardPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = use(params);
 	const { user, isLoading: isAuthLoading } = db.useAuth();
 	const { board, isLoading, error } = useBoard(id);
 	const { cards: cardArray, isLoading: isCardsLoading } = useBoardCards(id);
-	const { importDrawerOpen, setImportDrawerOpen } = useBoardStore();
+	const { importDrawerOpen, setImportDrawerOpen, presentationSidebarOpen, setPresentationSidebarOpen } = useBoardStore();
+	const { clearSelection } = useCanvasStore();
 
 	// Wait for auth to be ready before making any decisions
 	if (isAuthLoading) {
@@ -58,6 +61,15 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 							isPublicView={false}
 						/>
 						<ImportDrawer boardId={id} onClose={() => setImportDrawerOpen(false)} isOpen={importDrawerOpen} />
+						{presentationSidebarOpen && (
+							<PresentationSidebar
+								boardId={id}
+								onClose={() => {
+									setPresentationSidebarOpen(false);
+									clearSelection();
+								}}
+							/>
+						)}
 					</main>
 				</div>
 			</DndContextProvider>

@@ -7,6 +7,7 @@
 import type { Card } from '@/lib/types';
 
 const SNAP_DISTANCE = 30; // pixels - increased for better UX with card-based snapping
+const NOT_ALLOWED_SNAP_CARD_TYPES = ["line", "presentation_node"];
 
 export interface SnapTarget {
   cardId: string;
@@ -32,7 +33,8 @@ export function findSnapTarget(
 
   for (const [cardId, card] of cards) {
     // Don't snap to self or other line cards
-    if (cardId === excludeCardId || card.card_type === 'line') continue;
+	const isTypeOkay = !NOT_ALLOWED_SNAP_CARD_TYPES.includes(card.card_type);
+    if (cardId === excludeCardId || !isTypeOkay) continue;
 
     // Calculate card center
     const centerX = card.position_x + card.width / 2;

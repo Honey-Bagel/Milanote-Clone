@@ -20,7 +20,8 @@ import {
 	ColumnCardComponent,
 	BoardCardComponent,
 	LineCardComponent,
-	DrawingCardComponent
+	DrawingCardComponent,
+	PresentationNodeComponent
 } from '.';
 
 interface CardRendererProps {
@@ -71,6 +72,9 @@ export function CardRenderer({ card, boardId, isEditing, isSelected, isPublicVie
 
 		case 'drawing':
 			return <DrawingCardComponent card={card} isEditing={isEditing} />;
+
+		case 'presentation_node':
+			return <PresentationNodeComponent />;
 
 		default:
 			// TypeScript should prevent this, but just in case

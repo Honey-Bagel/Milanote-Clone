@@ -15,9 +15,18 @@ interface CanvasContextMenuProps {
 };
 
 export default function CanvasContextMenu({ cards, isOpen, position, onClose }: CanvasContextMenuProps) {
-	// const { selectAll } = useCanvasStore(); // TODO: Implement selectAll
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
-	const { selectAll } = useCanvasStore();
+	const { selectCards } = useCanvasStore();
+
+	const selectAll = () => {
+		const selectableCards: string[] = [];
+		cards.forEach((card) => {
+			if (card.card_type !== "presentation_node") {
+				selectableCards.push(card.id);
+			}
+		})
+		selectCards(selectableCards);
+	}
 
 	useLayoutEffect(() => {
 		if (isOpen && contextMenuRef.current) {
@@ -58,9 +67,7 @@ export default function CanvasContextMenu({ cards, isOpen, position, onClose }: 
 
 	const onSelectAll = (e: React.MouseEvent) => {
 		e.preventDefault();
-		const allCards = new Set(cards.keys());
-		selectAll(allCards);
-		console.log(allCards);
+		selectAll();
 		onClose();
 	}
 

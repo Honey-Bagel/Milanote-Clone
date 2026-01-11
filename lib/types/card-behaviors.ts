@@ -196,6 +196,23 @@ export const CARD_BEHAVIORS: Record<Card['card_type'], CardBehaviorConfig> = {
 		minHeight: 100,
 		maxHeight: 1200,
 	},
+
+	presentation_node: {
+		resizable: 'none', // Fixed size marker
+		draggable: true, // Can reposition nodes
+		editable: false, // Edit via property panel, not inline
+		selectable: true,
+		heightMode: 'fixed',
+		maintainAspectRatio: true, // Square pin marker
+		canContainCards: false,
+		canBeContained: false, // Presentation nodes are top-level
+		canConnectFrom: false,
+		canConnectTo: false,
+		minWidth: 40,
+		maxWidth: 40,
+		minHeight: 40,
+		maxHeight: 40,
+	},
 };
 
 // ============================================================================

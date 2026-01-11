@@ -51,7 +51,9 @@ export type InteractionMode =
 	| { mode: 'editing'; cardId: string }
 	| { mode: 'connecting'; fromCardId: string }
 	| { mode: 'panning' }
-	| { mode: 'drawing'; editingCardId?: string };
+	| { mode: 'drawing'; editingCardId?: string }
+	| { mode: 'presentation_basic' }
+	| { mode: 'presentation_playing'; currentNodeIndex: number; isTransitioning: boolean };
 
 export interface DragPreviewState {
 	cardType?: Card['card_type'];
@@ -151,6 +153,18 @@ interface CanvasState {
 	// Uploading cards (loading state)
 	uploadingCards: Map<string, UploadingCard>;
 
+	// Presentation mode state
+	presentationMode: {
+		isActive: boolean;
+		type: 'basic' | 'advanced' | null;
+		currentNodeIndex: number;
+		isTransitioning: boolean;
+		isAutoPlaying: boolean;
+		autoPlayTimeoutId: number | null;
+		nodeSequence: string[];
+		showNodeMarkers: boolean;
+	};
+
 	setBoardId: (boardId: string) => void;
 
 	// Simplified delete - only updates UI state (actual deletion happens via InstantDB)
@@ -249,6 +263,20 @@ interface CanvasState {
 	setDragPreview: (preview: DragPreviewState | null) => void;
 	addUploadingCard: (card: UploadingCard) => void;
 	removeUploadingCard: (id: string) => void;
+
+	// ============================================================================
+	// PRESENTATION MODE ACTIONS
+	// ============================================================================
+
+	enterPresentationMode: (type: 'basic' | 'advanced') => void;
+	exitPresentationMode: () => void;
+	goToNextNode: () => void;
+	goToPreviousNode: () => void;
+	goToNode: (index: number) => void;
+	setAutoPlay: (enabled: boolean) => void;
+	updateNodeSequence: (nodeIds: string[]) => void;
+	toggleNodeMarkerVisibility: () => void;
+	onTransitionComplete: (nodeCard: any) => void;
 }
 
 // ============================================================================
@@ -298,6 +326,18 @@ export const useCanvasStore = create<CanvasState>()(
 				snapToGrid: false,
 				dragPreview: null as DragPreviewState | null,
 				uploadingCards: new Map(),
+
+				// Presentation mode state
+				presentationMode: {
+					isActive: false,
+					type: null,
+					currentNodeIndex: 0,
+					isTransitioning: false,
+					isAutoPlaying: false,
+					autoPlayTimeoutId: null,
+					nodeSequence: [],
+					showNodeMarkers: true,
+				},
 
 				setBoardId: (boardId: string) => {
 					set((state) => {
@@ -670,6 +710,177 @@ export const useCanvasStore = create<CanvasState>()(
 				removeUploadingCard: (id) =>
 					set((state) => {
 						state.uploadingCards.delete(id);
+					}),
+
+				// ============================================================================
+				// PRESENTATION MODE ACTIONS
+				// ============================================================================
+
+				enterPresentationMode: (type: 'basic' | 'advanced') => {
+					// Close presentation sidebar
+					const { useBoardStore } = require('./board-store');
+					useBoardStore.getState().setPresentationSidebarOpen(false);
+
+					set((state) => {
+						state.presentationMode.isActive = true;
+						state.presentationMode.type = type;
+						state.presentationMode.currentNodeIndex = 0;
+						state.presentationMode.isAutoPlaying = false;
+
+						if (type === 'basic') {
+							state.interactionMode = { mode: 'presentation_basic' };
+						} else {
+							// Start transitioning to the first node immediately
+							state.presentationMode.isTransitioning = true;
+							state.interactionMode = {
+								mode: 'presentation_playing',
+								currentNodeIndex: 0,
+								isTransitioning: true,
+							};
+						}
+
+						// Enter browser fullscreen mode
+						if (document.documentElement.requestFullscreen) {
+							document.documentElement.requestFullscreen().catch((err) => {
+								console.warn('Failed to enter fullscreen:', err);
+							});
+						}
+					});
+				},
+
+				exitPresentationMode: () => {
+					// Exit fullscreen FIRST (synchronously as possible)
+					if (document.fullscreenElement) {
+						document.exitFullscreen().catch((err) => {
+							console.warn('Failed to exit fullscreen:', err);
+						});
+					}
+
+					// THEN update state
+					set((state) => {
+						// Clear auto-play timeout
+						if (state.presentationMode.autoPlayTimeoutId) {
+							clearTimeout(state.presentationMode.autoPlayTimeoutId);
+						}
+
+						state.presentationMode.isActive = false;
+						state.presentationMode.type = null;
+						state.presentationMode.currentNodeIndex = 0;
+						state.presentationMode.isTransitioning = false;
+						state.presentationMode.isAutoPlaying = false;
+						state.presentationMode.autoPlayTimeoutId = null;
+						state.interactionMode = { mode: 'idle' };
+					});
+				},
+
+				goToNextNode: () =>
+					set((state) => {
+						const nextIndex = state.presentationMode.currentNodeIndex + 1;
+						if (nextIndex < state.presentationMode.nodeSequence.length) {
+							state.presentationMode.currentNodeIndex = nextIndex;
+							state.presentationMode.isTransitioning = true;
+							state.interactionMode = {
+								mode: 'presentation_playing',
+								currentNodeIndex: nextIndex,
+								isTransitioning: true,
+							};
+
+							// Clear existing auto-play timeout
+							if (state.presentationMode.autoPlayTimeoutId) {
+								clearTimeout(state.presentationMode.autoPlayTimeoutId);
+								state.presentationMode.autoPlayTimeoutId = null;
+							}
+						}
+					}),
+
+				goToPreviousNode: () =>
+					set((state) => {
+						const prevIndex = state.presentationMode.currentNodeIndex - 1;
+						if (prevIndex >= 0) {
+							state.presentationMode.currentNodeIndex = prevIndex;
+							state.presentationMode.isTransitioning = true;
+							state.interactionMode = {
+								mode: 'presentation_playing',
+								currentNodeIndex: prevIndex,
+								isTransitioning: true,
+							};
+
+							// Clear existing auto-play timeout
+							if (state.presentationMode.autoPlayTimeoutId) {
+								clearTimeout(state.presentationMode.autoPlayTimeoutId);
+								state.presentationMode.autoPlayTimeoutId = null;
+							}
+						}
+					}),
+
+				goToNode: (index: number) =>
+					set((state) => {
+						if (index >= 0 && index < state.presentationMode.nodeSequence.length) {
+							state.presentationMode.currentNodeIndex = index;
+							state.presentationMode.isTransitioning = true;
+							state.interactionMode = {
+								mode: 'presentation_playing',
+								currentNodeIndex: index,
+								isTransitioning: true,
+							};
+
+							// Clear existing auto-play timeout
+							if (state.presentationMode.autoPlayTimeoutId) {
+								clearTimeout(state.presentationMode.autoPlayTimeoutId);
+								state.presentationMode.autoPlayTimeoutId = null;
+							}
+						}
+					}),
+
+				setAutoPlay: (enabled: boolean) =>
+					set((state) => {
+						state.presentationMode.isAutoPlaying = enabled;
+
+						if (!enabled) {
+							// Clear timeout when disabling auto-play
+							if (state.presentationMode.autoPlayTimeoutId) {
+								clearTimeout(state.presentationMode.autoPlayTimeoutId);
+								state.presentationMode.autoPlayTimeoutId = null;
+							}
+						} else {
+							// When enabling auto-play, immediately schedule next transition if not currently transitioning
+							if (!state.presentationMode.isTransitioning) {
+								// Trigger after a short delay to let the user see the current state
+								const timeoutId = setTimeout(() => {
+									const store = useCanvasStore.getState();
+									store.goToNextNode();
+								}, 1000) as unknown as number; // 1 second delay before first auto-advance
+
+								state.presentationMode.autoPlayTimeoutId = timeoutId;
+							}
+						}
+					}),
+
+				updateNodeSequence: (nodeIds: string[]) =>
+					set((state) => {
+						state.presentationMode.nodeSequence = nodeIds;
+					}),
+
+				toggleNodeMarkerVisibility: () =>
+					set((state) => {
+						state.presentationMode.showNodeMarkers = !state.presentationMode.showNodeMarkers;
+					}),
+
+				onTransitionComplete: (nodeCard: any) =>
+					set((state) => {
+						state.presentationMode.isTransitioning = false;
+
+						// Setup auto-advance if enabled
+						if (state.presentationMode.isAutoPlaying && nodeCard) {
+							// Use node's delay if set, otherwise default to 3000ms
+							const delay = nodeCard.presentation_auto_advance_delay ?? 3000;
+							const timeoutId = setTimeout(() => {
+								const store = useCanvasStore.getState();
+								store.goToNextNode();
+							}, delay) as unknown as number;
+
+							state.presentationMode.autoPlayTimeoutId = timeoutId;
+						}
 					}),
 
 			})),

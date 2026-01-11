@@ -116,15 +116,15 @@ export function ColumnCardComponent({
 
 		const meta = active.data?.current;
 
-		const cardType = meta?.type;
+		const cardType = meta?.card_type;
 
 		if (!cardType) return false;
-		const NOT_ALLOWED_TYPES = ["column"];
+		const NOT_ALLOWED_TYPES = ["column", "presentation_node"];
 
 		if (active.id === card.id) return false;
 
 		return !NOT_ALLOWED_TYPES.includes(cardType);
-	}, [active]);
+	}, [active, card.id]);
 
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

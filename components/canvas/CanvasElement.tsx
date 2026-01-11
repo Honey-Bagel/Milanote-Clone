@@ -17,6 +17,7 @@ import { useCallback, memo, useState } from 'react';
 import type { Card, CardData, LineCard } from '@/lib/types';
 import type { Editor } from '@tiptap/react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
+import { useBoardStore } from '@/lib/stores/board-store';
 import { CardRenderer } from './cards/CardRenderer';
 import { CardProvider } from './cards/CardContext';
 import { CardFrame } from './cards/CardFrame';
@@ -124,11 +125,18 @@ export const CanvasElement = memo(function CanvasElement({
 		isDraggingLineEndpoint,
 		interactionMode,
 		setInteractionMode,
+		presentationMode,
 	} = useCanvasStore();
+	const { presentationSidebarOpen } = useBoardStore();
 	const [cardOptions, setCardOptions] = useState<CardOptions | null>(null);
 
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
+
+	// Check if presentation node should be non-interactive (when hidden)
+	const isPresentationNodeHidden =
+		card.card_type === 'presentation_node' &&
+		(!presentationSidebarOpen || presentationMode.isActive);
 
 	// Check if this drawing card is being edited in drawing mode
 	const isBeingEditedInDrawingMode =
@@ -146,24 +154,25 @@ export const CanvasElement = memo(function CanvasElement({
 		id: card.id,
 		data: {
 			type: 'canvas-card',
+			card_type: card.card_type
 		},
-		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint || card.is_position_locked || isLineWithBlockedAttachments,
+		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint || card.is_position_locked || isLineWithBlockedAttachments || isPresentationNodeHidden,
 	});
 
 	// Event handlers
 	const handleClick = useCallback((e: React.MouseEvent) => {
 		e.stopPropagation();
-		if (isReadOnly) return;
+		if (isReadOnly || isPresentationNodeHidden) return;
 
 		const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
 
 		// Call parent click handler with multi-select info
 		onCardClick?.(card.id, isMultiSelect);
-	}, [card.id, isReadOnly, onCardClick]);
+	}, [card.id, isReadOnly, isPresentationNodeHidden, onCardClick]);
 
 	const handleDoubleClick = useCallback((e: React.MouseEvent) => {
 		e.stopPropagation();
-		if (isReadOnly) return;
+		if (isReadOnly || isPresentationNodeHidden) return;
 
 		// If this is a drawing card, enter drawing mode instead of text editing
 		if (card.card_type === 'drawing') {
@@ -186,10 +195,10 @@ export const CanvasElement = memo(function CanvasElement({
 
 	const handleContextMenu = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();
-		if (isReadOnly) return;
+		if (isReadOnly || isPresentationNodeHidden) return;
 
 		onContextMenu?.(e, card);
-	}, [card, isReadOnly, onContextMenu]);
+	}, [card, isReadOnly, isPresentationNodeHidden, onContextMenu]);
 
 	const handleEditorReady = useCallback((editor: Editor) => {
 		onEditorReady?.(card.id, editor);
@@ -328,7 +337,7 @@ export const CanvasElement = memo(function CanvasElement({
 						display: 'block',
 						userSelect: isEditing ? 'auto' : 'none',
 						cursor: isEditing ? 'auto' : 'pointer',
-						pointerEvents: 'auto',
+						pointerEvents: isPresentationNodeHidden ? 'none' : 'auto',
 						position: 'relative',
 					}}
 				>

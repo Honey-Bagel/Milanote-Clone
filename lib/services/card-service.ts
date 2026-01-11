@@ -277,6 +277,20 @@ function validateCardData(
 				line_start_attached_card_id: data.line_start_attached_card_id || null,
 				line_end_attached_card_id: data.line_end_attached_card_id || null,
 			};
+		case 'presentation_node':
+			return {
+				presentation_target: data.presentation_target ?? {
+					x: 0,
+					y: 0,
+					zoom: 0
+				},
+				presentation_title: data.presentation_title || null,
+				presentation_order: data.presentation_order ?? 0,
+				presentation_transition_type: data.presentation_transition_type || 'ease-in-out',
+				presentation_transition_duration: data.presentation_transition_duration ?? 1000,
+				presentation_auto_advance_delay: data.presentation_auto_advance_delay || null,
+				presentation_curve_path: data.presentation_curve_path || null,
+			};
 		default:
 			return data;
 	}
@@ -1312,6 +1326,118 @@ export async function updateDrawingCardComplete(
 }
 
 // ============================================================================
+// PRESENTATION NODE METHODS
+// ============================================================================
+
+/**
+ * Create a new presentation node at the specified viewport position
+ */
+export async function createPresentationNode({
+	boardId,
+	orderKey,
+	position,
+	targetViewport,
+	title = null,
+	order = 0,
+}: {
+	boardId: string;
+	orderKey?: string;
+	position: { x: number; y: number };
+	targetViewport: { x: number; y: number; zoom: number };
+	title?: string | null;
+	order?: number;
+}): Promise<string> {
+	const cardId = generateId();
+	const finalOrderKey = orderKey || (await generateOrderKey(boardId));
+
+	const now = Date.now();
+	await db.transact([
+		db.tx.cards[cardId].update({
+			board_id: boardId,
+			card_type: 'presentation_node',
+			position_x: position.x,
+			position_y: position.y,
+			width: 40,
+			height: 40,
+			order_key: finalOrderKey,
+			presentation_target: {
+				x: 0, // Unused - position_x is used instead
+				y: 0, // Unused - position_y is used instead
+				zoom: targetViewport.zoom,
+			},
+			presentation_title: title,
+			presentation_order: order,
+			presentation_transition_type: 'ease-in-out',
+			presentation_transition_duration: 1000,
+			presentation_auto_advance_delay: null,
+			presentation_curve_path: null,
+			created_at: now,
+			updated_at: now,
+		}),
+		db.tx.boards[boardId].update({ updated_at: now }),
+		db.tx.cards[cardId].link({ board: boardId }),
+	]);
+
+	return cardId;
+}
+
+type PresentationTarget = {
+	x: number;
+	y: number;
+	zoom: number;
+};
+
+/**
+ * Update presentation node properties
+ */
+export async function updatePresentationNode(
+	cardId: string,
+	boardId: string,
+	updates: {
+		presentation_target?: Partial<PresentationTarget>;
+		presentation_title?: string | null;
+		presentation_order?: number;
+		presentation_transition_type?: 'linear' | 'ease-in-out' | 'ease-in' | 'ease-out';
+		presentation_transition_duration?: number;
+		presentation_auto_advance_delay?: number | null;
+		presentation_curve_path?: {
+			controlPoint1X: number;
+			controlPoint1Y: number;
+			controlPoint2X: number;
+			controlPoint2Y: number;
+		} | null;
+	}
+): Promise<void> {
+	const now = Date.now();
+	await db.transact([
+		db.tx.cards[cardId].update({
+			...updates,
+			updated_at: now,
+		}),
+		db.tx.boards[boardId].update({ updated_at: now }),
+	]);
+}
+
+/**
+ * Batch update presentation node order
+ */
+export async function updatePresentationNodesOrder(
+	boardId: string,
+	nodeUpdates: Array<{ id: string; order: number }>
+): Promise<void> {
+	const now = Date.now();
+	await db.transact([
+		...nodeUpdates.map(({ id, order }) =>
+			db.tx.cards[id].update({
+				presentation_order: order,
+				updated_at: now,
+			})
+		),
+		db.tx.boards[boardId].update({ updated_at: now }),
+	]);
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
@@ -1343,4 +1469,7 @@ export const CardService = {
 	transferCardBetweenColumns,
 	moveCardsToBoardBatch,
 	updateDrawingCardComplete,
+	createPresentationNode,
+	updatePresentationNode,
+	updatePresentationNodesOrder,
 };

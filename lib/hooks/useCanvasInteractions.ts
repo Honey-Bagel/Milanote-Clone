@@ -114,9 +114,6 @@ export function useCanvasInteractions(
 		// ============================================================================
 
 		const handleWheel = (e: WheelEvent) => {
-			// Disable zoom in drawing mode
-			if (interactionMode.mode === 'drawing') return;
-
 			// Only zoom with Ctrl/Cmd held
 			if (!enableZoom || !(e.ctrlKey || e.metaKey)) return;
 

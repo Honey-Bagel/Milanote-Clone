@@ -724,9 +724,10 @@ export function useDndCanvas({
 					);
 
 					const activeCard = allCardsMap.get(active.id as string);
-					const isDraggingLine = activeCard?.card_type === "line";
 
-					if (!isDraggingColumn && !isDraggingLine) {
+					const isTypeAllowedInColumns = activeCard?.card_type !== "line" && activeCard?.card_type !== "presentation_node";
+
+					if (!isDraggingColumn && isTypeAllowedInColumns) {
 						timer.mark('CardService.addCardsToColumnBatch start');
 						// Batch add all cards to column with optimistic update
 						await CardService.addCardsToColumnBatch({

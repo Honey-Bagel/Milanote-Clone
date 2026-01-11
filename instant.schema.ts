@@ -138,6 +138,24 @@ const graph = i.schema({
 				timestamp: number;
 			}>>().optional(),
 
+			// Presentation node fields
+			presentation_target: i.json<{
+				x: number;
+				y: number;
+				zoom: number;
+			}>().optional(),
+			presentation_title: i.string().optional(),
+			presentation_order: i.number().optional().indexed(),
+			presentation_transition_type: i.string().optional(),
+			presentation_transition_duration: i.number().optional(),
+			presentation_auto_advance_delay: i.number().optional(),
+			presentation_curve_path: i.json<{
+				controlPoint1X: number;
+				controlPoint1Y: number;
+				controlPoint2X: number;
+				controlPoint2Y: number;
+			}>().optional(),
+
 			created_by: i.string().optional(),
 			created_at: i.number().indexed(),
 			updated_at: i.number().indexed(),

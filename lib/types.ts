@@ -277,6 +277,26 @@ export type DrawingCard = BaseCard & {
 	drawing_strokes: DrawingStroke[];
 };
 
+export type PresentationNodeCard = BaseCard & {
+	card_type: "presentation_node";
+	presentation_target: {
+		x: number;
+		y: number;
+		zoom: number;
+	};
+	presentation_title: string | null;
+	presentation_order: number;
+	presentation_transition_type: "linear" | "ease-in-out" | "ease-in" | "ease-out";
+	presentation_transition_duration: number;
+	presentation_auto_advance_delay: number | null;
+	presentation_curve_path: {
+		controlPoint1X: number;
+		controlPoint1Y: number;
+		controlPoint2X: number;
+		controlPoint2Y: number;
+	} | null;
+};
+
 export type Card =
 	| NoteCard
 	| ImageCard
@@ -288,7 +308,8 @@ export type Card =
 	| ColumnCard
 	| BoardCard
 	| LineCard
-	| DrawingCard;
+	| DrawingCard
+	| PresentationNodeCard;
 
 // Type-specific data for creating cards
 export type NoteCardData = {
@@ -503,7 +524,7 @@ export interface UserSettings {
 export type CardData = {
 	id: string;
 	board_id: string;
-	card_type: 'note' | 'image' | 'text' | 'task_list' | 'link' | 'file' | 'color_palette' | 'column' | 'board' | 'line' | 'drawing';
+	card_type: 'note' | 'image' | 'text' | 'task_list' | 'link' | 'file' | 'color_palette' | 'column' | 'board' | 'line' | 'drawing' | 'presentation_node';
 	position_x: number;
 	position_y: number;
 	width: number;
