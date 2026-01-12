@@ -52,6 +52,21 @@ const rules = {
 			"access_token",
 			"refresh_token",
 		]
+	},
+	templates: {
+		allow: {
+			// Anyone can view public templates
+			view: "data.is_public == true || auth.id in data.ref('creator.id')",
+
+			// Only admins can create templates
+			create: "auth.id != null && auth.id in data.ref('creator.profile.id') && data.ref('creator.profile.is_admin')[0] == true",
+
+			// Only admin creators can update their templates
+			update: "auth.id in data.ref('creator.id') && auth.id in data.ref('creator.profile.id') && data.ref('creator.profile.is_admin')[0] == true",
+
+			// Only admin creators can delete
+			delete: "auth.id in data.ref('creator.id') && auth.id in data.ref('creator.profile.id') && data.ref('creator.profile.is_admin')[0] == true",
+		},
 	}
 } satisfies InstantRules;
 

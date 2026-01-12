@@ -95,7 +95,11 @@ export function Canvas({
 		presentationMode,
 	} = useCanvasStore();
 
-	if (boardId) setBoardId(boardId);
+	useEffect(() => {
+		if (boardId) {
+			setBoardId(boardId);
+		}
+	}, [boardId, setBoardId]);
 
 	const allCardsMap = new Map<string, CardData>();
 	cards.forEach((card) => {

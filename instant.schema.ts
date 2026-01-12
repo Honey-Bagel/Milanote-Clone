@@ -1,4 +1,5 @@
 import { i } from "@instantdb/react";
+import type { TemplateData } from "@/lib/types/template";
 
 // Define the schema for the Milanote application
 const graph = i.schema({
@@ -13,6 +14,7 @@ const graph = i.schema({
 			display_name: i.string().optional(),
 			avatar_url: i.string().optional(),
 			favorite_boards: i.json<string[]>().optional(), // Array of board IDs
+			is_admin: i.boolean().optional(), // Admin flag for template creation
 			created_at: i.number(),
 			last_active: i.number().optional(),
 		}),
@@ -176,6 +178,25 @@ const graph = i.schema({
 			created_at: i.number(),
 			updated_at: i.number(),
 		}),
+
+		// Board templates table
+		templates: i.entity({
+			name: i.string().indexed(),
+			description: i.string().optional(),
+			category: i.string().indexed(), // 'project' | 'personal' | 'creative' | 'business' | 'education'
+			preview_url: i.string().optional(), // Screenshot/thumbnail URL
+
+			// Template structure stored as JSON
+			template_data: i.json<TemplateData>(),
+
+			// Visibility & metadata
+			is_public: i.boolean(),
+			is_featured: i.boolean().optional(), // Featured templates show first
+			usage_count: i.number().optional(), // Track popularity
+
+			created_at: i.number().indexed(),
+			updated_at: i.number().indexed(),
+		}),
 	},
 	links: {
 		// Links $users to profiles (1-1)
@@ -291,6 +312,20 @@ const graph = i.schema({
 				has: "one",
 				label: "user",
 				onDelete: "cascade",
+			},
+		},
+
+		// Link templates to creator
+		templateCreator: {
+			forward: {
+				on: "templates",
+				has: "one",
+				label: "creator",
+			},
+			reverse: {
+				on: "$users",
+				has: "many",
+				label: "created_templates",
 			},
 		},
 	},

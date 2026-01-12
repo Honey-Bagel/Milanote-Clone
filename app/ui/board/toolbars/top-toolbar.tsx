@@ -1,6 +1,6 @@
 'use client';
 
-import { Minus, Plus, Maximize2, Share2, Settings, Home } from 'lucide-react';
+import { Minus, Plus, Maximize2, Share2, Settings, Home, FileDown } from 'lucide-react';
 import ShareModal from '@/app/ui/board/share-modal';
 import { Fragment, useState, useMemo, useRef, useEffect } from 'react';
 import SettingsModal from '@/app/ui/home/settings-modal';
@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { RealtimeAvatarStack } from '@/components/realtime-avatar-stack';
 import { useBreadcrumbs, type BreadcrumbItem as BreadcrumbItemType } from '@/lib/hooks/boards/use-breadcrumbs';
+import { useIsAdmin } from '@/lib/hooks/use-is-admin';
+import CreateTemplateModal from '@/components/templates/CreateTemplateModal';
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -149,6 +151,7 @@ export default function TopToolbar({
 }: TopToolbarProps) {
 	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+	const [isCreateTemplateModalOpen, setIsCreateTemplateModalOpen] = useState(false);
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
 	const [editedTitle, setEditedTitle] = useState(boardTitle);
 	const [isEditingZoom, setIsEditingZoom] = useState(false);
@@ -157,6 +160,7 @@ export default function TopToolbar({
 	const zoomInputRef = useRef<HTMLInputElement>(null);
 	const { viewport, zoomIn, zoomOut, zoomToFit, setViewport } = useCanvasStore();
 	const { cards } = useBoardCards(boardId);
+	const { isLoading: isAdminLoading, isAdmin} = useIsAdmin();
 
 	const { breadcrumbs } = useBreadcrumbs(boardId, isPublicView);
 
@@ -460,19 +464,36 @@ export default function TopToolbar({
 							</div>
 
 							{/* Share Button */}
-							<button 
-								onClick={() => setIsShareModalOpen(true)} 
+							<button
+								onClick={() => setIsShareModalOpen(true)}
 								className="px-4 py-2 bg-primary hover:bg-primary rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-primary/20 border border-primary/50"
 							>
 								<Share2 size={14}/>
 								Share
 							</button>
 
+							{/* Export as Template Button (Admin Only) */}
+							{!isAdminLoading && isAdmin && (
+								<button
+									onClick={() => setIsCreateTemplateModalOpen(true)}
+									className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors"
+									title="Create a template from this board"
+								>
+									<FileDown size={14}/>
+									Export as Template
+								</button>
+							)}
+
 							<button onClick={() => setIsSettingsModalOpen(true)} className="p-2 hover:bg-white/5 rounded-lg text-secondary-foreground transition-colors"><Settings size={20} /></button>
 					</div>
 				</div>
 			<SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
 	 		<ShareModal boardId={boardId} isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
+			<CreateTemplateModal
+				boardId={boardId}
+				isOpen={isCreateTemplateModalOpen}
+				onClose={() => setIsCreateTemplateModalOpen(false)}
+			/>
 		</>
 	)
 }

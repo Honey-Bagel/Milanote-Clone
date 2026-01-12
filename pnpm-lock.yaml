@@ -116,6 +116,9 @@ importers:
       perfect-freehand:
         specifier: ^1.2.2
         version: 1.2.2
+      pnpm:
+        specifier: ^10.28.0
+        version: 10.28.0
       prosemirror-state:
         specifier: ^1.4.4
         version: 1.4.4
@@ -172,8 +175,8 @@ importers:
         specifier: 1.0.0
         version: 1.0.0
       baseline-browser-mapping:
-        specifier: ^2.9.11
-        version: 2.9.11
+        specifier: ^2.9.14
+        version: 2.9.14
       eslint:
         specifier: ^9.39.1
         version: 9.39.1(jiti@2.6.1)
@@ -2352,8 +2355,8 @@ packages:
     resolution: {integrity: sha512-I3yl4r9QB5ZRY3XuJVEPfc2XhZO6YweFPI+UovAzn+8/hb3oJ6lnysaFcjVpkCPfVWFUDvoZ8kmVDP7WyRtYtQ==}
     engines: {node: '>= 0.6.0'}
 
-  baseline-browser-mapping@2.9.11:
-    resolution: {integrity: sha512-Sg0xJUNDU1sJNGdfGWhVHX0kkZ+HWcvmVymJbj6NSgZZmW/8S9Y2HQ5euytnIgakgxN6papOAWiwDo1ctFDcoQ==}
+  baseline-browser-mapping@2.9.14:
+    resolution: {integrity: sha512-B0xUquLkiGLgHhpPBqvl7GWegWBUNuujQ6kXd/r1U38ElPT6Ok8KZ8e+FpUGEc2ZoRQUzq/aUnaKFc/svWUGSg==}
     hasBin: true
 
   bowser@2.13.1:
@@ -3355,6 +3358,11 @@ packages:
   playwright@1.58.0-alpha-2025-11-30:
     resolution: {integrity: sha512-dzAIbd9MED4dQsPM6leA9rhKEXBf8L7mf+/CgYTeOrDuGNCznEr4PYQSvGPviLfiVyLFPpnPur1N0bVu8ZgJww==}
     engines: {node: '>=18'}
+    hasBin: true
+
+  pnpm@10.28.0:
+    resolution: {integrity: sha512-Bd9x0UIfITmeBT/eVnzqNNRG+gLHZXFEG/wceVbpjjYwiJgtlARl/TRIDU2QoGaLwSNi+KqIAApk6D0LDke+SA==}
+    engines: {node: '>=18.12'}
     hasBin: true
 
   possible-typed-array-names@1.1.0:
@@ -6607,7 +6615,7 @@ snapshots:
 
   base64-arraybuffer@1.0.2: {}
 
-  baseline-browser-mapping@2.9.11: {}
+  baseline-browser-mapping@2.9.14: {}
 
   bowser@2.13.1: {}
 
@@ -6626,7 +6634,7 @@ snapshots:
 
   browserslist@4.28.0:
     dependencies:
-      baseline-browser-mapping: 2.9.11
+      baseline-browser-mapping: 2.9.14
       caniuse-lite: 1.0.30001757
       electron-to-chromium: 1.5.262
       node-releases: 2.0.27
@@ -7721,6 +7729,8 @@ snapshots:
       playwright-core: 1.58.0-alpha-2025-11-30
     optionalDependencies:
       fsevents: 2.3.2
+
+  pnpm@10.28.0: {}
 
   possible-typed-array-names@1.1.0: {}
 

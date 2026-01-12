@@ -13,6 +13,7 @@ import { useBoardStore } from "@/lib/stores/board-store";
 import { ImportDrawer } from "@/components/import/ImportDrawer";
 import { PresentationSidebar } from "@/components/presentation";
 import { useCanvasStore } from "@/lib/stores/canvas-store";
+import EmptyBoardSuggestion from "@/components/templates/EmptyBoardSuggestion";
 
 export default function BoardPage({ params }: { params: Promise<{ id: string }> }) {
 	const { id } = use(params);
@@ -52,6 +53,9 @@ export default function BoardPage({ params }: { params: Promise<{ id: string }> 
 						isViewerOnly={false}
 					/>
 					<main className="flex-1 overflow-hidden relative">
+						{/* Empty Board Suggestion */}
+						{cardArray.length === 0 && <EmptyBoardSuggestion boardId={id} />}
+
 						<Canvas
 							boardId={id}
 							enablePan={true}

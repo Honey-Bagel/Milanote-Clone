@@ -7,6 +7,7 @@
 import { db, generateId, updateEntity } from '@/lib/db/client';
 import { BOARD_DEFAULTS } from '@/lib/constants/defaults';
 import { syncBoardTitle } from '@/lib/instant/board-title-sync';
+import { TemplateService } from './template-service';
 
 // ============================================================================
 // BOARD CREATION
@@ -19,6 +20,7 @@ export interface CreateBoardParams {
   color?: string;
   isPublic?: boolean;
   boardId?: string; // Optional pre-generated ID for parallel operations
+  fromTemplateId?: string; // Optional template ID for creating from template
 }
 
 /**
@@ -32,6 +34,12 @@ export interface CreateBoardParams {
  * });
  */
 export async function createBoard(params: CreateBoardParams): Promise<string> {
+  // If template specified, use instantiation instead
+  if (params.fromTemplateId) {
+    console.log('[BoardService] Creating board from template:', params.fromTemplateId);
+    return TemplateService.instantiateTemplate(params.fromTemplateId, params.ownerId);
+  }
+
   const boardId = params.boardId || generateId();
   const now = Date.now();
 

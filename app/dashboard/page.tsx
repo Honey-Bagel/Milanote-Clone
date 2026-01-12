@@ -14,6 +14,7 @@ import { BoardListRow } from '../ui/dashboard/board-list-row';
 import { Separator } from "radix-ui";
 import { DateFilterDropdown, DateFilterField } from '../ui/dashboard/date-filter-dropdown';
 import { useDebounce, DateFilterType, getDateRangeTimestamp, isWithinDateRange } from '@/lib/utils';
+import TemplateBrowserModal from '@/components/templates/TemplateBrowserModal';
 
 type Tabtype = 'my-boards' | 'shared' | 'favorites';
 
@@ -30,6 +31,9 @@ export default function Dashboard() {
 	// Date filter state
 	const [dateFilterType, setDateFilterType] = useState<DateFilterType>('all');
 	const [dateFilterField, setDateFilterField] = useState<DateFilterField>('updated_at');
+
+	// Template browser modal state
+	const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
 
 	// Keyboard shortcuts
 	useEffect(() => {
@@ -183,7 +187,13 @@ export default function Dashboard() {
 						</div>
 						<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
 							<CreateBoardQuickAction />
-							<QuickActionCardWrapper iconName="Layout" title="Browse Templates" subtitle="Find the perfect template" color="cyan"/>
+							<QuickActionCardWrapper
+								iconName="Layout"
+								title="Browse Templates"
+								subtitle="Find the perfect template"
+								color="cyan"
+								onClick={() => setShowTemplateBrowser(true)}
+							/>
 							<QuickActionCardWrapper iconName="Palette" title="Import Board" subtitle="Use a board from somewhere else	" color="purple"/>
 							<QuickActionCardWrapper iconName="Code" title="Tech specs" subtitle="Documentation" color="emerald"/>
 						</div>
@@ -316,6 +326,12 @@ export default function Dashboard() {
 					)}
 				</div>
 			</div>
+
+			{/* Template Browser Modal */}
+			<TemplateBrowserModal
+				isOpen={showTemplateBrowser}
+				onClose={() => setShowTemplateBrowser(false)}
+			/>
 		</db.SignedIn>
 	)
 }
