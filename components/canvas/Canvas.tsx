@@ -30,6 +30,8 @@ import { CardService } from '@/lib/services/card-service';
 import { cardsToOrderKeyList, getOrderKeyForNewCard } from '@/lib/utils/order-key-manager';
 import { PresentationOverlay } from '@/components/presentation/PresentationOverlay';
 import { CameraAnimator } from '@/lib/utils/presentation-animator';
+import { Cursors } from '@instantdb/react';
+import { db } from '@/lib/instant/db';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -72,7 +74,9 @@ export function Canvas({
 	const cards: Map<string, CardData> = useMemo(
 		() => new Map(cardArray.map((card) => [card.id, card])),
 		[cardArray]
-	)
+	);
+
+	const room = db.room("board", boardId || '');
 
 	const {
 		viewport,
@@ -551,7 +555,6 @@ export function Canvas({
 					)}
 				</div>
 			)}
-
 			{/* Canvas */}
 			<div
 				className={`canvas-viewport relative w-full h-full overflow-hidden bg-[#020617] select-none ${className}`}
@@ -565,6 +568,11 @@ export function Canvas({
 				onContextMenu={handleCanvasContextMenu}
 				onMouseMove={handleCanvasMouseMove}
 			>
+				<Cursors
+					room={room}
+					className="h-full w-full"
+					userCursorColor="tomato"
+				>
 				<div ref={canvasRef} className="canvas-scroll-area w-full h-full">
 						<div
 							className="canvas-document"
@@ -718,8 +726,8 @@ export function Canvas({
 								</div>
 							)}
 						</div>
-					</div>
-
+				</div>
+				</Cursors>
 				{/* Drawing Layer - shown when in drawing mode */}
 				{isDrawingMode && (
 					<DrawingLayer

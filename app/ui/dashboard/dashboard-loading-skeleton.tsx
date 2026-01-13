@@ -13,7 +13,7 @@ export function DashboardLoadingSkeleton() {
 							<div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
 								<Layers size={18} className="text-white"/>
 							</div>
-							<span className="font-bold text-white text-lg">Milanote Clone</span>
+							<span className="font-bold text-white text-lg">Notera</span>
 						</div>
 						<div className="hidden md:flex items-center gap-2 bg-[#0f172a] border border-white/10 rounded-lg px-4 py-2 min-w-[320px]">
 							<Search size={16} className="text-muted-foreground"/>

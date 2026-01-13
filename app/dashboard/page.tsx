@@ -15,6 +15,7 @@ import { Separator } from "radix-ui";
 import { DateFilterDropdown, DateFilterField } from '../ui/dashboard/date-filter-dropdown';
 import { useDebounce, DateFilterType, getDateRangeTimestamp, isWithinDateRange } from '@/lib/utils';
 import TemplateBrowserModal from '@/components/templates/TemplateBrowserModal';
+import { useRouter } from 'next/navigation';
 
 type Tabtype = 'my-boards' | 'shared' | 'favorites';
 
@@ -34,6 +35,8 @@ export default function Dashboard() {
 
 	// Template browser modal state
 	const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
+
+	const router = useRouter();
 
 	// Keyboard shortcuts
 	useEffect(() => {
@@ -120,12 +123,14 @@ export default function Dashboard() {
 				<div className="sticky top-0 z-50 border-b border-white/10 bg-[#020617]/80 backdrop-blur-xl">
 					<div className="flex items-center justify-between px-6 py-4">
 						<div className="flex items-center gap-6">
-							<div className="flex items-center gap-3">
-								<div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-									<Layers size={18} className="text-white"/>
+							<button onClick={() => router.push('/')}>
+								<div className="flex items-center gap-3">
+									<div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+										<Layers size={18} className="text-white"/>
+									</div>
+									<span className="font-bold text-white text-lg">Notera</span>
 								</div>
-								<span className="font-bold text-white text-lg">Milanote Clone</span>
-							</div>
+							</button>
 							<div className="hidden md:flex items-center gap-2 bg-[#0f172a] border border-white/10 rounded-lg px-4 py-2 min-w-[320px] relative">
 								<Search size={16} className="text-muted-foreground"/>
 								<input

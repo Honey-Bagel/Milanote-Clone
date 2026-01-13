@@ -53,7 +53,7 @@ export async function syncBoardTitle(
 	// Find and update all board cards that link to this board
 	if (!options?.skipCardUpdate) {
 		// Query all cards that link to this board
-		const { data } = await db.queryOnce({
+		const query = await db.queryOnce({
 			cards: {
 				$: {
 					where: {
@@ -63,8 +63,7 @@ export async function syncBoardTitle(
 				},
 			},
 		});
-
-		const boardCards = data?.cards || [];
+		const boardCards = query.data.cards;
 
 		// Update each board card's title
 		boardCards.forEach((card: any) => {

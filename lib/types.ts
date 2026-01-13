@@ -322,6 +322,7 @@ export type ImageCardData = {
 	image_url: string;
 	caption?: string;
 	alt_text?: string;
+	image_size?: number;
 };
 
 export type TextCardData = {

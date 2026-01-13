@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { BoardCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import { BoardService } from '@/lib/services';
@@ -139,16 +139,25 @@ export function BoardCardComponent({
 		saveContent({
 			board_title: newTitle,
 		});
+	}, [saveContent]);
 
-		// Sync the title to both boards table and all related board cards
+	const handleTitleSubmit = useCallback(async (e: React.FocusEvent | React.KeyboardEvent) => {
+		const title = e.target.value;
+
 		if (card.linked_board_id) {
 			try {
-				await syncBoardTitle(card.linked_board_id, newTitle);
+				await syncBoardTitle(card.linked_board_id, title);
 			} catch (error) {
 				console.error('Failed to sync board title:', error);
 			}
 		}
-	}, [saveContent, card.linked_board_id]);
+	}, [card.linked_board_id]);
+
+	const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+		if (e.key === "Enter") {
+			handleTitleSubmit(e);
+		}
+	}, [handleTitleSubmit]);
 
 	const handleNavigateToBoard = useCallback(async (e: React.MouseEvent) => {
 		if (!isEditing && card.linked_board_id) {
@@ -198,6 +207,8 @@ export function BoardCardComponent({
 							type="text"
 							value={localTitle}
 							onChange={handleTitleChange}
+							onBlur={handleTitleSubmit}
+							onKeyDown={handleTitleKeyDown}
 							className="w-full px-2 py-1 text-sm bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
 							placeholder="Board name"
 							onClick={(e) => e.stopPropagation()}

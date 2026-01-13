@@ -49,6 +49,23 @@ export function useSelectionBox(
 
 	const isDrawingRef = useRef(false);
 	const startPosRef = useRef({ x: 0, y: 0 });
+	const isSpacePressed = useRef(false);
+
+	useEffect(() => {
+		const down = (e: KeyboardEvent) => {
+			if (e.code === 'Space') isSpacePressed.current = true;
+		};
+		const up = (e: KeyboardEvent) => {
+			if (e.code === 'Space') isSpacePressed.current = false;
+		};
+
+		window.addEventListener('keydown', down);
+		window.addEventListener('keyup', up);
+		return () => {
+			window.removeEventListener('keydown', down);
+			window.removeEventListener('keyup', up);
+		};
+	}, []);
 
 	useEffect(() => {
 		if (!enabled) return;
@@ -68,7 +85,8 @@ export function useSelectionBox(
 				isPanning ||
 				isDragging ||
 				editingCardId ||
-				e.currentTarget !== canvas
+				e.currentTarget !== canvas ||
+				isSpacePressed.current
 			) {
 				return;
 			}

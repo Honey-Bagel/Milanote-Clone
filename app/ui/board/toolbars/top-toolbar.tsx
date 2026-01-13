@@ -149,7 +149,6 @@ export default function TopToolbar({
 	isPublicView = false,
 	isViewerOnly = false
 }: TopToolbarProps) {
-	const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 	const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 	const [isCreateTemplateModalOpen, setIsCreateTemplateModalOpen] = useState(false);
 	const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -463,15 +462,6 @@ export default function TopToolbar({
 								<RealtimeAvatarStack roomName={boardId}/>
 							</div>
 
-							{/* Share Button */}
-							<button
-								onClick={() => setIsShareModalOpen(true)}
-								className="px-4 py-2 bg-primary hover:bg-primary rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors shadow-lg shadow-primary/20 border border-primary/50"
-							>
-								<Share2 size={14}/>
-								Share
-							</button>
-
 							{/* Export as Template Button (Admin Only) */}
 							{!isAdminLoading && isAdmin && (
 								<button
@@ -488,7 +478,6 @@ export default function TopToolbar({
 					</div>
 				</div>
 			<SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
-	 		<ShareModal boardId={boardId} isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
 			<CreateTemplateModal
 				boardId={boardId}
 				isOpen={isCreateTemplateModalOpen}

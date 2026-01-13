@@ -221,6 +221,7 @@ function validateCardData(
 				image_url: data.image_url || '',
 				image_caption: data.image_caption || '',
 				image_alt_text: data.image_alt_text || '',
+				image_size: data.image_size || 0,
 			};
 		case 'task_list':
 			return {

@@ -54,7 +54,7 @@ export default function LandingPage() {
 						<div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
 							<Layers size={16} className="text-white" />
 						</div>
-						<span className="font-bold text-lg tracking-tight text-white">Note App</span>
+						<span className="font-bold text-lg tracking-tight text-white">Notera</span>
 					</div>
 					<div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
 						<a href="#use-cases" className="hover:text-white transition-colors">Use Cases</a>
@@ -107,7 +107,7 @@ export default function LandingPage() {
 							The infinite <br /> paper for your <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300">digital mind.</span>
 						</h1>
 						<p className="text-lg text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
-							Linear docs are for finishing ideas. Milanote Clone is for finding them. Drag, drop, and connect your thoughts on an infinite spatial plane.
+							Linear docs are for finishing ideas. Notera is for finding them. Drag, drop, and connect your thoughts on an infinite spatial plane.
 						</p>
 						{!isSignedIn ? (
 							<form onSubmit={(e) => {e.preventDefault();}} className="flex flex-col sm:flex-row gap-3 max-w-md">
@@ -237,7 +237,7 @@ export default function LandingPage() {
 								}}>
 									<i className="fas fa-layer-group text-[var(--foreground)] text-sm"></i>
 								</div>
-								<span className="text-lg font-bold">Milanote</span>
+								<span className="text-lg font-bold">Notera</span>
 							</div>
 							<p className="text-[var(--muted)] text-sm">
 								The visual workspace for creative projects.
@@ -281,7 +281,7 @@ export default function LandingPage() {
 					{/* Bottom Bar */}
 					<div className="pt-8 border-t border-[var(--border)] flex flex-col md:flex-row justify-between items-center">
 						<p className="text-[var(--muted)] text-sm mb-4 md:mb-0">
-							© 2024 Milanote. All rights reserved.
+							© 2026 Notera. All rights reserved.
 						</p>
 						<div className="flex items-center space-x-6">
 							<a href="#" className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">

@@ -6,7 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import InstantDBAuthSync from "@/components/auth/InstantDBAuthSync";
 
 export const metadata: Metadata = {
-	title: 'Milanote Clone',
+	title: 'Notera',
 	description: 'A visual workspace for creative projects',
 };
 

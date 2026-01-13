@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useLinkedAccounts } from '@/lib/hooks/useLinkedAccount';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { db } from "@/lib/instant/db";
+import { FaGoogleDrive } from "react-icons/fa";
 
 export function ConnectedAccountsSection() {
 	const { user } = db.useAuth();
@@ -44,8 +45,8 @@ export function ConnectedAccountsSection() {
 			{/* Google Drive */}
 			<div className="flex items-center justify-between p-4 bg-slate-800 rounded-lg">
 				<div className="flex items-center gap-4">
-					<div className="w-12 h-12 bg-white rounded flex items-center justify-center">
-						{/* Google Drive Icon */}
+					<div className="w-12 h-12 rounded flex items-center justify-center">
+						<FaGoogleDrive size={36}/>
 					</div>
 					<div>
 						<div className="font-medium text-white">Google Drive</div>

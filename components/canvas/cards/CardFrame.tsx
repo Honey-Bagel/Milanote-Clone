@@ -17,7 +17,6 @@ import type { Card, ConnectionSide } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useResizable } from '@/lib/hooks/useResizable';
 import { useDirectDimensionMeasurement, type DirectDimensions } from '@/lib/hooks/useDirectDimensionMeasurement';
-import { ConnectionHandles } from '../ConnectionHandle';
 import { type CardDimensions, type HeightMode } from './useCardDimensions';
 import { useCardContext } from './CardContext';
 import { useCardBehavior } from '@/lib/hooks/useCardBehavior';
@@ -317,19 +316,6 @@ export const CardFrame = memo(function CardFrame({
 					viewport={viewport}
 					isEditing={isEditing}
 					heightMode={dimensions.heightMode}
-				/>
-			)}
-
-			{/* Connection handles */}
-			{showConnectionHandles && (
-				<ConnectionHandles
-					cardId={card.id}
-					isConnectionMode={isConnectionMode || !!pendingConnection || isDraggingLineEndpoint}
-					hasPendingConnection={!!pendingConnection}
-					pendingSourceCardId={pendingConnection?.fromCardId}
-					pendingSourceSide={pendingConnection?.fromSide}
-					onStartConnection={handleStartConnection}
-					onCompleteConnection={handleCompleteConnection}
 				/>
 			)}
 

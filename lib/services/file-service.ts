@@ -277,7 +277,7 @@ export async function safeDeleteFile(
  * @param boardId - Board ID for organizing files
  * @returns Promise<string> - Public URL of uploaded image
  */
-export async function uploadImage(file: File, boardId: string): Promise<string> {
+export async function uploadImage(file: File, boardId: string): Promise<{ url: string, size: number }> {
 	try {
 		// Compress image
 		const compressedFile = await compressImage(file);
@@ -288,7 +288,10 @@ export async function uploadImage(file: File, boardId: string): Promise<string> 
 		const key = `boards/${boardId}/images/${timestamp}-${sanitizedName}`;
 
 		// Upload to R2
-		return await uploadToR2(compressedFile, key);
+		const size = compressedFile.size;
+		const url = await uploadToR2(compressedFile, key);
+
+		return { url, size};
 	} catch (error) {
 		console.error('[FileService] Image upload failed:', error);
 		if (error instanceof Error) {

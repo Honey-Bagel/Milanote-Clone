@@ -41,11 +41,6 @@ export function ProfileSection() {
 
 	return (
 		<div className="space-y-8">
-			<div>
-				<h3 className="text-2xl font-bold text-white mb-2">Profile</h3>
-				<p className="text-sm text-secondary-foreground">Manage your public profile information</p>
-			</div>
-
 			{/* Avatar Section */}
 			<div className="flex items-center gap-6">
 				<div className="relative group">
@@ -123,13 +118,9 @@ export function ProfileSection() {
 				<h4 className="text-lg font-semibold text-white mb-4">Account Information</h4>
 				<div className="space-y-3">
 					<div className="flex justify-between items-center">
-						<span className="text-sm text-secondary-foreground">User ID</span>
-						<span className="text-sm text-foreground font-mono">{user.id.substring(0, 16)}...</span>
-					</div>
-					<div className="flex justify-between items-center">
 						<span className="text-sm text-secondary-foreground">Account Created</span>
 						<span className="text-sm text-foreground">
-							{new Date(user.createdAt).toLocaleDateString()}
+							{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Date not found"}
 						</span>
 					</div>
 					<div className="flex justify-between items-center">

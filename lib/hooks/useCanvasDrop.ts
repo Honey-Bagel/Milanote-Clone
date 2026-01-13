@@ -120,9 +120,19 @@ export function useCanvasDrop(boardId: string) {
 
 			try {
 				// Upload file to storage (using FileService with placeholder)
-				const fileUrl = cardType === 'image'
-					? await FileService.uploadImage(file, boardId)
-					: await FileService.uploadFile(file, boardId);
+				let fileUrl: string;
+				let size: number;
+
+				if (cardType === 'image') {
+					const imageObj = await FileService.uploadImage(file, boardId);
+					fileUrl = imageObj.url;
+					size = imageObj.size;
+				} else if (cardType === 'file') {
+					fileUrl = await FileService.uploadFile(file, boardId);
+					size = 0;
+				} else {
+					return;
+				}
 
 				// For image cards, calculate proper height based on aspect ratio
 				let cardHeight = defaultHeight;
@@ -150,6 +160,7 @@ export function useCanvasDrop(boardId: string) {
 					data: cardType === 'image' ? {
 						image_url: fileUrl,
 						image_caption: file.name,
+						image_size: size,
 					} : {
 						file_url: fileUrl,
 						file_name: file.name,

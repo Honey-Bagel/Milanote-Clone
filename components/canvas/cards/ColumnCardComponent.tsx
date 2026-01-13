@@ -176,7 +176,8 @@ export function ColumnCardComponent({
 				overflow-hidden
 				transition-all duration-200
 				w-auto h-auto
-				bg-[#1a1f2e]/95 backdrop-blur-sm shadow-lg
+				bg-[#1e293b]/90 backdrop-blur-sm shadow-lg
+				hover:border-accent/50 border border-white/10
 			`}
 		>
 			{/* Header */}

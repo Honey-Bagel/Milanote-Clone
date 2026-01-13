@@ -23,7 +23,6 @@ const SECTIONS = [
 	{ id: 'profile' as SectionId, label: 'Profile', icon: User },
 	{ id: 'preferences' as SectionId, label: 'Preferences', icon: Settings },
 	{ id: 'appearance' as SectionId, label: 'Appearance', icon: Palette },
-	{ id: 'notifications' as SectionId, label: 'Notifications', icon: Bell },
 	{ id: 'billing' as SectionId, label: 'Billing', icon: CreditCard },
 	{ id: 'security' as SectionId, label: 'Security', icon: Shield },
 	{ id: 'connected_accounts' as SectionId, label: 'Connections', icon: Link2 },
@@ -116,10 +115,10 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 							<div className="space-y-8">
 								<GeneralPreferencesSection />
 								<CollaborationSection />
+								<NotificationsSection />
 							</div>
 						)}
 						{activeSection === 'appearance' && <AppearanceSection />}
-						{activeSection === 'notifications' && <NotificationsSection />}
 						{activeSection === 'billing' && <BillingSection />}
 						{activeSection === 'security' && <SecuritySection />}
 						{activeSection === 'connected_accounts' && <ConnectedAccountsSection />}

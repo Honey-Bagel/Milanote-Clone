@@ -1,8 +1,11 @@
 'use client';
 
 import { CreditCard, TrendingUp, Zap } from 'lucide-react';
+import { useUserUsage } from '@/lib/hooks/user/use-user-usage';
+import { formatBytes } from '@/lib/utils';
 
 export function BillingSection() {
+	const { boardCount, fileUsage, isLoading, error } = useUserUsage();
 	return (
 		<div className="space-y-6">
 			<div>
@@ -50,14 +53,12 @@ export function BillingSection() {
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">
 					<div className="text-secondary-foreground text-xs uppercase tracking-wider mb-2">Boards Created</div>
-					<div className="text-2xl font-bold text-white">—</div>
-					<div className="text-xs text-muted-foreground mt-1">Coming soon</div>
+					<div className="text-2xl font-bold text-white">{(!isLoading && !error) && boardCount}</div>
 				</div>
 
 				<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">
 					<div className="text-secondary-foreground text-xs uppercase tracking-wider mb-2">Storage Used</div>
-					<div className="text-2xl font-bold text-white">—</div>
-					<div className="text-xs text-muted-foreground mt-1">Coming soon</div>
+					<div className="text-2xl font-bold text-white">{(!isLoading && !error) && formatBytes(fileUsage, { base: 1000 })}</div>
 				</div>
 			</div>
 		</div>

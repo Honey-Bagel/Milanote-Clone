@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
-import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen, Pencil, Presentation } from 'lucide-react';
+import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen, Pencil, Presentation, Share2 } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from '@/app/ui/board/add-element-modal';
@@ -25,7 +25,7 @@ export default function ElementToolbar({
 }: ElementToolbarProps) {
 	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode, interactionMode, setInteractionMode, enterPresentationMode } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
-	const { importDrawerOpen, setImportDrawerOpen, presentationSidebarOpen, setPresentationSidebarOpen } = useBoardStore();
+	const { importDrawerOpen, setImportDrawerOpen, presentationSidebarOpen, setPresentationSidebarOpen, setShareModalOpen, shareModalOpen } = useBoardStore();
 
 	const isDrawingMode = interactionMode.mode === 'drawing';
 	
@@ -109,6 +109,10 @@ export default function ElementToolbar({
 		setDragPreview(null);
 	}, [setDragPreview]);
 
+	const handleShareButtonClicked = () => {
+		setShareModalOpen(!shareModalOpen);
+	}
+
 	// Show read-only message if in public view or viewer-only mode
 	if (isPublicView || isViewerOnly) {
 		const message = isViewerOnly ? 'Viewer mode (read-only)' : 'Viewing public board (read-only)';
@@ -134,18 +138,6 @@ export default function ElementToolbar({
 					onDrag={handleDrag}
 				>
 					<div className="flex items-center space-x-2">
-						{/* Add Elements */}
-						<button
-							onClick={() => {setIsElementModalOpen(true)}}
-							className="px-3 py-1.5 bg-primary/10 border border-primary/20 hover:bg-primary/20 rounded-lg text-primary font-medium text-xs flex items-center space-x-2 transition-colors"
-						>
-							<Plus size={14} />
-							<span>Add</span>
-							<ChevronDown size={12} />
-						</button>
-
-						<div className="w-px h-6 bg-white/10 mx-2"></div>
-
 						{/* Element Types */}
 						<DraggableToolbarButton 
 							icon={StickyNote}
@@ -255,24 +247,6 @@ export default function ElementToolbar({
 							</TooltipContent>
 						</Tooltip>
 
-						{/* Presentation Mode */}
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									onClick={() => setPresentationSidebarOpen(!presentationSidebarOpen)}
-									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${presentationSidebarOpen ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
-									variant={"ghost"}
-									size={"sm"}
-								>
-									<Presentation className="w-4 h-4" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>
-								<p>Presentation Mode</p>
-								<p className="text-xs text-secondary-foreground">Manage presentation nodes and slides</p>
-							</TooltipContent>
-						</Tooltip>
-
 						{/* View Options */}
 						<Tooltip>
 							<TooltipTrigger asChild>
@@ -307,6 +281,33 @@ export default function ElementToolbar({
 						</Tooltip>
 					</div>
 					<div className="flex items-center">
+						{/* Presentation Mode */}
+						<Button
+							onClick={() => setPresentationSidebarOpen(!presentationSidebarOpen)}
+							className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${presentationSidebarOpen ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
+							variant={"ghost"}
+							size={"sm"}
+						>
+							<Presentation className="w-4 h-4" />
+							<div className="">
+								Present
+							</div>
+						</Button>
+
+						{/* Share button */}
+						<Button
+							onClick={handleShareButtonClicked}
+							className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${shareModalOpen ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
+							variant={"ghost"}
+							size={"sm"}
+						>
+							<Share2 className="w-4 h-4" />
+							<div className="">
+								Share
+							</div>
+						</Button>
+
+						{/* Import Drawer */}
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button

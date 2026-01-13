@@ -191,7 +191,7 @@ export const CanvasElement = memo(function CanvasElement({
 				clientY: e.clientY,
 			}
 		});
-	}, [card.id, card.card_type, isReadOnly, setEditingCardId, setInteractionMode, onCardDoubleClick]);
+	}, [card.id, card.card_type, isReadOnly, setEditingCardId, setInteractionMode, onCardDoubleClick, isPresentationNodeHidden]);
 
 	const handleContextMenu = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();

@@ -1,7 +1,7 @@
 import { i } from "@instantdb/react";
 import type { TemplateData } from "@/lib/types/template";
 
-// Define the schema for the Milanote application
+// Define the schema for the Notera application
 const graph = i.schema({
 	entities: {
 
@@ -79,6 +79,7 @@ const graph = i.schema({
 			image_url: i.string().optional(),
 			image_caption: i.string().optional(),
 			image_alt_text: i.string().optional(),
+			image_size: i.number().optional(),
 
 			// Task list card fields
 			task_list_title: i.string().optional(),

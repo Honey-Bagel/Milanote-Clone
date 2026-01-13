@@ -160,3 +160,38 @@ export const getDefaultCardData = (cardType: Card["card_type"]) => {
 			return {};
 	}
 }
+
+const IEC_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'] as const;
+const SI_UNITS  = ['B', 'KB', 'MB', 'GB', 'TB'] as const;
+
+type Unit = typeof IEC_UNITS[number] | typeof SI_UNITS[number];
+
+
+export function formatBytes(
+  bytes: number,
+  options?: {
+    decimals?: number;
+    base?: 1000 | 1024;
+    useIecLabels?: boolean;
+  }
+): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+
+  const decimals = options?.decimals ?? 2;
+  const base = options?.base ?? 1024;
+  const useIecLabels = options?.useIecLabels ?? (base === 1024);
+
+  const units = base === 1024
+    ? (useIecLabels ? IEC_UNITS : SI_UNITS)
+    : SI_UNITS;
+
+  let value = bytes;
+  let unitIndex = 0;
+
+  while (value >= base && unitIndex < units.length - 1) {
+    value /= base;
+    unitIndex++;
+  }
+
+  return `${Number(value.toFixed(decimals))} ${units[unitIndex]}`;
+}
