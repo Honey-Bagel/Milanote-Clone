@@ -498,6 +498,16 @@ button:disabled,
 	background: var(--muted);
 }
 
+/* Hide scrollbar while maintaining functionality */
+.scrollbar-hide {
+	-ms-overflow-style: none;  /* IE and Edge */
+	scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+	display: none;  /* Chrome, Safari, Opera */
+}
+
 .drag-handle.focus,
 .drag-handle:focus-visible {
 	outline: none !important;

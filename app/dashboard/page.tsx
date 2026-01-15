@@ -16,6 +16,8 @@ import { DateFilterDropdown, DateFilterField } from '../ui/dashboard/date-filter
 import { useDebounce, DateFilterType, getDateRangeTimestamp, isWithinDateRange } from '@/lib/utils';
 import TemplateBrowserModal from '@/components/templates/TemplateBrowserModal';
 import { useRouter } from 'next/navigation';
+import { MobileSearchModal } from '../ui/dashboard/mobile-search-modal';
+import { useIsSmallScreen } from '@/lib/hooks/use-media-query';
 
 type Tabtype = 'my-boards' | 'shared' | 'favorites';
 
@@ -36,6 +38,10 @@ export default function Dashboard() {
 	// Template browser modal state
 	const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
 
+	// Mobile search modal state
+	const [showMobileSearch, setShowMobileSearch] = useState(false);
+	const isSmallScreen = useIsSmallScreen();
+
 	const router = useRouter();
 
 	// Keyboard shortcuts
@@ -44,8 +50,12 @@ export default function Dashboard() {
 			// Ctrl+K or Cmd+K to focus search
 			if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
 				e.preventDefault();
-				const searchInput = document.querySelector<HTMLInputElement>('input[type="text"][placeholder="Search boards"]');
-				searchInput?.focus();
+				if (isSmallScreen) {
+					setShowMobileSearch(true);
+				} else {
+					const searchInput = document.querySelector<HTMLInputElement>('input[type="text"][placeholder="Search boards"]');
+					searchInput?.focus();
+				}
 			}
 
 			// ESC to clear search
@@ -56,7 +66,7 @@ export default function Dashboard() {
 
 		window.addEventListener('keydown', handleKeyDown);
 		return () => window.removeEventListener('keydown', handleKeyDown);
-	}, []);
+	}, [isSmallScreen]);
 
 	// Filter boards based on active tab, search, and date filters
 	const filteredBoards = useMemo(() => {
@@ -121,16 +131,18 @@ export default function Dashboard() {
 
 				{/* Full-Width Navigation Bar */}
 				<div className="sticky top-0 z-50 border-b border-white/10 bg-[#020617]/80 backdrop-blur-xl">
-					<div className="flex items-center justify-between px-6 py-4">
-						<div className="flex items-center gap-6">
-							<button onClick={() => router.push('/')}>
-								<div className="flex items-center gap-3">
-									<div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
-										<Layers size={18} className="text-white"/>
+					<div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
+						<div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
+							<button onClick={() => router.push('/')} className="flex-shrink-0">
+								<div className="flex items-center gap-2 sm:gap-3">
+									<div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+										<Layers size={16} className="sm:w-[18px] sm:h-[18px] text-white"/>
 									</div>
-									<span className="font-bold text-white text-lg">Notera</span>
+									<span className="font-bold text-white text-base sm:text-lg hidden xs:inline">Notera</span>
 								</div>
 							</button>
+
+							{/* Desktop Search Bar */}
 							<div className="hidden md:flex items-center gap-2 bg-[#0f172a] border border-white/10 rounded-lg px-4 py-2 min-w-[320px] relative">
 								<Search size={16} className="text-muted-foreground"/>
 								<input
@@ -153,7 +165,17 @@ export default function Dashboard() {
 								)}
 							</div>
 						</div>
-						<div className="flex items-center gap-3">
+
+						<div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+							{/* Mobile Search Button */}
+							<button
+								onClick={() => setShowMobileSearch(true)}
+								className="md:hidden p-2 hover:bg-white/5 rounded-lg transition-colors"
+								aria-label="Search"
+							>
+								<Search size={18} className="text-secondary-foreground"/>
+							</button>
+
 							<button className="p-2 hover:bg-white/5 rounded-lg transition-colors relative">
 								<Bell size={18} className="text-secondary-foreground"/>
 								<div className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full"></div>
@@ -162,8 +184,8 @@ export default function Dashboard() {
 						</div>
 					</div>
 
-					{/* Sub-Navigation tools */}
-					<div className="flex gap-1 px-6">
+					{/* Sub-Navigation tabs */}
+					<div className="flex gap-1 px-4 sm:px-6 overflow-x-auto scrollbar-hide">
 						<TabButton
 							active={activeTab === 'my-boards'}
 							icon={Grid}
@@ -183,14 +205,14 @@ export default function Dashboard() {
 				</div>
 
 				{/* Main Content Area */}
-				<div className="flex-1 p-8 max-w-[2000px] mx-auto w-full">
+				<div className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[2000px] mx-auto w-full">
 
 					{/* Quick actions Section */}
-					<div className="mb-12">
-						<div className="flex items-center justify-between mb-6">
-							<h3 className="text-sm font-bold text-secondary-foreground uppercase tracking-wider">Quick Start</h3>
+					<div className="mb-8 sm:mb-12">
+						<div className="flex items-center justify-between mb-4 sm:mb-6">
+							<h3 className="text-xs sm:text-sm font-bold text-secondary-foreground uppercase tracking-wider">Quick Start</h3>
 						</div>
-						<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
 							<CreateBoardQuickAction />
 							<QuickActionCardWrapper
 								iconName="Layout"
@@ -207,9 +229,9 @@ export default function Dashboard() {
 					<Separator.Root className="bg-secondary h-px w-full my-4" decorative={true}/>
 
 					{/* Boards Section */}
-					<div className="mb-6 flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							<div className="text-sm text-secondary-foreground">
+					<div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+						<div className="flex items-center gap-2 flex-wrap">
+							<div className="text-xs sm:text-sm text-secondary-foreground">
 								{filteredBoards.length} {filteredBoards.length === 1 ? 'board' : 'boards'}
 								{(debouncedSearchQuery || dateFilterType !== 'all') && boards && ` (filtered from ${boards.length})`}
 							</div>
@@ -242,7 +264,7 @@ export default function Dashboard() {
 								</span>
 							)}
 						</div>
-						<div className="flex items-center gap-2">
+						<div className="flex items-center gap-2 flex-shrink-0">
 							<DateFilterDropdown
 								filterType={dateFilterType}
 								filterField={dateFilterField}
@@ -268,7 +290,7 @@ export default function Dashboard() {
 					{filteredBoards && filteredBoards.length > 0 ? (
 						<>
 							{viewMode === 'grid' ? (
-								<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
 									{filteredBoards.map((board) => (
 										<BoardCard
 											key={board.id}
@@ -337,6 +359,14 @@ export default function Dashboard() {
 				isOpen={showTemplateBrowser}
 				onClose={() => setShowTemplateBrowser(false)}
 			/>
+
+			{/* Mobile Search Modal */}
+			<MobileSearchModal
+				isOpen={showMobileSearch}
+				onClose={() => setShowMobileSearch(false)}
+				searchQuery={searchQuery}
+				onSearchChange={setSearchQuery}
+			/>
 		</db.SignedIn>
 	)
 }
@@ -350,13 +380,13 @@ interface TabButtonProps {
 
 function TabButton({ children, icon: Icon, active, onClick }: TabButtonProps) {
 	return (
-		<button onClick={onClick} className={`flex items-center gap-2 px-4 py-3 rounded-t-lg text-sm font-medium border-b-2 transition-colors ${
+		<button onClick={onClick} className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-t-lg text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
 			active
 				? 'bg-gradient-to-t from-primary/10 to-transparent text-white border-primary'
 				: 'text-secondary-foreground border-transparent hover:text-white hover:bg-white/5'
 		}`}>
-			<Icon size={14} />
-			{children}
+			<Icon size={14} className="flex-shrink-0" />
+			<span className="hidden sm:inline">{children}</span>
 		</button>
 	)
 }

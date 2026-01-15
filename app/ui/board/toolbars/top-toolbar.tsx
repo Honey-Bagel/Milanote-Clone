@@ -23,6 +23,8 @@ import { BoardService } from '@/lib/services/board-service';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
+import { MobileToolbarMenu } from './mobile-toolbar-menu';
+import { useIsSmallScreen } from '@/lib/hooks/use-media-query';
 
 type TopToolbarProps = {
 	boardId: string;
@@ -160,6 +162,7 @@ export default function TopToolbar({
 	const { viewport, zoomIn, zoomOut, zoomToFit, setViewport } = useCanvasStore();
 	const { cards } = useBoardCards(boardId);
 	const { isLoading: isAdminLoading, isAdmin} = useIsAdmin();
+	const isSmallScreen = useIsSmallScreen();
 
 	const { breadcrumbs } = useBreadcrumbs(boardId, isPublicView);
 
@@ -372,18 +375,19 @@ export default function TopToolbar({
 
 	return (
 			<>
-				<div className="bg-[#0f172a] border-b border-white/10 px-6 py-3 flex items-center justify-between shrink-0 z-50">
-					<div className="flex items-center space-x-3">
+				<div className="bg-[#0f172a] border-b border-white/10 px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex items-center justify-between shrink-0 z-50">
+					{/* Left side - Breadcrumbs */}
+					<div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0 overflow-hidden">
 						{/* Breadcrumb Navigation */}
 						<Breadcrumb>
-							<BreadcrumbList>
+							<BreadcrumbList className="flex-nowrap">
 								<BreadcrumbItem>
 									<BreadcrumbLink	asChild>
 										<Link
 											href="/dashboard"
-											className="flex items-center rounded-lg hover:bg-white/5 text-secondary-foreground transition-colors"
+											className="flex items-center rounded-lg hover:bg-white/5 text-secondary-foreground transition-colors p-1"
 										>
-											<Home className="w-5 h-5" />
+											<Home className="w-4 h-4 sm:w-5 sm:h-5" />
 										</Link>
 									</BreadcrumbLink>
 								</BreadcrumbItem>
@@ -416,8 +420,9 @@ export default function TopToolbar({
 					</div>
 
 					{/* Right side - Controls */}
-					<div className="flex items-center space-x-3">
-						{/* Zoom Controls */}
+					<div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3 flex-shrink-0">
+						{/* Zoom Controls - Hidden on small screens */}
+						{!isSmallScreen && (
 							<div className="flex items-center space-x-1 bg-[#020617] border border-white/10 rounded-lg px-1 py-1">
 								<button onClick={zoomOut} className="p-1.5 hover:bg-white/10 rounded text-secondary-foreground transition-colors">
 									<Minus size={16} />
@@ -447,8 +452,10 @@ export default function TopToolbar({
 									<Plus size={16} />
 								</button>
 							</div>
+						)}
 
-							{/* View Mode */}
+						{/* View Mode - Hidden on small screens, moved to overflow menu */}
+						{!isSmallScreen && (
 							<button
 								onClick={handleZoomToFit}
 								className="p-2 hover:bg-white/5 rounded-lg text-secondary-foreground transition-colors"
@@ -456,25 +463,45 @@ export default function TopToolbar({
 							>
 								<Maximize2 size={16} />
 							</button>
+						)}
 
-							{/* Collaborators */}
-							<div className="mx-2">
-								<RealtimeAvatarStack roomName={boardId}/>
-							</div>
+						{/* Collaborators */}
+						<div className="hidden sm:flex mx-1 lg:mx-2">
+							<RealtimeAvatarStack roomName={boardId}/>
+						</div>
 
-							{/* Export as Template Button (Admin Only) */}
-							{!isAdminLoading && isAdmin && (
-								<button
-									onClick={() => setIsCreateTemplateModalOpen(true)}
-									className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors"
-									title="Create a template from this board"
-								>
-									<FileDown size={14}/>
-									Export as Template
-								</button>
-							)}
+						{/* Export as Template Button (Admin Only) - Hidden on small screens */}
+						{!isSmallScreen && !isAdminLoading && isAdmin && (
+							<button
+								onClick={() => setIsCreateTemplateModalOpen(true)}
+								className="hidden lg:flex px-3 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white text-sm font-medium items-center gap-2 transition-colors"
+								title="Create a template from this board"
+							>
+								<FileDown size={14}/>
+								<span className="hidden xl:inline">Export as Template</span>
+							</button>
+						)}
 
-							<button onClick={() => setIsSettingsModalOpen(true)} className="p-2 hover:bg-white/5 rounded-lg text-secondary-foreground transition-colors"><Settings size={20} /></button>
+						{/* Settings - Hidden on small screens, moved to overflow menu */}
+						{!isSmallScreen && (
+							<button
+								onClick={() => setIsSettingsModalOpen(true)}
+								className="p-2 hover:bg-white/5 rounded-lg text-secondary-foreground transition-colors"
+								title="Settings"
+							>
+								<Settings size={20} />
+							</button>
+						)}
+
+						{/* Mobile Overflow Menu - Shown only on small screens */}
+						{isSmallScreen && (
+							<MobileToolbarMenu
+								onZoomToFit={handleZoomToFit}
+								onOpenSettings={() => setIsSettingsModalOpen(true)}
+								onCreateTemplate={isAdmin ? () => setIsCreateTemplateModalOpen(true) : undefined}
+								isAdmin={isAdmin}
+							/>
+						)}
 					</div>
 				</div>
 			<SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />

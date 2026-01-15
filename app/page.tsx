@@ -88,10 +88,72 @@ export default function LandingPage() {
 							)
 						}
 					</div>
-					<div className="md:hidden text-slate-400">
-						<Menu size={24} onClick={() => setIsMenuOpen(!isMenuOpen)} />
-					</div>
+					<button
+						className="md:hidden text-slate-400 hover:text-white transition-colors p-2 -mr-2"
+						onClick={() => setIsMenuOpen(!isMenuOpen)}
+						aria-label="Toggle menu"
+					>
+						<Menu size={24} />
+					</button>
 				</div>
+
+				{/* Mobile Menu */}
+				{isMenuOpen && (
+					<div className="md:hidden absolute top-20 left-0 right-0 bg-[#020617]/98 backdrop-blur-md border-b border-white/10 shadow-2xl">
+						<div className="px-6 py-6 space-y-4">
+							<a
+								href="#use-cases"
+								className="block py-3 text-sm font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5"
+								onClick={() => setIsMenuOpen(false)}
+							>
+								Use Cases
+							</a>
+							<a
+								href="#visual-engine"
+								className="block py-3 text-sm font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5"
+								onClick={() => setIsMenuOpen(false)}
+							>
+								Visual Engine
+							</a>
+							<Link
+								href="/pricing"
+								className="block py-3 text-sm font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5"
+								onClick={() => setIsMenuOpen(false)}
+							>
+								Pricing
+							</Link>
+
+							<div className="pt-4 space-y-3">
+								{!isSignedIn ? (
+									<>
+										<Link
+											href="/auth"
+											className="block w-full text-center py-3 text-white hover:text-cyan-400 transition-colors border border-white/10 rounded-lg"
+											onClick={() => setIsMenuOpen(false)}
+										>
+											Log In
+										</Link>
+										<Link
+											href="/auth?mode=signup"
+											className="block w-full text-center px-5 py-3 bg-white text-slate-950 hover:bg-slate-200 rounded-lg text-sm font-bold transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+											onClick={() => setIsMenuOpen(false)}
+										>
+											Sign up
+										</Link>
+									</>
+								) : (
+									<Link
+										href="/dashboard"
+										className="block w-full text-center px-5 py-3 bg-white text-slate-950 hover:bg-slate-200 rounded-lg text-sm font-bold transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+										onClick={() => setIsMenuOpen(false)}
+									>
+										Dashboard
+									</Link>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
 			</nav>
 
 			<main className="relative z-10 w-full min-h-screen pt-32 pb-20 px-4">

@@ -4,6 +4,7 @@ import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { createViewportMatrix, screenToCanvas } from '@/lib/utils/transform';
 import { useCanvasInteractions } from '@/lib/hooks/useCanvasInteractions';
+import { useCanvasTouchGestures } from '@/lib/hooks/useCanvasTouchGestures';
 import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
 import { useSelectionBox } from '@/lib/hooks/useSelectionBox';
 import { Grid } from './Grid';
@@ -354,6 +355,21 @@ export function Canvas({
 	}, [editingCardId]);
 
 	useCanvasInteractions(canvasRef, { enablePan, enableZoom });
+	useCanvasTouchGestures(canvasRef, {
+		enablePan,
+		enableZoom,
+		enableLongPress: !isPublicView,
+		onLongPress: (x, y) => {
+			// Trigger canvas context menu on long press
+			const event = new MouseEvent('contextmenu', {
+				bubbles: true,
+				cancelable: true,
+				clientX: x,
+				clientY: y,
+			});
+			canvasRef.current?.dispatchEvent(event);
+		},
+	});
 	useKeyboardShortcuts(boardId, { enabled: enableKeyboardShortcuts && !presentationMode.isActive });
 	useSelectionBox(canvasRef, { enabled: enableSelectionBox && !presentationMode.isActive });
 
