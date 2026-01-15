@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, User, Settings, Palette, Bell, CreditCard, Shield, Link2, ChevronLeft, Menu } from 'lucide-react';
+import { X, User, Settings, Palette, Bell, CreditCard, Shield, Link2, ChevronLeft, Menu, LogOut } from 'lucide-react';
 import { ProfileSection } from './settings/profile-section';
 import { AppearanceSection } from './settings/appearance-section';
 import { GeneralPreferencesSection } from './settings/general-preferences-section';
@@ -12,6 +12,7 @@ import { BillingSection } from './settings/billing-section';
 import { SecuritySection } from './settings/security-section';
 import { ConnectedAccountsSection } from './settings/connected-accounts-section';
 import { useIsSmallScreen } from '@/lib/hooks/use-media-query';
+import { useAuth } from '@clerk/nextjs';
 
 interface SettingsModalProps {
 	isOpen: boolean;
@@ -34,6 +35,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 	const [activeSection, setActiveSection] = useState<SectionId>('profile');
 	const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 	const isSmallScreen = useIsSmallScreen();
+	const { signOut } = useAuth();
 
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
@@ -103,7 +105,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 						)}
 					</div>
 
-					<nav className="space-y-1 flex-1">
+					<nav className="flex flex-1 flex-col space-y-1">
 						{SECTIONS.map((section) => {
 							const Icon = section.icon;
 							return (
@@ -121,6 +123,14 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 								</button>
 							);
 						})}
+						<button
+							key={"logout"}
+							onClick={() => signOut({ redirectUrl: "/auth" })}
+							className="mt-auto w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg transition-colors duration-150 outline-none hover:bg-red-500/10 focus:bg-red-500/10 text-red-400 hover:text-red-300"
+						>
+							<LogOut size={16} />
+							<span>Logout</span>
+						</button>
 					</nav>
 
 					<div className="pt-4 border-t border-white/10 mt-4">

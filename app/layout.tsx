@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { ThemeProvider } from "@/lib/contexts/theme-context";
 import { ClerkProvider } from "@clerk/nextjs";
 import InstantDBAuthSync from "@/components/auth/InstantDBAuthSync";
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
 	title: 'Notera',
@@ -23,6 +24,17 @@ export default function RootLayout({
 						<ThemeProvider>
 							{children}
 						</ThemeProvider>
+						<Toaster
+							position="top-right"
+							theme="dark"
+							toastOptions={{
+								style: {
+									background: '#020617',
+									border: '1px solid rgba(255, 255, 255, 0.1)',
+									color: '#fff',
+								},
+							}}
+						/>
 				</body>
 			</html>
 		</ClerkProvider>

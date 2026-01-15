@@ -11,6 +11,7 @@ import { db } from '../instant/db';
 import { generateId } from '@/lib/db/client';
 import { useBoard } from './boards';
 import { getOrderKeyForNewCard, cardsToOrderKeyList } from '@/lib/utils/order-key-manager';
+import { useUserPreferences } from './use-user-preferences';
 
 /**
  * Find a column card at a given canvas position
@@ -52,6 +53,7 @@ export function useCanvasDrop(boardId: string) {
 	} = useCanvasStore();
 	const { cards } = useBoardCards(boardId);
 	const { board } = useBoard(boardId);
+	const { preferences, error, isLoading } = useUserPreferences();
 
 	/**
 	 * Determine card type based on file mime type
@@ -346,6 +348,10 @@ export function useCanvasDrop(boardId: string) {
 			const newBoardId = generateId();
 			defaultData.linked_board_id = newBoardId;
 
+			if (!error && !isLoading) {
+				defaultData.board_color = preferences.defaultBoardColor;
+			}
+
 			// Create both board and card in TRUE parallel (no await, no dependency chain)
 			BoardService.createBoard({
 				boardId: newBoardId, // Pass pre-generated ID
@@ -409,7 +415,7 @@ export function useCanvasDrop(boardId: string) {
 				console.error('Failed to create card on drop:', error);
 			});
 		}
-	}, [boardId, viewport, handleFileDrop, cards, setPotentialColumnTarget, board, handleImportDrop]);
+	}, [boardId, viewport, handleFileDrop, cards, setPotentialColumnTarget, board, handleImportDrop, preferences, isLoading, error]);
 
 	return {
 		isDraggingOver,

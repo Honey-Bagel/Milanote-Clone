@@ -1,26 +1,19 @@
 'use client';
 
+import { useState } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { Shield, Key, Smartphone, Monitor, ChevronRight } from 'lucide-react';
+import { Shield, Key, Smartphone, Monitor, ChevronRight, Activity } from 'lucide-react';
+import { ChangePasswordModal } from './modals/change-password-modal';
+import { SessionsModal } from './modals/sessions-modal';
+import { Manage2FAModal } from './modals/manage-2fa-modal';
 
 export function SecuritySection() {
 	const { user } = useUser();
 
-	const handleChangePassword = () => {
-		// Trigger Clerk's password change flow
-		// This can be done by navigating to Clerk's account portal or using their modal
-		window.open('https://accounts.clerk.dev', '_blank');
-	};
-
-	const handleManage2FA = () => {
-		// Trigger Clerk's 2FA management
-		window.open('https://accounts.clerk.dev', '_blank');
-	};
-
-	const handleManageSessions = () => {
-		// Trigger Clerk's session management
-		window.open('https://accounts.clerk.dev', '_blank');
-	};
+	// Modal state
+	const [showPasswordModal, setShowPasswordModal] = useState(false);
+	const [showSessionsModal, setShowSessionsModal] = useState(false);
+	const [show2FAModal, setShow2FAModal] = useState(false);
 
 	return (
 		<div className="space-y-8">
@@ -36,7 +29,7 @@ export function SecuritySection() {
 					Password
 				</h4>
 				<button
-					onClick={handleChangePassword}
+					onClick={() => setShowPasswordModal(true)}
 					className="w-full flex items-center justify-between p-4 bg-[#020617] border border-white/10 rounded-xl hover:border-white/20 transition-all group"
 				>
 					<div className="text-left">
@@ -74,8 +67,8 @@ export function SecuritySection() {
 						</div>
 					</div>
 					<button
-						onClick={handleManage2FA}
-						className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary transition-colors font-medium text-sm"
+						onClick={() => setShow2FAModal(true)}
+						className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium text-sm"
 					>
 						{user?.twoFactorEnabled ? 'Manage 2FA' : 'Enable 2FA'}
 					</button>
@@ -92,7 +85,7 @@ export function SecuritySection() {
 					Active Sessions
 				</h4>
 				<button
-					onClick={handleManageSessions}
+					onClick={() => setShowSessionsModal(true)}
 					className="w-full flex items-center justify-between p-4 bg-[#020617] border border-white/10 rounded-xl hover:border-white/20 transition-all group"
 				>
 					<div className="text-left">
@@ -105,6 +98,50 @@ export function SecuritySection() {
 					</div>
 					<ChevronRight className="text-muted-foreground group-hover:text-primary transition-colors" size={18} />
 				</button>
+			</div>
+
+			{/* Security Activity Section */}
+			<div className="space-y-4">
+				<h4 className="text-lg font-semibold text-white flex items-center gap-2">
+					<Activity size={18} className="text-primary" />
+					Security Activity
+				</h4>
+				<div className="space-y-3">
+					<div className="flex justify-between items-center p-3 bg-[#020617] border border-white/10 rounded-lg">
+						<span className="text-sm text-secondary-foreground">Last sign in</span>
+						<span className="text-sm text-foreground font-medium">
+							{user?.lastSignInAt
+								? new Date(user.lastSignInAt).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric',
+									hour: '2-digit',
+									minute: '2-digit'
+								})
+								: 'N/A'
+							}
+						</span>
+					</div>
+					<div className="flex justify-between items-center p-3 bg-[#020617] border border-white/10 rounded-lg">
+						<span className="text-sm text-secondary-foreground">Password protection</span>
+						<span className="text-sm text-foreground font-medium">
+							{user?.passwordEnabled ? 'Enabled' : 'Disabled'}
+						</span>
+					</div>
+					<div className="flex justify-between items-center p-3 bg-[#020617] border border-white/10 rounded-lg">
+						<span className="text-sm text-secondary-foreground">Account created</span>
+						<span className="text-sm text-foreground font-medium">
+							{user?.createdAt
+								? new Date(user.createdAt).toLocaleDateString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									year: 'numeric'
+								})
+								: 'N/A'
+							}
+						</span>
+					</div>
+				</div>
 			</div>
 
 			{/* Security Recommendations */}
@@ -131,26 +168,62 @@ export function SecuritySection() {
 					</div>
 
 					<div className="flex items-start gap-3 p-3 bg-[#020617] rounded-lg">
-						<div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
+						<div className={`w-2 h-2 rounded-full mt-1.5 ${
+							user?.passwordEnabled ? 'bg-green-500' : 'bg-yellow-500'
+						}`} />
 						<div className="flex-1">
-							<div className="text-sm text-white font-medium">Strong password in use</div>
+							<div className="text-sm text-white font-medium">
+								{user?.passwordEnabled ? 'Password protection enabled' : 'Enable password protection'}
+							</div>
 							<div className="text-xs text-secondary-foreground mt-1">
-								Your password meets security requirements
+								{user?.passwordEnabled
+									? 'Your account is protected with a password'
+									: 'Set up a password for additional security'}
 							</div>
 						</div>
 					</div>
 
 					<div className="flex items-start gap-3 p-3 bg-[#020617] rounded-lg">
-						<div className="w-2 h-2 rounded-full bg-green-500 mt-1.5" />
+						<div className={`w-2 h-2 rounded-full mt-1.5 ${
+							user?.primaryEmailAddress?.verification?.status === 'verified' ? 'bg-green-500' : 'bg-yellow-500'
+						}`} />
 						<div className="flex-1">
-							<div className="text-sm text-white font-medium">Email verified</div>
+							<div className="text-sm text-white font-medium">
+								{user?.primaryEmailAddress?.verification?.status === 'verified' ? 'Email verified' : 'Verify your email'}
+							</div>
 							<div className="text-xs text-secondary-foreground mt-1">
-								Your email address has been verified
+								{user?.primaryEmailAddress?.verification?.status === 'verified'
+									? 'Your email address has been verified'
+									: 'Verify your email to secure your account'}
+							</div>
+						</div>
+					</div>
+
+					<div className="flex items-start gap-3 p-3 bg-[#020617] rounded-lg">
+						<div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5" />
+						<div className="flex-1">
+							<div className="text-sm text-white font-medium">Regular security checkups</div>
+							<div className="text-xs text-secondary-foreground mt-1">
+								Review your active sessions and security settings regularly
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
+
+			{/* Modals */}
+			<ChangePasswordModal
+				isOpen={showPasswordModal}
+				onClose={() => setShowPasswordModal(false)}
+			/>
+			<SessionsModal
+				isOpen={showSessionsModal}
+				onClose={() => setShowSessionsModal(false)}
+			/>
+			<Manage2FAModal
+				isOpen={show2FAModal}
+				onClose={() => setShow2FAModal(false)}
+			/>
 		</div>
 	);
 }
