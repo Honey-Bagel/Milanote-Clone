@@ -2,6 +2,11 @@
 
 import { db } from '@/lib/instant/db';
 
+/**
+ * Hook to get linked accounts for the current user
+ *
+ * InstantDB handles caching automatically, so no need for SWR here
+ */
 export function useLinkedAccounts() {
 	const { user } = db.useAuth();
 

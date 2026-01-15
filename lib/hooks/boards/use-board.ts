@@ -1,7 +1,6 @@
 'use client';
 
 import { db } from "@/lib/instant/db";
-import { useRobustQuery } from "../instant/use-robust-query";
 
 /**
  * Fetch a single board by ID

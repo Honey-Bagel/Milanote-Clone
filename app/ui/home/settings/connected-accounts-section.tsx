@@ -5,6 +5,7 @@ import { useLinkedAccounts } from '@/lib/hooks/useLinkedAccount';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { db } from "@/lib/instant/db";
 import { FaGoogleDrive } from "react-icons/fa";
+import { AccountCardSkeleton } from './settings-section-skeleton';
 
 export function ConnectedAccountsSection() {
 	const { user } = db.useAuth();
@@ -32,6 +33,20 @@ export function ConnectedAccountsSection() {
 			body: JSON.stringify({ accountId }),
 		});
 	};
+
+	if (isLoading) {
+		return (
+			<div className="space-y-6">
+				<div>
+					<h3 className="text-xl font-semibold text-white mb-2">Connected Accounts</h3>
+					<p className="text-sm text-slate-400">
+						Connect external services to import content
+					</p>
+				</div>
+				<AccountCardSkeleton />
+			</div>
+		);
+	}
 
 	return (
 		<div className="space-y-6">
@@ -78,7 +93,7 @@ export function ConnectedAccountsSection() {
 					</button>
 				)}
 			</div>
-			
+
 			{/* Pinterest (similar structure) */}
 		</div>
 	)

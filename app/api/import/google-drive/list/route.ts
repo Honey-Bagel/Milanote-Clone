@@ -9,7 +9,7 @@ export const GET = withInstantAuth(async (user, req) => {
 
 	try {
 		const accessToken = await getValidToken(user.id, 'google_drive');
-		
+
 		const driveUrl = new URL('https://www.googleapis.com/drive/v3/files');
 		driveUrl.searchParams.set('q', `'${folderId}' in parents and trashed=false`);
 		driveUrl.searchParams.set('fields', 'nextPageToken,files(id,name,mimeType,thumbnailLink,webViewLink,iconLink,size)');
@@ -20,9 +20,23 @@ export const GET = withInstantAuth(async (user, req) => {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		});
 
-		return NextResponse.json(await response.json());
+		const data = await response.json();
+
+		if (!response.ok) {
+			console.error('Google Drive API error:', data);
+			return NextResponse.json({
+				error: 'Failed to fetch files from Google Drive',
+				details: data.error?.message || 'Unknown error'
+			}, { status: response.status });
+		}
+
+		return NextResponse.json(data);
 	} catch (error) {
-		console.log('Import-google-drive-list:', error);
-		return NextResponse.json({ error: 'Failed to fetch files' }, { status: 500 });
+		console.error('Import-google-drive-list error:', error);
+		const errorMessage = error instanceof Error ? error.message : 'Failed to fetch files';
+		return NextResponse.json({
+			error: errorMessage,
+			needsReconnect: errorMessage.includes('OAuth') || errorMessage.includes('token')
+		}, { status: 500 });
 	}
 });
