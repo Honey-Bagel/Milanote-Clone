@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback, useRef, RefObject, useEffect } from 'react';
-import { Plus, StickyNote, Book, Link, CheckSquare, Columns, Palette, Minus, ArrowRight, Grid3x3, ChevronDown, Magnet, Spline, PanelRightOpen, Pencil, Presentation, Share2 } from 'lucide-react';
+import { useState, useCallback, useRef, RefObject } from 'react';
+import { StickyNote, Book, Link, CheckSquare, Columns, Palette, ArrowRight, Grid3x3, Magnet, Spline, Pencil, Presentation, Share2 } from 'lucide-react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import type { Card } from '@/lib/types';
 import AddElementModal from '@/app/ui/board/add-element-modal';
@@ -25,7 +25,7 @@ export default function ElementToolbar({
 }: ElementToolbarProps) {
 	const { showGrid, setShowGrid, viewport, snapToGrid, setSnapToGrid, setDragPreview, isConnectionMode, setConnectionMode, interactionMode, setInteractionMode, enterPresentationMode } = useCanvasStore();
 	const [isElementModalOpen, setIsElementModalOpen] = useState(false);
-	const { importDrawerOpen, setImportDrawerOpen, presentationSidebarOpen, setPresentationSidebarOpen, setShareModalOpen, shareModalOpen } = useBoardStore();
+	const { presentationSidebarOpen, setPresentationSidebarOpen, setShareModalOpen, shareModalOpen } = useBoardStore();
 
 	const isDrawingMode = interactionMode.mode === 'drawing';
 	
@@ -306,23 +306,6 @@ export default function ElementToolbar({
 								Share
 							</div>
 						</Button>
-
-						{/* Import Drawer */}
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									onClick={() => setImportDrawerOpen(!importDrawerOpen)}
-									className={`p-2 hover:bg-gray-700 rounded-lg transition-colors ${importDrawerOpen ? 'bg-primary/20 text-primary' : 'text-secondary-foreground hover:text-white'}`}
-									variant={"ghost"}
-									size={"sm"}
-								>
-									<PanelRightOpen className="w-4 h-4" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent>
-								Open Import Drawer
-							</TooltipContent>
-						</Tooltip>
 					</div>
 				</div>
 			</TooltipProvider>

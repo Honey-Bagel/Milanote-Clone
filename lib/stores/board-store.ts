@@ -12,6 +12,7 @@ interface BoardState {
 	setPresentationSidebarOpen: (open: boolean) => void;
 	setShareModalOpen: (open: boolean) => void;
 	setSelectedPresentationNodeId: (id: string | null) => void;
+	toggleImportDrawer: () => void;
 };
 
 export const useBoardStore = create<BoardState>()(
@@ -39,6 +40,11 @@ export const useBoardStore = create<BoardState>()(
 		setSelectedPresentationNodeId: (id) =>
 			set((state) => {
 				state.selectedPresentationNodeId = id;
+			}),
+
+		toggleImportDrawer: () =>
+			set((state) => {
+				state.importDrawerOpen = !state.importDrawerOpen;
 			}),
 	})),
 )

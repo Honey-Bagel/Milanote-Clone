@@ -305,7 +305,7 @@ export const CanvasElement = memo(function CanvasElement({
 			ref={setNodeRef}
 			data-element-id={card.id}
 			data-card="true"
-			className="canvas-element select-none"
+			className="canvas-element card-appear select-none"
 			style={{
 				position: 'absolute',
 				top: displayY,
