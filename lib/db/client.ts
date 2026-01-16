@@ -7,6 +7,7 @@
 
 import { db } from '@/lib/instant/db';
 import { id, tx } from '@instantdb/react';
+import type { EntityType, EntityData, TransactionObject } from './types';
 
 // ============================================================================
 // RE-EXPORT CORE DB FOR DIRECT ACCESS
@@ -18,7 +19,8 @@ export { db, id, tx };
 // TYPE HELPERS
 // ============================================================================
 
-type EntityType = 'cards' | 'boards' | 'profiles' | 'board_collaborators' | '$users';
+// Re-export EntityType for convenience
+export type { EntityType };
 
 // ============================================================================
 // TRANSACTION BUILDERS
@@ -40,9 +42,10 @@ type EntityType = 'cards' | 'boards' | 'profiles' | 'board_collaborators' | '$us
 export function createEntity(
   entityType: EntityType,
   entityId: string,
-  data: Record<string, any>
-) {
+  data: Partial<EntityData>
+): TransactionObject {
   const now = Date.now();
+  // Note: InstantDB uses dynamic entity access, so type assertion is unavoidable
   return (db.tx as any)[entityType][entityId].update({
     ...data,
     created_at: now,
@@ -62,8 +65,9 @@ export function createEntity(
 export function updateEntity(
   entityType: EntityType,
   entityId: string,
-  updates: Record<string, any>
-) {
+  updates: Partial<EntityData>
+): TransactionObject {
+  // Note: InstantDB uses dynamic entity access, so type assertion is unavoidable
   return (db.tx as any)[entityType][entityId].update({
     ...updates,
     updated_at: Date.now(),
@@ -78,7 +82,8 @@ export function updateEntity(
 export function deleteEntity(
   entityType: EntityType,
   entityId: string
-) {
+): TransactionObject {
+  // Note: InstantDB uses dynamic entity access, so type assertion is unavoidable
   return (db.tx as any)[entityType][entityId].delete();
 }
 
@@ -94,7 +99,8 @@ export function linkEntity(
   entityId: string,
   linkName: string,
   targetId: string
-) {
+): TransactionObject {
+  // Note: InstantDB uses dynamic entity access, so type assertion is unavoidable
   return (db.tx as any)[entityType][entityId].link({ [linkName]: targetId });
 }
 
@@ -113,7 +119,7 @@ export function linkEntity(
  */
 export async function batchCreate(
   entityType: EntityType,
-  items: Array<{ id: string; data: Record<string, any> }>
+  items: Array<{ id: string; data: Partial<EntityData> }>
 ): Promise<void> {
   const transactions = items.map(({ id, data }) =>
     createEntity(entityType, id, data)
@@ -126,7 +132,7 @@ export async function batchCreate(
  */
 export async function batchUpdate(
   entityType: EntityType,
-  updates: Array<{ id: string; data: Record<string, any> }>
+  updates: Array<{ id: string; data: Partial<EntityData> }>
 ): Promise<void> {
   const transactions = updates.map(({ id, data }) =>
     updateEntity(entityType, id, data)
@@ -162,7 +168,7 @@ export async function batchDelete(
  */
 export async function withBoardUpdate(
   boardId: string,
-  transactions: any[]
+  transactions: TransactionObject[]
 ): Promise<void> {
   const now = Date.now();
   await db.transact([
@@ -186,7 +192,7 @@ export async function withBoardUpdate(
 export async function createCardWithBoard(
   cardId: string,
   boardId: string,
-  cardData: Record<string, any>
+  cardData: Partial<EntityData>
 ): Promise<string> {
   const now = Date.now();
   await db.transact([

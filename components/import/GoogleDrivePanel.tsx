@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Folder, ChevronRight, Home, Loader2, AlertCircle } from 'lucide-react';
-import { useGoogleDriveFiles } from '@/lib/hooks/connected-apps/useGoogleDriveFiles';
+import { useGoogleDriveFiles } from '@/lib/hooks/connected-apps/use-google-drive-files';
 import { DriveFileItem } from './DriveFileItem';
 import type { LinkedAccount } from '@/lib/types';
 

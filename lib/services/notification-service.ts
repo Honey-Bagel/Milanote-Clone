@@ -1,4 +1,13 @@
 import { db, generateId } from "@/lib/db/client";
+import type {
+	ActivityLogEntry,
+	ActivityLogQueryData,
+	NotificationQueryData,
+	NotificationRecipient,
+	NotificationEntry,
+	ActivitySummary,
+	CollaboratorWithUser,
+} from '@/lib/types/helpers';
 
 const GROUPING_WINDOW_MS = 15 * 60 * 1000; // 15 Minutes
 
@@ -36,9 +45,9 @@ export const NotificationService = {
 
 		// 2. Determine affected users (all collaborators except actor)
 		const collaborators = activity.board?.collaborators || [];
-		const recipients = collaborators
-			.filter((c: any) => c.user.id !== actorId) // Exclude actor
-			.map((c: any) => ({
+		const recipients: NotificationRecipient[] = collaborators
+			.filter((c: CollaboratorWithUser) => c.user.id !== actorId) // Exclude actor
+			.map((c: CollaboratorWithUser) => ({
 				userId: c.user.id,
 				preferences: c.user.preferences,
 				profile: c.user.profile,
@@ -112,7 +121,7 @@ export const NotificationService = {
 		const now = Date.now();
 
 		await db.transact(
-			notifications.map((n: any) =>
+			notifications.map((n: NotificationEntry) =>
 				db.tx.notifications[n.id].update({
 					is_read: true,
 					read_at: now,
@@ -157,7 +166,7 @@ export const NotificationService = {
 
 		// Delete in batches
 		await db.transact(
-			notificationsToDelete.map((n: any) =>
+			notificationsToDelete.map((n: NotificationEntry) =>
 				db.tx.notifications[n.id].delete()
 			)
 		);
@@ -192,7 +201,7 @@ export const NotificationService = {
 		}
 
 		await db.transact(
-			logsToDelete.map((log: any) =>
+			logsToDelete.map((log: ActivityLogEntry) =>
 			db.tx.activity_log[log.id].delete()
 			)
 		);
@@ -207,7 +216,7 @@ export const NotificationService = {
  */
 async function createNotificationFromActivity(
 	recipientId: string,
-	activity: any,
+	activity: ActivityLogEntry,
 	now: number
 ): Promise<void> {
 	const notificationId = generateId();
@@ -215,7 +224,7 @@ async function createNotificationFromActivity(
 	const windowEnd = now + GROUPING_WINDOW_MS;
 
 	let notificationType: string;
-	let activitySummary: any = { total_actions: 1 };
+	let activitySummary: ActivitySummary = { total_actions: 1 };
 
 	if (activity.action_type === 'card.created') {
 		notificationType = 'board_activity';
@@ -260,7 +269,7 @@ async function createNotificationFromActivity(
  */
 async function updateNotificationWithActivity(
 	notificationId: string,
-	activity: any,
+	activity: ActivityLogEntry,
 	now: number
 ): Promise<void> {
 	// Fetch existing notification

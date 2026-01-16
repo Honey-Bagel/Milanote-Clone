@@ -15,11 +15,11 @@
 import { memo, useCallback } from 'react';
 import type { Card, ConnectionSide } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { useResizable } from '@/lib/hooks/useResizable';
-import { useDirectDimensionMeasurement, type DirectDimensions } from '@/lib/hooks/useDirectDimensionMeasurement';
+import { useResizable } from '@/lib/hooks/use-resizable';
+import { useDirectDimensionMeasurement, type DirectDimensions } from '@/lib/hooks/use-direct-dimension-measurement';
 import { type CardDimensions, type HeightMode } from './useCardDimensions';
 import { useCardContext } from './CardContext';
-import { useCardBehavior } from '@/lib/hooks/useCardBehavior';
+import { useCardBehavior } from '@/lib/hooks/use-card-behavior';
 import { Lock } from 'lucide-react';
 
 // ============================================================================

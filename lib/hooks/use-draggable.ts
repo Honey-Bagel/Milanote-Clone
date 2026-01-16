@@ -12,8 +12,9 @@ import { useCanvasStore, type Position } from '@/lib/stores/canvas-store';
 import { screenToCanvas } from '@/lib/utils/transform';
 import { CardService, CardTransaction } from '@/lib/services';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
-import type { Card } from '@/lib/types';
-import { useAutoPan } from '@/lib/hooks/useAutoPan';
+import type { Card, ColumnCard } from '@/lib/types';
+import type { ColumnItem } from '@/lib/types/helpers';
+import { useAutoPan } from '@/lib/hooks/use-auto-pan';
 import { useBoardCards } from '@/lib/hooks/cards';
 import { bringCardsToFrontOnInteraction, cardsToOrderKeyList } from '@/lib/utils/order-key-manager';
 import { updateEntity, withBoardUpdate } from '@/lib/db/client';
@@ -87,9 +88,9 @@ export function useDraggable({
 	 * Find which column (if any) a card belongs to
 	 */
 	const findCardColumn = (cardId: string): string | null => {
-		const columnCard = cardsArray.find(c =>
+		const columnCard = cardsArray.find((c): c is ColumnCard =>
 			c.card_type === 'column' &&
-			(c as any).column_cards?.column_items?.some((item: any) => item.card_id === cardId)
+			(c as ColumnCard).column_items?.some((item: ColumnItem) => item.card_id === cardId)
 		);
 
 		return columnCard?.id || null;
@@ -349,11 +350,12 @@ export function useDraggable({
 
 									// Remove from starting column if it was in one
 									if (startingColumn && startingColumn !== potentialTarget) {
-										const startCol = cardsMap.get(startingColumn) as any;
-										if (startCol) {
-											const updatedItems = ((startCol as any).column_items || [])
-												.filter((item: any) => item.card_id !== draggedCardId)
-												.map((item: any, index: number) => ({ ...item, position: index }));
+										const startCol = cardsMap.get(startingColumn);
+										if (startCol && startCol.card_type === 'column') {
+											const startColumnCard = startCol as ColumnCard;
+											const updatedItems: ColumnItem[] = (startColumnCard.column_items || [])
+												.filter((item: ColumnItem) => item.card_id !== draggedCardId)
+												.map((item: ColumnItem, index: number) => ({ ...item, position: index }));
 
 											transactions.push(updateEntity('cards', startingColumn, { column_items: updatedItems }));
 										}
@@ -361,9 +363,9 @@ export function useDraggable({
 
 									// Add to new column (if not already in it)
 									if (startingColumn !== potentialTarget) {
-										const currentItems = (targetColumn as any).column_items || [];
+										const currentItems: ColumnItem[] = (targetColumn as ColumnCard).column_items || [];
 										const newPosition = currentItems.length;
-										const updatedColumnItems = [
+										const updatedColumnItems: ColumnItem[] = [
 											...currentItems,
 											{ card_id: draggedCardId, position: newPosition }
 										];
@@ -386,11 +388,12 @@ export function useDraggable({
 						else if (startingColumn) {
 							try {
 								const boardId = draggedCard.board_id;
-								const startCol = cardsMap.get(startingColumn) as any;
-								if (startCol) {
-									const updatedItems = ((startCol as any).column_items || [])
-										.filter((item: any) => item.card_id !== draggedCardId)
-										.map((item: any, index: number) => ({ ...item, position: index }));
+								const startCol = cardsMap.get(startingColumn);
+								if (startCol && startCol.card_type === 'column') {
+									const startColumnCard = startCol as ColumnCard;
+									const updatedItems: ColumnItem[] = (startColumnCard.column_items || [])
+										.filter((item: ColumnItem) => item.card_id !== draggedCardId)
+										.map((item: ColumnItem, index: number) => ({ ...item, position: index }));
 
 									await withBoardUpdate(boardId, [
 										updateEntity('cards', startingColumn, { column_items: updatedItems })

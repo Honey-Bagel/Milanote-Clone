@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLinkedAccounts } from '@/lib/hooks/useLinkedAccount';
+import { useLinkedAccounts } from '@/lib/hooks/use-linked-account';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import { db } from "@/lib/instant/db";
 import { FaGoogleDrive } from "react-icons/fa";

@@ -3,10 +3,10 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { createViewportMatrix, screenToCanvas } from '@/lib/utils/transform';
-import { useCanvasInteractions } from '@/lib/hooks/useCanvasInteractions';
-import { useCanvasTouchGestures } from '@/lib/hooks/useCanvasTouchGestures';
-import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
-import { useSelectionBox } from '@/lib/hooks/useSelectionBox';
+import { useCanvasInteractions } from '@/lib/hooks/use-canvas-interactions';
+import { useCanvasTouchGestures } from '@/lib/hooks/use-canvas-touch-gestures';
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { useSelectionBox } from '@/lib/hooks/use-selection-box';
 import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
@@ -19,7 +19,7 @@ import LinePropertiesToolbar from '@/app/ui/board/toolbars/line-properties-toolb
 import DrawingToolbar from '@/app/ui/board/toolbars/drawing-toolbar';
 import ContextMenu from '@/app/ui/board/context-menu';
 import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
-import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
+import { useCanvasDrop } from '@/lib/hooks/use-canvas-drop';
 import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
 import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
@@ -399,9 +399,9 @@ export function Canvas({
 
 	const isCardInColumn = (cardId: string): boolean => {
 		const allCardsArray = Array.from(allCardsMap.values());
-		return allCardsArray.some(c =>
+		return allCardsArray.some((c): c is import('@/lib/types').ColumnCard =>
 			c.card_type === 'column' &&
-			(c as any).column_items?.some((item: any) => item.card_id === cardId)
+			(c as import('@/lib/types').ColumnCard).column_items?.some((item: import('@/lib/types/helpers').ColumnItem) => item.card_id === cardId)
 		);
 	};
 

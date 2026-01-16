@@ -10,14 +10,24 @@ import { useCanvasStore, useCanvasHistory } from '../stores/canvas-store';
 import { deleteCard as deleteCardDB, bringCardsToFront, sendCardsToBack, alignCardsTop, alignCardsBottom, alignCardsLeft, alignCardsRight } from '@/lib/instant/card-mutations';
 import { useUndoStore } from '@/lib/stores/undo-store';
 import { useBoardCards } from '@/lib/hooks/cards/use-board-cards';
-// TODO Phase 3-7: Re-enable these imports when migrating content updates
-// import { updateCardContent, restoreCard } from '../data/cards-client';
-import type { Card } from '../types';
+import type { Card, NoteCardData, TextCardData, ImageCardData, LinkCardData, TaskListCardData, ColumnCardData } from '../types';
+
+/**
+ * Card-type-specific data for duplication
+ */
+type CardSpecificData =
+	| NoteCardData
+	| TextCardData
+	| ImageCardData
+	| LinkCardData
+	| TaskListCardData
+	| ColumnCardData
+	| Record<string, never>;
 
 /**
  * Extract type-specific data from a card for re-creation
  */
-function getTypeSpecificData(card: Card): any {
+function getTypeSpecificData(card: Card): CardSpecificData {
 	switch (card.card_type) {
 		case 'note':
 			return {
@@ -205,11 +215,6 @@ export function useKeyboardShortcuts(
 	const {
 		selectedCardIds,
 		deleteCards,
-		// TODO Phase 3-5: Re-enable these when implementing with InstantDB
-		// copySelected,
-		// cutSelected,
-		// paste,
-		// duplicateCard,
 		zoomIn,
 		zoomOut,
 		resetViewport,
@@ -233,52 +238,6 @@ export function useKeyboardShortcuts(
 				target.isContentEditable;
 
 			const isMod = e.metaKey || e.ctrlKey;
-
-			// ============================================================================
-			// SELECTION SHORTCUTS
-			// ============================================================================
-
-			// TODO Phase 3: Re-enable Select All
-			// Select All: Cmd/Ctrl + A
-			// if (isMod && e.key === 'a' && !isEditing) {
-			// 	e.preventDefault();
-			// 	selectAll();
-			// 	return;
-			// }
-
-			// ============================================================================
-			// CLIPBOARD SHORTCUTS
-			// ============================================================================
-
-			// TODO Phase 3-5: Re-enable clipboard operations with InstantDB
-			// Copy: Cmd/Ctrl + C
-			// if (isMod && e.key === 'c' && !isEditing && selectedCardIds.size > 0) {
-			// 	e.preventDefault();
-			// 	copySelected();
-			// 	return;
-			// }
-
-			// Cut: Cmd/Ctrl + X
-			// if (isMod && e.key === 'x' && !isEditing && selectedCardIds.size > 0) {
-			// 	e.preventDefault();
-			// 	cutSelected();
-			// 	return;
-			// }
-
-			// Paste: Cmd/Ctrl + V
-			// if (isMod && e.key === 'v' && !isEditing) {
-			// 	e.preventDefault();
-			// 	paste();
-			// 	return;
-			// }
-
-			// Duplicate: Cmd/Ctrl + D
-			// if (isMod && e.key === 'd' && !isEditing && selectedCardIds.size > 0) {
-			// 	e.preventDefault();
-			// 	// Duplicate all selected cards
-			// 	Array.from(selectedCardIds).forEach((id) => duplicateCard(id));
-			// 	return;
-			// }
 
 			// ============================================================================
 			// DELETE SHORTCUTS
@@ -394,14 +353,6 @@ export function useKeyboardShortcuts(
 				resetViewport();
 				return;
 			}
-
-			// TODO Phase 5: Re-enable zoom to fit (needs card data)
-			// Zoom to Fit: Cmd/Ctrl + 1
-			// if (isMod && e.key === '1' && !isEditing) {
-			// 	e.preventDefault();
-			// 	zoomToFit();
-			// 	return;
-			// }
 
 			// ============================================================================
 			// ALIGNMENT SHORTCUTS (Arrow Keys)

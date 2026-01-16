@@ -18,6 +18,7 @@ import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { findOverlappingColumns } from '@/lib/utils/collision-detection';
 import { CardService, CardTransaction } from '@/lib/services/card-service';
 import type { CardData, LineCard } from '@/lib/types';
+import type { CollisionDetectionArgs, Collision, ModifierArgs, ModifierTransform, ColumnItem } from '@/lib/types/helpers';
 import { GRID_SIZE } from '../constants/defaults';
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { closestCenter, KeyboardSensor } from '@dnd-kit/core';
@@ -43,10 +44,10 @@ interface UseDndCanvasReturn {
 	handleDragOver: (event: DragOverEvent) => void;
 
 	// Collision detection
-	customCollisionDetection: (args: any) => any[];
+	customCollisionDetection: CollisionDetection;
 
 	// Modifiers
-	modifiers: Array<(args: any) => any>;
+	modifiers: Array<(args: ModifierArgs) => ModifierTransform>;
 
 	// Active drag state
 	activeId: string | null;
@@ -161,7 +162,7 @@ export function useDndCanvas({
 	// COLLISION DETECTION
 	// ============================================================================
 
-	const customCollisionDetection = useCallback((args: any) => {
+	const customCollisionDetection = useCallback<CollisionDetection>((args) => {
 		const { active, collisionRect } = args;
 		const dragType = active?.data?.current?.type;
 

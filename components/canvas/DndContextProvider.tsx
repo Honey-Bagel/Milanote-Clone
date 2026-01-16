@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react';
 import { DndContext, DragOverlay, pointerWithin } from '@dnd-kit/core';
-import { useDndCanvas } from '@/lib/hooks/useDndCanvas';
+import { useDndCanvas } from '@/lib/hooks/use-dnd-canvas';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { CardProvider } from './cards/CardContext';
 import { CardFrame } from './cards';

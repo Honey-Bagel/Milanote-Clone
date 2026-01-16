@@ -374,7 +374,7 @@ export async function createTemplate(params: CreateTemplateParams): Promise<stri
  * Convert a card to template format
  */
 function convertCardToTemplate(
-	card: any,
+	card: import('@/lib/types').Card,
 	orderIndex: number,
 	idMapping: Map<string, string>
 ): TemplateCard {
@@ -420,8 +420,8 @@ function convertCardToTemplate(
 	});
 
 	// Remap column items
-	if (card.column_items) {
-		templateCard.column_items = card.column_items.map((item: any) => ({
+	if (card.card_type === 'column' && (card as import('@/lib/types').ColumnCard).column_items) {
+		templateCard.column_items = (card as import('@/lib/types').ColumnCard).column_items.map((item: import('@/lib/types/helpers').ColumnItem) => ({
 			card_template_id: idMapping.get(item.card_id)!,
 			position: item.position,
 		}));

@@ -3,9 +3,9 @@
 import { useState, useCallback } from "react";
 import { X, Link2 } from 'lucide-react';
 import { GoogleDrivePanel } from './GoogleDrivePanel';
-import { useLinkedAccounts } from "@/lib/hooks/useLinkedAccount";
-import { useDrawerPersistence } from '@/lib/hooks/useDrawerPersistence';
-import { useDrawerResize } from '@/lib/hooks/useDrawerResize';
+import { useLinkedAccounts } from "@/lib/hooks/use-linked-account";
+import { useDrawerPersistence } from '@/lib/hooks/use-drawer-persistence';
+import { useDrawerResize } from '@/lib/hooks/use-drawer-resize';
 import { DrawerHandle } from './DrawerHandle';
 import { DrawerResizer } from './DrawerResizer';
 import { DrawerSettingsMenu } from './DrawerSettingsMenu';
