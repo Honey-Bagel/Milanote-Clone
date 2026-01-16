@@ -25,6 +25,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import { MobileToolbarMenu } from './mobile-toolbar-menu';
 import { useIsSmallScreen } from '@/lib/hooks/use-media-query';
+import { NotificationBell } from '../notifications/notification-bell';
 
 type TopToolbarProps = {
 	boardId: string;
@@ -469,6 +470,9 @@ export default function TopToolbar({
 						<div className="hidden sm:flex mx-1 lg:mx-2">
 							<RealtimeAvatarStack roomName={boardId}/>
 						</div>
+
+						{/* Notification Bell */}
+						<NotificationBell />
 
 						{/* Export as Template Button (Admin Only) - Hidden on small screens */}
 						{!isSmallScreen && !isAdminLoading && isAdmin && (

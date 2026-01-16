@@ -6,6 +6,7 @@ import {
 	sendToBack as orderKeySendToBack,
 	cardsToOrderKeyList,
 } from "@/lib/utils/order-key-manager";
+import { ActivityTrackingService } from "../services/activity-tracking-service";
 
 /**
  * Maps card types to their InstantDB field prefixes
@@ -63,6 +64,16 @@ export async function createCard(cardData: Partial<CardData>): Promise<string> {
 		}),
 		db.tx.cards[cardId].link({ board: cardData.board_id }),
 	]);
+
+	// Log activity (fire-and-forget)
+	if (cardData.created_by) {
+		ActivityTrackingService.logCardCreated({
+			actor_id: cardData.created_by,
+			board_id: cardData.board_id,
+			card_id: cardId,
+			card_type: cardData.card_type,
+		}).catch(console.error);
+	}
 
 	return cardId;
 }
@@ -137,6 +148,17 @@ export async function updateCardContent(
 			updated_at: now,
 		}),
 	]);
+
+	// Log activity
+	const { user } = db.useAuth();
+	if (user) {
+		ActivityTrackingService.logCardUpdated({
+			actor_id: user.id,
+			board_id: boardId,
+			card_id: cardId,
+			card_type: cardType,
+		}).catch(console.error);
+	}
 }
 
 // ============================================================================

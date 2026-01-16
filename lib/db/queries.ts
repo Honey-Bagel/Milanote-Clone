@@ -139,3 +139,41 @@ export function userProfileQuery(userId: string) {
     },
   };
 }
+
+/**
+ * Query user's notifcations
+ */
+export function userNotificationsQuery(
+	userId: string,
+	options?: { limit?: number; unreadOnly?: boolean }
+) {
+	return {
+		notifications: {
+			$: {
+				where: {
+					recipient_id: userId,
+					...(options?.unreadOnly && { is_read: false })
+				},
+				order: { updated_at: 'desc' },
+				limit: options?.limit || 20,
+			},
+			board: {},
+		},
+	};
+}
+
+/**
+ * Query unread notification count
+ */
+export function unreadNotificationsCountQuery(userId: string) {
+	return {
+		notifications: {
+			$: {
+				where: {
+					recipeint_id: userId,
+					is_read: false,
+				},
+			},
+		},
+	};
+}

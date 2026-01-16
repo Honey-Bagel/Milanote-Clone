@@ -198,6 +198,59 @@ const graph = i.schema({
 			created_at: i.number().indexed(),
 			updated_at: i.number().indexed(),
 		}),
+
+		// Activity log - atmoic record of every action
+		activity_log: i.entity({
+			action_type: i.string().indexed(), // 'card.created' | 'card.updated' | 'collaborator.added'
+			actor_id: i.string().indexed(), // User who performed the action
+			board_id: i.string().indexed(),
+
+			// Card-specific fields
+			card_id: i.string().optional().indexed(),
+			card_type: i.string().optional(),
+			
+			// Metadata for flexible extensibility
+			metadata: i.json<{
+				fields_changed?: string[];
+				collaborator_email?: string;
+				role?: string;
+			}>().optional(),
+
+			created_at: i.number().indexed(),
+		}),
+
+		// Notifications - grouped activities for user consumption
+		notifications: i.entity({
+			recipient_id: i.string().indexed(),
+			notification_type: i.string().indexed(), // 'board_activity' | 'collaborator_added'
+
+			// Board context
+			board_id: i.string().indexed(),
+			board_title: i.string(),
+			board_color: i.string().optional(),
+
+			// Aggregation data
+			actor_ids: i.json<string[]>(),
+			activity_summary: i.json<{
+				cards_created?: Record<string, number>; // { 'note': 3, 'image': 1 }
+				cards_updated?: Record<string, number>;
+				total_actions?: number;
+				added_by?: string;
+				role?: string;
+			}>(),
+
+			// Read status
+			is_read: i.boolean().indexed(),
+			read_at: i.number().optional(),
+
+			// Timestamps
+			created_at: i.number().indexed(),
+			updated_at: i.number().indexed(),
+
+			// Grouping window for 15-min aggregation
+			group_window_start: i.number().indexed(),
+			group_window_end: i.number().indexed(),
+		}),
 	},
 	links: {
 		// Links $users to profiles (1-1)
@@ -329,6 +382,31 @@ const graph = i.schema({
 				label: "created_templates",
 			},
 		},
+
+		// Link activity_log to actor
+		activityActor: {
+			forward: { on: "activity_log", has: "one", label: "actor" },
+			reverse: { on: "$users", has: "many", label: "activities" },
+		},
+
+		// Link activity_log to board
+		activityBoard: {
+			forward: { on: "activity_log", has: "one", label: "board" },
+			reverse: { on: "boards", has: "many", label: "activity_log" },
+		},
+
+		// Link notifications to recipient
+		notificationRecipient: {
+			forward: { on: "notifications", has: "one", label: "recipient" },
+			reverse: { on: "$users", has: "many", label: "notifications" },
+		},
+
+		// Link notifications to board
+		notificationBoard: {
+			forward: { on: "notifications", has: "one", label: "board" },
+			reverse: { on: "boards", has: "many", label: "notifications" },
+		},
+		
 	},
 	rooms: {
 		board: {

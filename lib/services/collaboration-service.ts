@@ -5,6 +5,7 @@
  */
 
 import { db, generateId } from '@/lib/db/client';
+import { ActivityTrackingService } from './activity-tracking-service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -47,6 +48,20 @@ export async function addCollaborator(params: AddCollaboratorParams): Promise<st
     // Link collaborator to user
     db.tx.board_collaborators[collaboratorId].link({ user: params.userId }),
   ]);
+
+  // Log activity
+  const { user } = db.useAuth();
+  if (user) {
+	// Fetch collaborator email from user profile
+	// Wil be implemented in NotificationService
+	ActivityTrackingService.logCollaboratorAdded({
+		actor_id: user.id,
+		board_id: params.userId,
+		collaborator_id: params.userId,
+		collaborator_email: '',
+		role: params.role,
+	}).catch(console.error);
+  }
 
   return collaboratorId;
 }

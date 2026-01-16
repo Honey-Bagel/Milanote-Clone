@@ -67,7 +67,31 @@ const rules = {
 			// Only admin creators can delete
 			delete: "auth.id in data.ref('creator.id') && auth.id in data.ref('creator.profile.id') && data.ref('creator.profile.is_admin')[0] == true",
 		},
-	}
+	},
+
+	activity_log: {
+		allow: {
+			// Only board collaborators can view activity log
+			view: "auth.id in data.ref('board.owner.id') || auth.id in data.ref('board.collaborators.user.id')",
+			// Only server/system creates activity logs
+			create: "false",
+			update: "false",
+			delete: "false",
+		},
+	},
+
+	notifications: {
+		allow: {
+			// Users can only view their own notifications
+			view: "auth.id == data.recipient_id",
+			// Only server creates notifications
+			create: "false",
+			// Users can mark their own notifications as read
+			update: "auth.id == data.recipient_id",
+			// Users can delete their own notifications
+			delete: "auth.id == data.recipient_id",
+		},
+	},
 } satisfies InstantRules;
 
 export default rules;

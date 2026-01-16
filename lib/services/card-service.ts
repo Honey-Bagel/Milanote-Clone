@@ -14,6 +14,7 @@ import {
 	getOrderKeyForNewCard,
 } from '@/lib/utils/order-key-manager';
 import { PerformanceTimer } from '../utils/performance';
+import { ActivityTrackingService } from './activity-tracking-service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -350,6 +351,16 @@ export async function createCard(params: CreateCardParams): Promise<string> {
 			},
 			undo: () => deleteCard(cardId, params.boardId, { withUndo: false }),
 		});
+	}
+
+	// Log activity (fire-and-forget)
+	if (cardData.created_by && cardData.board_id && cardData.card_type) {
+		ActivityTrackingService.logCardCreated({
+			actor_id: cardData.created_by,
+			board_id: cardData.board_id,
+			card_id: cardId,
+			card_type: cardData.card_type
+		}).catch(console.error);
 	}
 
 	return cardId;
