@@ -8,8 +8,6 @@ const adminDb = init({
 });
 
 
-// TODO: Check and make sure authenticated user owns the row that is being
-// updated
 export async function POST(req: Request) {
 	const { userId } = await auth();
 	if (!userId) {
@@ -17,6 +15,19 @@ export async function POST(req: Request) {
 	}
 
 	const { accountId } = await req.json();
+
+	// Verify the user owns this linked account
+	const { linked_accounts } = await adminDb.query({
+		linked_accounts: {
+			$: { where: { id: accountId } },
+			user: {},
+		},
+	});
+
+	const account = linked_accounts?.[0];
+	if (!account || account.user?.[0]?.id !== userId) {
+		return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+	}
 
 	await adminDb.transact([
 		adminDb.tx.linked_accounts[accountId].update({
