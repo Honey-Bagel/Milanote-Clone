@@ -17,6 +17,16 @@ const graph = i.schema({
 			is_admin: i.boolean().optional(), // Admin flag for template creation
 			created_at: i.number(),
 			last_active: i.number().optional(),
+
+			// Billing & Subscription
+			subscription_tier: i.string().indexed(), // 'free' | 'standard' | 'pro'
+			stripe_customer_id: i.string().optional().indexed(),
+			stripe_subscription_id: i.string().optional().indexed(),
+			subscription_status: i.string().optional().indexed(), // 'active' | 'past_due' | 'canceled' | null
+			subscription_current_period_end: i.number().optional(),
+			subscription_cancel_at_period_end: i.boolean().optional(),
+			grace_period_end: i.number().optional().indexed(),
+			storage_flagged: i.boolean().optional().indexed(),
 		}),
 
 		// User preferences table
@@ -250,6 +260,14 @@ const graph = i.schema({
 			// Grouping window for 15-min aggregation
 			group_window_start: i.number().indexed(),
 			group_window_end: i.number().indexed(),
+		}),
+
+		// Webhook idempotency
+		stripe_webhook_events: i.entity({
+			event_id: i.string().unique().indexed(),
+			event_type: i.string().indexed(),
+			processed_at: i.number().indexed(),
+			data: i.json<any>(),
 		}),
 	},
 	links: {

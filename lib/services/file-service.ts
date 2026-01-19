@@ -6,6 +6,7 @@
 
 import { db } from '../instant/db';
 import { PresignedUrlResponse } from '@/lib/types';
+import { updateStorageFlag } from '../billing/storage-flag';
 
 // Maximum file size before compression (1MB)
 const MAX_IMAGE_SIZE = 1024 * 1024;
@@ -291,6 +292,22 @@ export async function uploadImage(file: File, boardId: string): Promise<{ url: s
 		const size = compressedFile.size;
 		const url = await uploadToR2(compressedFile, key);
 
+		try {
+			const { data } = await db.queryOnce({
+				boards: {
+					$: { where: { id: boardId } },
+					owner: {},
+				},
+			});
+
+			const ownerId = data.boards[0]?.owner?.id;
+			if (ownerId) {
+				await updateStorageFlag(ownerId);
+			}
+		} catch (error) {
+			// Don't throw - non-blocking
+		}
+
 		return { url, size};
 	} catch (error) {
 		console.error('[FileService] Image upload failed:', error);
@@ -313,8 +330,26 @@ export async function uploadFile(file: File, boardId: string): Promise<string> {
 		const timestamp = Date.now();
 		const sanitizedName = sanitizeFilename(file.name);
 		const key = `boards/${boardId}/files/${timestamp}-${sanitizedName}`;
+		
+		const fileUrl = await uploadToR2(file, key);
 
-		return await uploadToR2(file, key);
+		try {
+			const { data } = await db.queryOnce({
+				boards: {
+					$: { where: { id: boardId } },
+					owner: {},
+				},
+			});
+
+			const ownerId = data.boards[0]?.owner?.id;
+			if (ownerId) {
+				await updateStorageFlag(ownerId);
+			}
+		} catch (error) {
+			// Don't throw - non-blocking
+		}
+
+		return fileUrl;
 	} catch (error) {
 		console.error('[FileService] File upload failed:', error);
 		if (error instanceof Error) {

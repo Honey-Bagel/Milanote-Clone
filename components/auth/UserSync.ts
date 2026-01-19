@@ -33,6 +33,9 @@ export async function syncUserToInstantDB(clerkUser: {
 					display_name: clerkUser.username || 'Unknown',
 					created_at: Date.now(),
 					last_active: Date.now(),
+					subscription_tier: 'free',
+					subscription_status: null,
+					storage_flagged: false,
 				}),
 				db.tx.$users[userId].link({ profile: userId })
 			]);

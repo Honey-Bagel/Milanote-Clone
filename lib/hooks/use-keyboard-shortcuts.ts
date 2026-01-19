@@ -6,197 +6,18 @@
  */
 
 import { useEffect } from 'react';
-import { useCanvasStore, useCanvasHistory } from '../stores/canvas-store';
-import { deleteCard as deleteCardDB, bringCardsToFront, sendCardsToBack, alignCardsTop, alignCardsBottom, alignCardsLeft, alignCardsRight } from '@/lib/instant/card-mutations';
+import { useCanvasStore } from '../stores/canvas-store';
 import { useUndoStore } from '@/lib/stores/undo-store';
 import { useBoardCards } from '@/lib/hooks/cards/use-board-cards';
-import type { Card, NoteCardData, TextCardData, ImageCardData, LinkCardData, TaskListCardData, ColumnCardData } from '../types';
-
-/**
- * Card-type-specific data for duplication
- */
-type CardSpecificData =
-	| NoteCardData
-	| TextCardData
-	| ImageCardData
-	| LinkCardData
-	| TaskListCardData
-	| ColumnCardData
-	| Record<string, never>;
-
-/**
- * Extract type-specific data from a card for re-creation
- */
-function getTypeSpecificData(card: Card): CardSpecificData {
-	switch (card.card_type) {
-		case 'note':
-			return {
-				content: card.note_cards.content,
-				color: card.note_cards.color,
-			};
-		case 'text':
-			return {
-				content: card.text_cards.content,
-				title: card.text_cards.title,
-			};
-		case 'image':
-			return {
-				image_url: card.image_cards.image_url,
-				caption: card.image_cards.caption,
-				alt_text: card.image_cards.alt_text,
-			};
-		case 'link':
-			return {
-				url: card.link_cards.url,
-				title: card.link_cards.title,
-				favicon_url: card.link_cards.favicon_url,
-			};
-		case 'task_list':
-			return {
-				title: card.task_list_cards.title,
-				tasks: card.task_list_cards.tasks,
-			};
-		case 'column':
-			return {
-				title: card.column_cards.title,
-				column_items: card.column_cards.column_items,
-			};
-		default:
-			return {};
-	}
-}
-
-/**
- * Sync cards to database after undo/redo
- * Compares old and new state and persists any changes
- */
-async function syncCardsToDatabase(
-	oldCards: Map<string, Card>,
-	newCards: Map<string, Card>
-) {
-	const promises: Promise<void>[] = [];
-
-	// Handle deleted cards (existed in old, not in new)
-	for (const [id] of oldCards) {
-		if (!newCards.has(id)) {
-			promises.push(deleteCard(id));
-		}
-	}
-
-	// Handle added cards (exists in new, not in old) - restore with original ID
-	for (const [id, newCard] of newCards) {
-		if (!oldCards.has(id)) {
-			const typeSpecificData = getTypeSpecificData(newCard);
-			promises.push(
-				restoreCard(
-					id,
-					newCard.board_id,
-					newCard.card_type,
-					{
-						position_x: newCard.position_x,
-						position_y: newCard.position_y,
-						width: newCard.width,
-						height: newCard.height ?? undefined,
-						order_key: newCard.order_key,
-						z_index: newCard.z_index,
-					},
-					typeSpecificData
-				)
-			);
-			continue;
-		}
-
-		const oldCard = oldCards.get(id);
-		if (!oldCard) continue;
-
-		// Check for transform changes (position, size, z-index)
-		const transformChanged =
-			oldCard.position_x !== newCard.position_x ||
-			oldCard.position_y !== newCard.position_y ||
-			oldCard.width !== newCard.width ||
-			oldCard.height !== newCard.height ||
-			oldCard.order_key !== newCard.order_key;
-
-		if (transformChanged) {
-			promises.push(
-				updateCardTransform(id, {
-					position_x: newCard.position_x,
-					position_y: newCard.position_y,
-					width: newCard.width,
-					height: newCard.height ?? undefined,
-					order_key: newCard.order_key,
-				})
-			);
-		}
-
-		// Check for content changes based on card type
-		if (newCard.card_type === 'note' && oldCard.card_type === 'note') {
-			if (oldCard.note_cards.content !== newCard.note_cards.content ||
-				oldCard.note_cards.color !== newCard.note_cards.color) {
-				promises.push(
-					updateCardContent(id, 'note', {
-						content: newCard.note_cards.content,
-						color: newCard.note_cards.color,
-					})
-				);
-			}
-		} else if (newCard.card_type === 'text' && oldCard.card_type === 'text') {
-			if (oldCard.text_cards.content !== newCard.text_cards.content ||
-				oldCard.text_cards.title !== newCard.text_cards.title) {
-				promises.push(
-					updateCardContent(id, 'text', {
-						content: newCard.text_cards.content,
-						title: newCard.text_cards.title,
-					})
-				);
-			}
-		} else if (newCard.card_type === 'link' && oldCard.card_type === 'link') {
-			if (oldCard.link_cards.url !== newCard.link_cards.url ||
-				oldCard.link_cards.title !== newCard.link_cards.title) {
-				promises.push(
-					updateCardContent(id, 'link', {
-						url: newCard.link_cards.url,
-						title: newCard.link_cards.title,
-					})
-				);
-			}
-		} else if (newCard.card_type === 'task_list' && oldCard.card_type === 'task_list') {
-			if (oldCard.task_list_cards.title !== newCard.task_list_cards.title ||
-				JSON.stringify(oldCard.task_list_cards.tasks) !== JSON.stringify(newCard.task_list_cards.tasks)) {
-				promises.push(
-					updateCardContent(id, 'task_list', {
-						title: newCard.task_list_cards.title,
-						tasks: newCard.task_list_cards.tasks,
-					})
-				);
-			}
-		} else if (newCard.card_type === 'image' && oldCard.card_type === 'image') {
-			if (oldCard.image_cards.caption !== newCard.image_cards.caption ||
-				oldCard.image_cards.alt_text !== newCard.image_cards.alt_text) {
-				promises.push(
-					updateCardContent(id, 'image', {
-						caption: newCard.image_cards.caption,
-						alt_text: newCard.image_cards.alt_text,
-					})
-				);
-			}
-		} else if (newCard.card_type === 'column' && oldCard.card_type === 'column') {
-			if (oldCard.column_cards.title !== newCard.column_cards.title) {
-				promises.push(
-					updateCardContent(id, 'column', {
-						title: newCard.column_cards.title,
-					})
-				);
-			}
-		}
-	}
-
-	try {
-		await Promise.all(promises);
-	} catch (error) {
-		console.error('Failed to sync undo/redo changes:', error);
-	}
-}
+import {
+	deleteCards,
+	bringCardsToFront,
+	sendCardsToBack,
+	alignCardsTop,
+	alignCardsBottom,
+	alignCardsLeft,
+	alignCardsRight
+} from '../services/card-service';
 
 interface UseKeyboardShortcutsOptions {
 	/**
@@ -214,7 +35,6 @@ export function useKeyboardShortcuts(
 
 	const {
 		selectedCardIds,
-		deleteCards,
 		zoomIn,
 		zoomOut,
 		resetViewport,
@@ -255,35 +75,7 @@ export function useKeyboardShortcuts(
 
 				const cardIds = Array.from(selectedCardIds);
 
-				// Get the card data for each card to handle board card cascade deletes
-				const selectedCards = cards.filter(c => cardIds.includes(c.id));
-
-				// Delete from database - use individual deleteCard for each to handle cascade (no await for instant UI update)
-				selectedCards.forEach(card =>
-					deleteCardDB(card.id, boardId, card).catch((error) => {
-						console.error(`Failed to delete card ${card.id}:`, error);
-					})
-				);
-
-				// Update UI state
-				deleteCards(cardIds);
-
-				// Add undo action (skip for now - complex)
-				useUndoStore.getState().addAction({
-					type: 'batch',
-					timestamp: Date.now(),
-					description: `Delete ${cardIds.length} card${cardIds.length > 1 ? 's' : ''}`,
-					do: async () => {
-						const deletePromises = selectedCards.map(card =>
-							deleteCardDB(card.id, boardId, card)
-						);
-						await Promise.all(deletePromises);
-					},
-					undo: async () => {
-						console.warn('Undo multi-delete not yet implemented');
-					},
-				});
-
+				deleteCards(cardIds, boardId);
 				return;
 			}
 
@@ -317,7 +109,7 @@ export function useKeyboardShortcuts(
 			if (isMod && e.key === ']' && !isEditing && selectedCardIds.size > 0 && boardId) {
 				e.preventDefault();
 				const cardIds = Array.from(selectedCardIds);
-				bringCardsToFront(cardIds, boardId, cards);
+				bringCardsToFront(cardIds as string[], boardId, cards);
 				return;
 			}
 
@@ -435,15 +227,16 @@ export function useKeyboardShortcuts(
 			window.removeEventListener('keydown', handleKeyDown);
 		};
 	}, [
+		cards,
 		enabled,
 		boardId,
 		selectedCardIds,
-		deleteCards,
 		undo,
 		redo,
 		zoomIn,
 		zoomOut,
 		resetViewport,
+		enterPresentationMode
 	]);
 }
 

@@ -3,6 +3,7 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { withInstantAuth } from '@/lib/auth/with-instant-auth';
 import { r2Client, R2_BUCKET_NAME, getPublicUrl } from '@/lib/config/r2';
+import { checkBoardOwnerLimits } from '@/lib/billing/entitlement-check';
 
 /**
  * Upload types for organizing files in R2
@@ -59,8 +60,8 @@ function validateKey(key: string, uploadType: UploadType): boolean {
  */
 export const POST = withInstantAuth(async (user, req) => {
   try {
-    const body: PresignedUrlRequest = await req.json();
-    const { key, contentType, uploadType } = body;
+    const body = await req.json();
+    const { key, contentType, uploadType, fileSize, boardId } = body;
 
     // Validate required fields
     if (!key || !contentType || !uploadType) {
@@ -69,6 +70,29 @@ export const POST = withInstantAuth(async (user, req) => {
         { status: 400 }
       );
     }
+
+	// Require boardId for enforcement
+	if (!boardId) {
+		return NextResponse.json({ error: 'Board ID required for file uploads' }, { status: 400 });
+	}
+
+	// Require fileSize for storage check
+	if (typeof fileSize !== 'number' || fileSize <= 0) {
+		return NextResponse.json({ error: 'Valid file size required' }, { status: 400 });
+	}
+
+	const check = await checkBoardOwnerLimits(boardId, 'storage', fileSize);
+
+	if (!check.allowed) {
+		return NextResponse.json(
+			{
+				error: check.reason,
+				upgrade_required: true,
+				owner_limits_exceeded: true,
+			},
+			{ status: 403 }
+		);
+	}
 
     // Validate key structure
     if (!validateKey(key, uploadType)) {

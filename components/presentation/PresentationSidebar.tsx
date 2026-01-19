@@ -25,7 +25,7 @@ import { PresentationNodeItem } from './PresentationNodeItem';
 import { NodePropertyEditor } from './NodePropertyEditor';
 import { sortPresentationNodes, getNextOrderNumber } from '@/lib/utils/presentation-helpers';
 import { createPresentationNode, updatePresentationNode, updatePresentationNodesOrder } from '@/lib/services/card-service';
-import { deleteCard } from '@/lib/instant/card-mutations';
+import { deleteCard } from '@/lib/services/card-service';
 
 interface PresentationSidebarProps {
 	boardId: string;
@@ -111,7 +111,7 @@ export function PresentationSidebar({ boardId, onClose }: PresentationSidebarPro
 		if (!node) return;
 
 		try {
-			await deleteCard(nodeId, boardId, node);
+			await deleteCard(nodeId, boardId, { withUndo: true, cardData: node });
 			// Clear selection if deleted node was selected
 			if (selectedNodeId === nodeId) {
 				setSelectedNodeId(null);

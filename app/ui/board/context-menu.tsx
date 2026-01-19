@@ -1,17 +1,17 @@
 'use client';
 
-import { ContextMenuProps } from '@/lib/types';
+import { CardData, ContextMenuProps } from '@/lib/types';
 import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2, Lock, Unlock } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { GetCardTypeContextMenu } from '@/components/canvas/cards/CardComponentContextMenus';
-import { deleteCard as deleteCardDB, duplicateCard } from '@/lib/instant/card-mutations';
 import { useUndoStore } from '@/lib/stores/undo-store';
 import { CardService } from '@/lib/services/card-service';
+import { deleteCard } from '@/lib/services/card-service';
 
 export default function ContextMenu({ isOpen, data, allCards, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
-	const { setEditingCardId, deleteCard } = useCanvasStore();
+	const { setEditingCardId } = useCanvasStore();
 
 	useLayoutEffect(() => {
 		if (isOpen && contextMenuRef.current) {
@@ -62,26 +62,10 @@ export default function ContextMenu({ isOpen, data, allCards, onClose }: Context
 		if (!cardId || !boardId) return;
 
 		// Store card data for undo and cascade delete
-		const cardToDelete = data.card;
+		const cardToDelete = data.card as CardData;
 
-		// Delete from database (no await for instant UI update)
-		deleteCardDB(cardId, boardId, cardToDelete);
-
-		// Update UI state (remove from selection, etc.)
-		deleteCard(cardId);
-
-		// Add undo action (skip redo for deletes - complex)
-		useUndoStore.getState().addAction({
-			type: 'card_delete',
-			timestamp: Date.now(),
-			description: `Delete card ${cardId}`,
-			do: () => deleteCardDB(cardId, boardId, cardToDelete),
-			undo: async () => {
-				// Restore would require re-creating with same ID
-				// Can implement in later phase or skip
-				console.warn('Undo delete not yet implemented');
-			},
-		});
+		// Delete from database
+		deleteCard(cardId, boardId, { withUndo: true, cardData: cardToDelete });
 
 		onClose();
 	};
@@ -92,7 +76,7 @@ export default function ContextMenu({ isOpen, data, allCards, onClose }: Context
 		if (!card) return;
 
 		// Duplicate card with a 20px offset
-		await duplicateCard(card, { x: 20, y: 20 });
+		//await duplicateCard(card, { x: 20, y: 20 });
 
 		onClose();
 	};

@@ -12,7 +12,7 @@ const rules = {
 	},
 	profiles: {
 		allow: {
-			view: "auth.id != null",
+			view: "auth.id != null && data.id == auth.id",
 			create: "auth.id != null && data.id == auth.id",
 			update: "auth.id != null && data.id == auth.id",
 			delete: "auth.id != null && data.id == auth.id",

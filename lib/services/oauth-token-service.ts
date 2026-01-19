@@ -74,7 +74,7 @@ async function refreshOAuthToken(provider: OAuthProvider, encryptedRefreshToken:
 		const data = await response.json();
 
 		if (!response.ok) {
-			console.error(`[OAuth] Google Drive token refresh failed for account ${accountId}:`, {
+			console.error(`[OAuth] ${provider} token refresh failed for account ${accountId}:`, {
 				status: response.status,
 				statusText: response.statusText,
 				error: data.error,

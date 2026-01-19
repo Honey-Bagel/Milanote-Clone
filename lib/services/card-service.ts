@@ -15,6 +15,7 @@ import {
 } from '@/lib/utils/order-key-manager';
 import { PerformanceTimer } from '../utils/performance';
 import { ActivityTrackingService } from './activity-tracking-service';
+import { checkBoardOwnerLimits } from '../billing/entitlement-check';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -312,7 +313,6 @@ function validateCardData(
  * });
  */
 export async function createCard(params: CreateCardParams): Promise<string> {
-	const cardId = generateId();
 	const orderKey = params.orderKey || await generateOrderKey(params.boardId);
 
 	// Validate and apply defaults for type-specific data
@@ -329,6 +329,16 @@ export async function createCard(params: CreateCardParams): Promise<string> {
 		...validatedData,
 	};
 
+	if (!cardData.board_id) {
+		throw new Error("Board ID not valid");
+	}
+
+	const check = await checkBoardOwnerLimits(cardData.board_id, 'card');
+	if (!check.allowed) {
+		throw new Error(check.reason || 'Card creation not allowed');
+	}
+
+	const cardId = generateId();
 	const now = Date.now();
 	await db.transact([
 		db.tx.cards[cardId].update({
