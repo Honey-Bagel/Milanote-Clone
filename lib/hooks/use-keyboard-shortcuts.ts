@@ -73,7 +73,7 @@ export function useKeyboardShortcuts(
 
 				if (!boardId) return;
 
-				const cardIds = Array.from(selectedCardIds);
+				const cardIds = Array.from(selectedCardIds) as string[];
 
 				deleteCards(cardIds, boardId);
 				return;

@@ -39,6 +39,9 @@ async function calculateUserUsage(userId: string): Promise<{
 			$: { where: { 'owner.id': userId } },
 			cards: {},
 		},
+		profiles: {
+			$: { where: { id: userId } },
+		},
 	});
 
 	const boardCount = data.boards.length;
@@ -53,6 +56,11 @@ async function calculateUserUsage(userId: string): Promise<{
 			storageBytes += (card.file_size || 0) + (card.image_size || 0);
 		}
 	}
+
+	// Add pending storage to usage calculation (prevents race conditions)
+	const profile = data.profiles[0];
+	const pendingBytes = profile?.pending_storage_bytes || 0;
+	storageBytes += pendingBytes;
 
 	return { boards: boardCount, cards: cardCount, storageBytes };
 }
@@ -79,6 +87,14 @@ export async function checkEntitlement(
 	const profile = profileData.profiles[0];
 	if (!profile) {
 		return { allowed: false, reason: 'User not found' };
+	}
+
+	// GRACE PERIOD ENFORCEMENT: Block all creation during grace period
+	if (profile.subscription_status === 'past_due' && profile.grace_period_end) {
+		return {
+			allowed: false,
+			reason: 'Payment failed. Please update your payment method to continue creating content.',
+		};
 	}
 
 	const tier = (profile.subscription_tier || 'free') as SubscriptionTier;

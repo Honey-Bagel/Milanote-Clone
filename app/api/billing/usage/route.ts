@@ -2,7 +2,12 @@ import { withInstantAuth } from '@/lib/auth/with-instant-auth';
 import { NextResponse } from 'next/server';
 import { TIER_LIMITS, type SubscriptionTier } from '@/lib/billing/tier-limits';
 import { calculateUserUsage } from '@/lib/billing/entitlement-check';
-import { adminDB } from '@/lib/instant/admin-db';
+import { init } from '@instantdb/admin';
+
+const adminDB = init({
+	appId: process.env.NEXT_PUBLIC_INSTANT_APP_ID!,
+	adminToken: process.env.INSTANT_ADMIN_TOKEN!,
+});
 
 export const GET = withInstantAuth(async (user, req) => {
 	// Get user tier

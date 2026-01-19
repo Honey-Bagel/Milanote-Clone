@@ -1,5 +1,6 @@
 import { db } from "@/lib/instant/db";
 import { id } from "@instantdb/react";
+import { initializeCounters } from "@/lib/billing/atomic-counter-service";
 
 export async function syncUserToInstantDB(clerkUser: {
 	id: string;
@@ -44,6 +45,8 @@ export async function syncUserToInstantDB(clerkUser: {
 			return userId;
 		}
 	}
+
+	initializeCounters(existingData.data.$users[0].id);
 
 	console.log('User already exists in InstantDB');
 	return existingProfile?.id;

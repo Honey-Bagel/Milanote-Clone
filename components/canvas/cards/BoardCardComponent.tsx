@@ -103,6 +103,7 @@ export function BoardCardComponent({
 			if (!instantUser.user?.id) throw new Error('Not authenticated');
 
 			// Create new board using BoardService with parent link
+			// This will throw an error if limits are exceeded
 			const newBoardId = await BoardService.createBoard({
 				ownerId: instantUser.user.id,
 				title: newBoardTitle,
@@ -110,7 +111,7 @@ export function BoardCardComponent({
 				parentId: card.board_id,
 			});
 
-			// Update card to link to new board using immediate save
+			// ONLY update card if board creation succeeded
 			await saveContentImmediate({
 				linked_board_id: newBoardId,
 				board_title: newBoardTitle,
@@ -119,7 +120,14 @@ export function BoardCardComponent({
 
 			setIsCreatingNew(false);
 		} catch (error) {
+			// Show user-friendly error message
+			const errorMessage = error instanceof Error ? error.message : 'Failed to create board';
 			console.error('Failed to create board:', error);
+
+			// Show error to user (you might want to add a toast notification here)
+			alert(errorMessage);
+
+			// Don't close the creation form - let user try again or cancel
 		}
 	}, [instantUser.user?.id, newBoardTitle, newBoardColor, card.board_id, saveContentImmediate]);
 

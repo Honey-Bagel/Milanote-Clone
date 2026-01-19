@@ -3,7 +3,13 @@ import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { withInstantAuth } from '@/lib/auth/with-instant-auth';
 import { r2Client, R2_BUCKET_NAME, getPublicUrl } from '@/lib/config/r2';
-import { checkBoardOwnerLimits } from '@/lib/billing/entitlement-check';
+import { reserveStorage, releaseReservation } from '@/lib/billing/storage-reservation';
+import { init } from '@instantdb/admin';
+
+const adminDB = init({
+	appId: process.env.NEXT_PUBLIC_INSTANT_APP_ID!,
+	adminToken: process.env.INSTANT_ADMIN_TOKEN!,
+});
 
 /**
  * Upload types for organizing files in R2
@@ -27,6 +33,7 @@ interface PresignedUrlResponse {
   publicUrl: string;
   key: string;
   expiresIn: number;
+  reservationId: string;
 }
 
 /**
@@ -71,35 +78,54 @@ export const POST = withInstantAuth(async (user, req) => {
       );
     }
 
-	// Require boardId for enforcement
-	if (!boardId) {
-		return NextResponse.json({ error: 'Board ID required for file uploads' }, { status: 400 });
-	}
+	// Skip validation for avatar uploads (no board/storage limits)
+	let reservationId = '';
+	if (uploadType !== 'avatar') {
+		// Require boardId for non-avatar uploads
+		if (!boardId) {
+			return NextResponse.json({ error: 'Board ID required for file uploads' }, { status: 400 });
+		}
 
-	// Require fileSize for storage check
-	if (typeof fileSize !== 'number' || fileSize <= 0) {
-		return NextResponse.json({ error: 'Valid file size required' }, { status: 400 });
-	}
+		// Require fileSize for storage check
+		if (typeof fileSize !== 'number' || fileSize <= 0) {
+			return NextResponse.json({ error: 'Valid file size required' }, { status: 400 });
+		}
 
-	const check = await checkBoardOwnerLimits(boardId, 'storage', fileSize);
+		// RESERVE STORAGE QUOTA (prevents race conditions)
+		const reservation = await reserveStorage(boardId, fileSize);
 
-	if (!check.allowed) {
-		return NextResponse.json(
-			{
-				error: check.reason,
-				upgrade_required: true,
-				owner_limits_exceeded: true,
-			},
-			{ status: 403 }
-		);
+		if (!reservation.allowed) {
+			return NextResponse.json(
+				{
+					error: reservation.reason,
+					upgrade_required: true,
+					owner_limits_exceeded: true,
+				},
+				{ status: 403 }
+			);
+		}
+
+		reservationId = reservation.reservationId || '';
 	}
 
     // Validate key structure
     if (!validateKey(key, uploadType)) {
-      return NextResponse.json(
-        { error: 'Invalid key format or path traversal attempt' },
-        { status: 400 }
-      );
+		// Release reservation if validation fails (for non-avatar uploads)
+		if (uploadType !== 'avatar' && boardId) {
+			const { boards } = await adminDB.query({
+				boards: { $: { where: { id: boardId } }, owner: {} },
+			});
+			if (boards[0]?.owner) {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const owner = boards[0].owner as any;
+				await releaseReservation(owner.id, fileSize);
+			}
+		}
+
+		return NextResponse.json(
+			{ error: 'Invalid key format or path traversal attempt' },
+			{ status: 400 }
+		);
     }
 
     // Create the PutObject command
@@ -121,6 +147,7 @@ export const POST = withInstantAuth(async (user, req) => {
       publicUrl,
       key,
       expiresIn,
+      reservationId,
     };
 
     return NextResponse.json(response);

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withInstantAuth } from '@/lib/auth/with-instant-auth';
 import { getValidToken } from '@/lib/services/oauth-token-service';
 import { FileService } from '@/lib/services';
+import { checkBoardOwnerLimits } from '@/lib/billing/entitlement-check';
 
 export const POST = withInstantAuth(async (user, req) => {
 	const { fileId, boardId } = await req.json();
@@ -25,6 +26,28 @@ export const POST = withInstantAuth(async (user, req) => {
 		}
 
 		const metadata = await metaResponse.json();
+
+		// Pre-check storage limits before downloading from Google Drive
+		if (metadata.mimeType.startsWith('image/') && metadata.size) {
+			const fileSize = parseInt(metadata.size, 10);
+			const storageCheck = await checkBoardOwnerLimits(boardId, 'storage', fileSize);
+
+			if (!storageCheck.allowed) {
+				return NextResponse.json({
+					error: storageCheck.reason,
+					upgrade_required: true,
+				}, { status: 403 });
+			}
+		}
+
+		// Check card limit (importing creates a new card)
+		const cardCheck = await checkBoardOwnerLimits(boardId, 'card');
+		if (!cardCheck.allowed) {
+			return NextResponse.json({
+				error: cardCheck.reason,
+				upgrade_required: true,
+			}, { status: 403 });
+		}
 
 		// If image, download and upload to storage
 		if (metadata.mimeType.startsWith('image/')) {

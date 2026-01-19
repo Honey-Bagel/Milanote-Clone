@@ -601,6 +601,7 @@ export interface PresignedUrlResponse {
 	publicUrl: string;
 	key: string;
 	expiresIn: number;
+	reservationId: string;
 }
 
 export interface DeleteFileResponse {

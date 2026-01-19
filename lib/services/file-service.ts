@@ -133,16 +133,17 @@ async function compressImage(file: File): Promise<File> {
 // ============================================================================
 
 /**
- * Upload file to R2 using presigned URL
+ * Upload file to R2 with presigned URL and post-upload validation
  *
  * Flow:
- * 1. Request presigned URL from API
+ * 1. Request presigned URL from API (reserves storage quota)
  * 2. Upload file directly to R2 using presigned URL
- * 3. Return public URL for database storage
+ * 3. Validate upload and confirm reservation
+ * 4. Return public URL for database storage
  */
-async function uploadToR2(file: File, key: string): Promise<string> {
+async function uploadToR2(file: File, key: string, boardId: string): Promise<string> {
 	try {
-		// Step 1: Get presigned URL from API
+		// Step 1: Get presigned URL from API (WITH RESERVATION)
 		const response = await fetch('/api/upload/presigned-url', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
@@ -150,12 +151,14 @@ async function uploadToR2(file: File, key: string): Promise<string> {
 				key,
 				contentType: file.type,
 				uploadType: determineUploadType(key),
+				fileSize: file.size, // Required for storage reservation
+				boardId, // Required for owner limit check
 			}),
 		});
 
 		if (!response.ok) {
-			const error = await response.text();
-			throw new Error(`Failed to get presigned URL: ${error}`);
+			const error = await response.json();
+			throw new Error(error.error || 'Failed to get presigned URL');
 		}
 
 		const data: PresignedUrlResponse = await response.json();
@@ -173,7 +176,29 @@ async function uploadToR2(file: File, key: string): Promise<string> {
 			throw new Error(`Failed to upload to R2: ${uploadResponse.statusText}`);
 		}
 
-		// Step 3: Return public URL
+		// Step 3: POST-UPLOAD VALIDATION (skip for avatar uploads)
+		const uploadType = determineUploadType(key);
+		if (uploadType !== 'avatar' && boardId) {
+			const validationResponse = await fetch('/api/upload/complete', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					key: data.key,
+					boardId,
+					declaredSize: file.size,
+					reservationId: data.reservationId,
+				}),
+			});
+
+			if (!validationResponse.ok) {
+				const validationError = await validationResponse.json();
+				throw new Error(
+					validationError.reason || 'Upload validation failed'
+				);
+			}
+		}
+
+		// Step 4: Return public URL (validation passed)
 		return data.publicUrl;
 	} catch (error) {
 		console.error('[FileService] Upload error:', error);
@@ -288,9 +313,9 @@ export async function uploadImage(file: File, boardId: string): Promise<{ url: s
 		const sanitizedName = sanitizeFilename(file.name);
 		const key = `boards/${boardId}/images/${timestamp}-${sanitizedName}`;
 
-		// Upload to R2
+		// Upload to R2 with post-validation
 		const size = compressedFile.size;
-		const url = await uploadToR2(compressedFile, key);
+		const url = await uploadToR2(compressedFile, key, boardId);
 
 		try {
 			const { data } = await db.queryOnce({
@@ -330,8 +355,8 @@ export async function uploadFile(file: File, boardId: string): Promise<string> {
 		const timestamp = Date.now();
 		const sanitizedName = sanitizeFilename(file.name);
 		const key = `boards/${boardId}/files/${timestamp}-${sanitizedName}`;
-		
-		const fileUrl = await uploadToR2(file, key);
+
+		const fileUrl = await uploadToR2(file, key, boardId);
 
 		try {
 			const { data } = await db.queryOnce({
@@ -374,7 +399,9 @@ export async function uploadAvatar(file: File, userId: string): Promise<string> 
 		// Use fixed key (automatically overwrites old avatar)
 		const key = `users/${userId}/avatar/avatar.jpg`;
 
-		return await uploadToR2(compressedFile, key);
+		// Avatar uploads don't require board validation, use empty boardId
+		// The API will skip board owner checks for avatar upload type
+		return await uploadToR2(compressedFile, key, '');
 	} catch (error) {
 		console.error('[FileService] Avatar upload failed:', error);
 		if (error instanceof Error) {

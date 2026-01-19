@@ -27,6 +27,16 @@ const graph = i.schema({
 			subscription_cancel_at_period_end: i.boolean().optional(),
 			grace_period_end: i.number().optional().indexed(),
 			storage_flagged: i.boolean().optional().indexed(),
+
+			// Usage counters for atomic enforcement (prevent race conditions)
+			board_count: i.number().optional().indexed(),
+			card_count: i.number().optional().indexed(),
+			storage_bytes_used: i.number().optional().indexed(),
+			counters_last_reconciled: i.number().optional(),
+
+			// Storage reservation for upload validation (prevent TOCTOU)
+			pending_storage_bytes: i.number().optional(),
+			last_storage_sync: i.number().optional().indexed(),
 		}),
 
 		// User preferences table

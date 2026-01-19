@@ -15,7 +15,9 @@ import {
 } from '@/lib/utils/order-key-manager';
 import { PerformanceTimer } from '../utils/performance';
 import { ActivityTrackingService } from './activity-tracking-service';
-import { checkBoardOwnerLimits } from '../billing/entitlement-check';
+import { decrementCounter } from '../billing/atomic-counter-service';
+import { TIER_LIMITS, type SubscriptionTier } from '../billing/tier-limits';
+
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -333,22 +335,65 @@ export async function createCard(params: CreateCardParams): Promise<string> {
 		throw new Error("Board ID not valid");
 	}
 
-	const check = await checkBoardOwnerLimits(cardData.board_id, 'card');
-	if (!check.allowed) {
-		throw new Error(check.reason || 'Card creation not allowed');
-	}
-
 	const cardId = generateId();
 	const now = Date.now();
-	await db.transact([
-		db.tx.cards[cardId].update({
-			...cardData,
-			created_at: now,
-			updated_at: now,
+
+	// OPTIMIZATION: Run query and card creation in parallel
+	const [boardData] = await Promise.all([
+		// Query 1: Get board owner and tier (runs in parallel with card creation)
+		db.queryOnce({
+			boards: {
+				$: { where: { id: cardData.board_id } },
+				owner: { profile: {} },
+			},
 		}),
-		db.tx.boards[params.boardId].update({ updated_at: now }),
-		db.tx.cards[cardId].link({ board: params.boardId }),
+		// Create 2: Card creation (starts immediately)
+		db.transact([
+			db.tx.cards[cardId].update({
+				...cardData,
+				created_at: now,
+				updated_at: now,
+			}),
+			db.tx.boards[params.boardId].update({ updated_at: now }),
+			db.tx.cards[cardId].link({ board: params.boardId }),
+		]),
 	]);
+
+	// Check limits AFTER creation (optimistic approach)
+	const board = boardData.data.boards[0];
+	if (!board?.owner) {
+		// Rollback: delete the card we just created
+		await db.transact([db.tx.cards[cardId].delete()]);
+		throw new Error('Board not found');
+	}
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const owner = board.owner as any;
+	const ownerId = owner.id;
+	const profile = owner.profile?.[0];
+	const tier = (profile?.subscription_tier || 'free') as SubscriptionTier;
+	const limit = TIER_LIMITS[tier].cards;
+	const currentCardCount = profile?.card_count || 0;
+
+	// Check if limit exceeded
+	if (limit !== 'unlimited' && currentCardCount >= limit) {
+		// Rollback: delete the card we just created
+		await db.transact([db.tx.cards[cardId].delete()]);
+		throw new Error(`Card limit reached: ${currentCardCount} / ${limit}`);
+	}
+
+	// Update counter (after creation for speed)
+	try {
+		await db.transact([
+			db.tx.profiles[ownerId].update({
+				card_count: currentCardCount + 1,
+			}),
+		]);
+	} catch (error) {
+		// If counter update fails, rollback the card
+		await db.transact([db.tx.cards[cardId].delete()]);
+		throw error;
+	}
 
 	// Add undo action
 	if (params.withUndo) {
@@ -555,6 +600,30 @@ export async function deleteCard(
 		linkedBoardId: options?.cardData && 'linked_board_id' in options.cardData ? (options.cardData as { linked_board_id?: string }).linked_board_id : undefined,
 	});
 
+	// Get board owner for counter decrement
+	const { init } = await import('@instantdb/admin');
+	const adminDB = init({
+		appId: process.env.NEXT_PUBLIC_INSTANT_APP_ID!,
+		adminToken: process.env.INSTANT_ADMIN_TOKEN!,
+	});
+
+	const boardData = await adminDB.query({
+		boards: {
+			$: { where: { id: boardId } },
+			owner: {},
+		},
+	});
+
+	const board = boardData.boards[0];
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const ownerId = board?.owner ? (board.owner as any).id : null;
+
+	// Calculate storage to release
+	let storageToRelease = 0;
+	if (options?.cardData) {
+		storageToRelease += (options.cardData.file_size || 0) + (options.cardData.image_size || 0);
+	}
+
 	// Delete associated files/images before deleting card
 	if (options?.cardData) {
 		const { FileService } = await import('./file-service');
@@ -579,7 +648,8 @@ export async function deleteCard(
 			const { BoardService } = await import('./board-service');
 			try {
 				console.log('[CardService] Deleting linked board:', linkedBoardId);
-				await BoardService.deleteBoard(linkedBoardId);
+				// Pass ownerId to avoid redundant query
+				await BoardService.deleteBoard(linkedBoardId, ownerId || undefined);
 				console.log('[CardService] Successfully deleted linked board');
 			} catch (error) {
 				console.error('Failed to delete linked board:', error);
@@ -589,6 +659,14 @@ export async function deleteCard(
 
 	console.log('[CardService] Deleting card from database');
 	await withBoardUpdate(boardId, [deleteEntity('cards', cardId)]);
+
+	// Decrement card counter and storage
+	if (ownerId) {
+		await decrementCounter(ownerId, 'card_count', 1);
+		if (storageToRelease > 0) {
+			await decrementCounter(ownerId, 'storage_bytes_used', storageToRelease);
+		}
+	}
 
 	// Note: Undo for delete would require storing full card data before deletion
 	// This is complex and may not be needed for MVP
@@ -610,9 +688,107 @@ export async function deleteCard(
 /**
  * Delete multiple cards
  */
-export async function deleteCards(cardIds: string[], boardId: string): Promise<void> {
+export async function deleteCards(
+	cardIds: string[],
+	boardId: string,
+	options?: { withUndo?: boolean }
+): Promise<void> {
+	if (cardIds.length === 0) return;
+
+	// Batch query
+	const { data } = await db.queryOnce({
+		cards: {
+			$: { where: { id: { in: cardIds } } },
+		},
+		boards: {
+			$: { where: { id: boardId } },
+			owner: { profile: {} },
+		},
+	});
+
+	const cards = data?.cards || [];
+	if (cards.length === 0) return;
+
+	const board = data?.boards?.[0];
+	const owner = board?.owner as any;
+	const ownerId = owner?.id;
+
+	// Database Deletion
 	const transactions = cardIds.map(id => deleteEntity('cards', id));
 	await withBoardUpdate(boardId, transactions);
+
+	// File deletion
+	const uniqueFiles = new Map<string, { url: string, type: 'image' | 'file'}>();
+
+	for (const card of cards) {
+		if (card.card_type === 'file' && card.file_url) {
+			uniqueFiles.set(card.file_url, { url: card.file_url, type: 'file' });
+		}
+		if (card.card_type === 'image' && card.image_url) {
+			uniqueFiles.set(card.image_url, { url: card.image_url, type: 'image' });
+		}
+	}
+
+	if (uniqueFiles.size > 0) {
+		const { FileService } = await import('./file-service');
+		for (const {url, type} of uniqueFiles.values()) {
+			await FileService.safeDeleteFile(url, type);
+		}
+	}
+
+	// Linked board deletion
+	const linkedBoardIds = new Set<string>();
+	for (const card of cards) {
+		if (card.card_type === 'board') {
+			const boardCard = card as { linked_board_id?: string };
+			if (boardCard.linked_board_id) {
+				linkedBoardIds.add(boardCard.linked_board_id);
+			}
+		}
+	}
+
+	if (linkedBoardIds.size > 0) {
+		const { BoardService } = await import('./board-service');
+		const CONCURRENCY_LIMIT = 5;
+		const boardIdsArray = Array.from(linkedBoardIds);
+
+		for (let i = 0; i < boardIdsArray.length; i += CONCURRENCY_LIMIT) {
+			const chunk = boardIdsArray.slice(i, i + CONCURRENCY_LIMIT);
+			await Promise.all(
+				chunk.map(boardId =>
+					BoardService.deleteBoard(boardId, ownerId).catch(err => {
+						console.error('Failed to delete linked board:', boardId, err);
+					})
+				)
+			);
+		}
+	}
+
+	// Batch Counter Decrements
+	if (ownerId) {
+		const totalStorage = cards.reduce((sum, card) =>
+			sum + (card.file_size || 0) + (card.image_size || 0), 0
+		);
+
+		await decrementCounter(ownerId, 'card_count', cards.length);
+
+		if (totalStorage > 0) {
+			await decrementCounter(ownerId, 'storage_bytes_used', totalStorage);
+		}
+	}
+
+	// Undo Registration (if requested)
+	if (options?.withUndo) {
+		useUndoStore.getState().addAction({
+			type: 'card_delete',
+			timestamp: Date.now(),
+			description: `Delete ${cards.length} card(s)`,
+			do: () => deleteCards(cardIds, boardId, { withUndo: false }),
+			undo: async () => {
+				console.warn('Undo for batch card deletion not yet implemented')
+			},
+		});
+	}
 }
 
 // ============================================================================

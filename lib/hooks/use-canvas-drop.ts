@@ -340,54 +340,49 @@ export function useCanvasDrop(boardId: string) {
 		// Pre-calculate order key from already-loaded cards
 		const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cards));
 
-		// If creating a board card, pre-generate IDs for true parallel execution
+		// If creating a board card, use optimized createBoardWithCard method
 		if (cardType === 'board') {
 			if (!board?.owner) return;
-
-			// Pre-generate the board ID so both operations can start immediately
-			const newBoardId = generateId();
-			defaultData.linked_board_id = newBoardId;
 
 			if (!error && !isLoading) {
 				defaultData.board_color = preferences.defaultBoardColor;
 			}
 
-			// Create both board and card in TRUE parallel (no await, no dependency chain)
-			BoardService.createBoard({
-				boardId: newBoardId, // Pass pre-generated ID
-				ownerId: board?.owner?.id,
-				title: defaultData.board_title,
-				parentId: boardId,
-				color: defaultData.board_color,
-			}).catch(error => {
-				console.error('Failed to create linked board:', error);
-			});
+			// Use the optimized method that checks both limits atomically and creates both in parallel
+			(async () => {
+				try {
+					const ownerId = board?.owner?.id;
+					if (!ownerId) {
+						throw new Error('Owner ID not found');
+					}
 
-			// Card creation can start immediately without waiting for board
-			CardService.createCard({
-				boardId: boardId,
-				cardType: cardType,
-				position: { x: posX, y: posY },
-				dimensions: { width: defaultWidth, height: defaultHeight ?? undefined },
-				data: defaultData,
-				orderKey: orderKey,
-				withUndo: true,
-			}).then(cardId => {
-				// If dropping into column, update column items
-				if (targetColumn) {
-					const columnItems = targetColumn.column_items || [];
-					const newPosition = columnItems.length;
-					const updatedColumnItems = [
-						...columnItems,
-						{ card_id: cardId, position: newPosition }
-					];
+					const { boardId: newBoardId, cardId } = await BoardService.createBoardWithCard({
+						ownerId: ownerId,
+						parentBoardId: boardId,
+						cardPosition: { x: posX, y: posY },
+						cardDimensions: { width: defaultWidth, height: defaultHeight ?? undefined },
+						title: defaultData.board_title,
+						color: defaultData.board_color,
+						orderKey: orderKey,
+					});
 
-					// Update column in database
-					CardService.updateColumnItems(targetColumn.id, boardId, updatedColumnItems);
+					// If dropping into column, update column items
+					if (targetColumn) {
+						const columnItems = targetColumn.column_items || [];
+						const newPosition = columnItems.length;
+						const updatedColumnItems = [
+							...columnItems,
+							{ card_id: cardId, position: newPosition }
+						];
+
+						await CardService.updateColumnItems(targetColumn.id, boardId, updatedColumnItems);
+					}
+				} catch (error) {
+					console.error('Failed to create board card:', error);
+					// Show user-friendly error (you might want to use a toast notification)
+					alert(error instanceof Error ? error.message : 'Failed to create board');
 				}
-			}).catch(error => {
-				console.error('Failed to create board card:', error);
-			});
+			})();
 		} else {
 			// Create card in database (no await for instant UI update)
 			CardService.createCard({
