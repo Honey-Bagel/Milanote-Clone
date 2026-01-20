@@ -9,8 +9,7 @@ export function AppearanceSection() {
 			<p className="text-sm text-secondary-foreground mb-4">Customize how the interface looks</p>
 			<div className="space-y-4">
 				<div>
-					<label className="block text-sm font-medium text-secondary-foreground mb-3">Theme</label>
-					<ThemeSwitcherList />
+					
 				</div>
 			</div>
 		</div>

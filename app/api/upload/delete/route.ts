@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { init } from '@instantdb/admin';
-import { withInstantAuth } from '@/lib/auth/with-instant-auth';
 import { r2Client, R2_BUCKET_NAME } from '@/lib/config/r2';
+import { withRateLimitedAuth } from '@/lib/rate-limit/with-rate-limit';
+import { RATE_LIMITS } from '@/lib/rate-limit/configs';
 
 // Initialize admin DB for ownership verification
 const adminDB = init({
@@ -91,63 +92,67 @@ async function verifyDeletePermission(
  * Delete a file from R2
  * Requires authentication and ownership verification
  */
-export const DELETE = withInstantAuth(async (user, req) => {
-	try {
-		const body: DeleteFileRequest = await req.json();
-		const { key } = body;
+export const DELETE = withRateLimitedAuth(
+	async (user, req) => {
+		try {
+			const body: DeleteFileRequest = await req.json();
+			const { key } = body;
 
-		// Validate required fields
-		if (!key) {
-			return NextResponse.json(
-				{ error: 'Missing required field: key' },
-				{ status: 400 }
-			);
-		}
+			// Validate required fields
+			if (!key) {
+				return NextResponse.json(
+					{ error: 'Missing required field: key' },
+					{ status: 400 }
+				);
+			}
 
-		// Check for path traversal attempts
-		if (key.includes('..') || key.includes('\\')) {
-			return NextResponse.json(
-				{ error: 'Invalid key format' },
-				{ status: 400 }
-			);
-		}
+			// Check for path traversal attempts
+			if (key.includes('..') || key.includes('\\')) {
+				return NextResponse.json(
+					{ error: 'Invalid key format' },
+					{ status: 400 }
+				);
+			}
 
-		// Verify user has permission to delete this file
-		const hasPermission = await verifyDeletePermission(key, user.id);
-		if (!hasPermission) {
-			return NextResponse.json(
-				{ error: 'Unauthorized: You do not have permission to delete this file' },
-				{ status: 403 }
-			);
-		}
+			// Verify user has permission to delete this file
+			const hasPermission = await verifyDeletePermission(key, user.id);
+			if (!hasPermission) {
+				return NextResponse.json(
+					{ error: 'Unauthorized: You do not have permission to delete this file' },
+					{ status: 403 }
+				);
+			}
 
-		// Delete the object from R2
-		const command = new DeleteObjectCommand({
-			Bucket: R2_BUCKET_NAME,
-			Key: key,
-		});
-
-		await r2Client.send(command);
-
-		const response: DeleteFileResponse = {
-			success: true,
-			key,
-		};
-
-		return NextResponse.json(response);
-	} catch (error: any) {
-		// Handle "NoSuchKey" error gracefully (file already deleted)
-		if (error.name === 'NoSuchKey' || error.Code === 'NoSuchKey') {
-			return NextResponse.json({
-				success: true,
-				key: (await req.json()).key,
+			// Delete the object from R2
+			const command = new DeleteObjectCommand({
+				Bucket: R2_BUCKET_NAME,
+				Key: key,
 			});
-		}
 
-		console.error('[DeleteFile] Error deleting file:', error);
-		return NextResponse.json(
-			{ error: 'Failed to delete file' },
-			{ status: 500 }
-		);
-	}
-});
+			await r2Client.send(command);
+
+			const response: DeleteFileResponse = {
+				success: true,
+				key,
+			};
+
+			return NextResponse.json(response);
+		} catch (error: any) {
+			// Handle "NoSuchKey" error gracefully (file already deleted)
+			if (error.name === 'NoSuchKey' || error.Code === 'NoSuchKey') {
+				return NextResponse.json({
+					success: true,
+					key: (await req.json()).key,
+				});
+			}
+
+			console.error('[DeleteFile] Error deleting file:', error);
+			return NextResponse.json(
+				{ error: 'Failed to delete file' },
+				{ status: 500 }
+			);
+		}
+	},
+	RATE_LIMITS.UPLOAD_DELETE,
+	'upload-delete'
+);

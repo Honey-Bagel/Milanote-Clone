@@ -18,6 +18,7 @@ import TemplateBrowserModal from '@/components/templates/TemplateBrowserModal';
 import { useRouter } from 'next/navigation';
 import { MobileSearchModal } from '../ui/dashboard/mobile-search-modal';
 import { useIsSmallScreen } from '@/lib/hooks/use-media-query';
+import { NotificationBell } from '../ui/board/notifications/notification-bell';
 
 type Tabtype = 'my-boards' | 'shared' | 'favorites';
 
@@ -176,10 +177,7 @@ export default function Dashboard() {
 								<Search size={18} className="text-secondary-foreground"/>
 							</button>
 
-							<button className="p-2 hover:bg-white/5 rounded-lg transition-colors relative">
-								<Bell size={18} className="text-secondary-foreground"/>
-								<div className="absolute top-1 right-1 w-2 h-2 bg-accent rounded-full"></div>
-							</button>
+							<NotificationBell />
 							<UserMenu />
 						</div>
 					</div>

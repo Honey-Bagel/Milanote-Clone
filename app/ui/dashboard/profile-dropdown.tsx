@@ -67,17 +67,6 @@ export default function UserMenu() {
 						</div>
 					</div>
 
-					{/* Manage Account */}
-					<DropdownMenu.Item className="relative flex cursor-pointer select-none items-center justify-between px-4 py-2.5 text-sm outline-none hover:bg-white/5 focus:bg-white/5 rounded-lg mx-2 my-1 transition-colors">
-						<div className="flex items-center gap-3">
-							<User size={16} className="text-secondary-foreground" />
-							<span className="text-foreground">Manage account</span>
-						</div>
-						<ChevronRightIcon className="w-4 h-4 text-muted-foreground" />
-					</DropdownMenu.Item>
-
-					<DropdownMenu.Separator className="h-px bg-white/10 my-2" />
-
 					{/* Settings */}
 					<DropdownMenu.Item
 						onClick={() => setIsSettingsModalOpen(true)}

@@ -46,8 +46,6 @@ export async function syncUserToInstantDB(clerkUser: {
 		}
 	}
 
-	initializeCounters(existingData.data.$users[0].id);
-
 	console.log('User already exists in InstantDB');
 	return existingProfile?.id;
 }

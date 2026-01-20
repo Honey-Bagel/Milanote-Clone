@@ -2,52 +2,154 @@
 
 import { useUserUsage } from '@/lib/hooks/user/use-user-usage';
 import { formatBytes } from '@/lib/utils';
-import { UsageCardSkeleton } from './settings-section-skeleton';
-import { CurrentPlanCard } from '@/components/settings/billing/CurrentPlanCard';
+import { CurrentPlanCard } from '@/components/billing/CurrentPlanCard';
+import { CreditCard, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
+import { TIER_LIMITS } from '@/lib/billing/tier-limits';
+import { useUserPlan } from '@/lib/hooks/user/use-user-plan';
 
 export function BillingSection() {
 	const { boardCount, fileUsage, isLoading, error } = useUserUsage();
+	const { tier } = useUserPlan();
+
+	// Mock limits (These would now come from your TIER_LIMITS as numbers or 'unlimited')
+	const limit = TIER_LIMITS[tier];
+	const cardCount = 88;
+
 	return (
-		<div className="space-y-6">
+		<div className="max-w-[1400px] space-y-6">
 			<div>
-				<h3 className="text-lg font-bold text-white mb-2">Billing & Subscription</h3>
-				<p className="text-sm text-secondary-foreground mb-6">Manage your subscription and billing information</p>
+				<h3 className="text-lg font-bold text-white">Billing & Subscription</h3>
+				<p className="text-sm text-secondary-foreground">Manage your subscription and usage limits.</p>
 			</div>
 
-			{/* Current Plan Card */}
-			<CurrentPlanCard />
-
-			{/* Usage Stats */}
-			{isLoading ? (
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<UsageCardSkeleton />
-					<UsageCardSkeleton />
+			<div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
+				
+				{/* LEFT COLUMN: Plan Details (60% width) */}
+				<div className="lg:col-span-3 h-full">
+					<CurrentPlanCard />
 				</div>
-			) : error ? (
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">
-						<div className="text-secondary-foreground text-xs uppercase tracking-wider mb-2">Boards Created</div>
-						<div className="text-sm text-red-400">Failed to load</div>
+
+				{/* RIGHT COLUMN: Sidebar Stack (40% width) */}
+				<div className="lg:col-span-2 flex flex-col gap-6 h-full">
+					
+					{/* 1. Resource Usage */}
+					<div className="p-6 bg-[#020617] border border-white/10 rounded-xl shadow-sm flex-1">
+						<div className="flex items-center justify-between mb-6">
+							<h4 className="text-base font-semibold text-white">Resource Usage</h4>
+							<span className="text-[10px] font-medium text-secondary-foreground uppercase tracking-wider">
+								Monthly Cycle
+							</span>
+						</div>
+						
+						{isLoading ? (
+							<div className="space-y-6 animate-pulse">
+								<div className="h-2 bg-white/5 rounded w-full"></div>
+								<div className="h-2 bg-white/5 rounded w-3/4"></div>
+							</div>
+						) : error ? (
+							 <div className="text-xs text-red-400 flex items-center gap-2">
+								<AlertCircle size={14} /> Failed to load usage
+							</div>
+						) : (
+							<div className="space-y-6">
+								<UsageRow label="Boards Created" current={boardCount} max={limit.boards} format={(v) => v} color="bg-blue-500" />
+								<UsageRow label="Total Cards" current={cardCount} max={limit.cards} format={(v) => v} color="bg-blue-500" />
+								<UsageRow label="File Storage" current={fileUsage} max={limit.storageBytes} format={(v) => formatBytes(v, { base: 1000 })} color="bg-blue-500" />
+							</div>
+						)}
 					</div>
 
-					<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">
-						<div className="text-secondary-foreground text-xs uppercase tracking-wider mb-2">Storage Used</div>
-						<div className="text-sm text-red-400">Failed to load</div>
-					</div>
-				</div>
-			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">
-						<div className="text-secondary-foreground text-xs uppercase tracking-wider mb-2">Boards Created</div>
-						<div className="text-2xl font-bold text-white">{boardCount}</div>
-					</div>
+					{/* 2. Payment & History */}
+					<div className="p-6 bg-[#020617] border border-white/10 rounded-xl shadow-sm flex-none">
+						<div className="flex items-center justify-between mb-6">
+							 <h4 className="text-base font-semibold text-white">Payment Method</h4>
+							 <button className="text-xs text-primary hover:text-primary/80 transition-colors">Update</button>
+						</div>
+						
+						{/* Credit Card Display */}
+						<div className="flex items-start gap-4 mb-6">
+							<div className="p-2.5 bg-white/5 rounded-lg border border-white/5 text-white shrink-0">
+								<CreditCard size={20} />
+							</div>
+							<div className="flex-1">
+								<div className="flex items-center justify-between">
+									<p className="text-sm font-medium text-white">Visa ending in 4242</p>
+									<span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20">DEFAULT</span>
+								</div>
+								<p className="text-xs text-secondary-foreground mt-0.5">Expires 12/2028</p>
+								<p className="text-xs text-secondary-foreground mt-0.5">billing@example.com</p>
+							</div>
+						</div>
 
-					<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">
-						<div className="text-secondary-foreground text-xs uppercase tracking-wider mb-2">Storage Used</div>
-						<div className="text-2xl font-bold text-white">{formatBytes(fileUsage, { base: 1000 })}</div>
+						<div className="space-y-3 pt-6 border-t border-white/5">
+							<h5 className="text-[11px] font-semibold text-secondary-foreground uppercase tracking-wider mb-3">Recent Invoices</h5>
+							<InvoiceRow date="Oct 24, 2025" amount="$0.00" status="Paid" />
+							<InvoiceRow date="Sep 24, 2025" amount="$0.00" status="Paid" />
+						</div>
 					</div>
 				</div>
-			)}
+			</div>
+		</div>
+	);
+}
+
+function UsageRow({ 
+	label, 
+	current, 
+	max, 
+	format, 
+	color 
+}: { 
+	label: string, 
+	current: number, 
+	max: number | string, 
+	format: (v: any) => any, 
+	color: string 
+}) {
+	// Check if max is exactly the string 'unlimited' (case-insensitive)
+	const isUnlimited = typeof max === 'string' && max.toLowerCase() === 'unlimited';
+	
+	// If unlimited, percentage is 0. Otherwise, cast max to number and calculate.
+	const percentage = isUnlimited 
+		? 0 
+		: Math.min((current / (max as number)) * 100, 100);
+	
+	return (
+		<div>
+			<div className="flex justify-between text-xs mb-2">
+				<span className="text-secondary-foreground font-medium">{label}</span>
+				<span className="text-white font-medium">
+					{isUnlimited ? (
+						<span className="text-white/20">Unlimited</span>
+					) : (
+						<>
+							{format(current)}
+							<span className="text-white/20"> / {format(max)}</span>
+						</>
+					)}
+				</span>
+			</div>
+			{/* Progress Bar Track */}
+			<div className="h-2 w-full bg-white/[0.04] rounded-full overflow-hidden">
+				<div 
+					className={`h-full rounded-full transition-all duration-500 ${color}`}
+					style={{ width: `${percentage}%` }}
+				/>
+			</div>
+		</div>
+	);
+}
+
+function InvoiceRow({ date, amount, status }: { date: string, amount: string, status: string }) {
+	return (
+		<div className="flex items-center justify-between group cursor-pointer">
+			<div className="flex items-center gap-3">
+				<FileText size={14} className="text-secondary-foreground group-hover:text-primary transition-colors" />
+				<span className="text-sm text-secondary-foreground group-hover:text-white transition-colors">{date}</span>
+			</div>
+			<div className="flex items-center gap-3">
+				<span className="text-sm text-secondary-foreground font-medium">{amount}</span>
+			</div>
 		</div>
 	);
 }
