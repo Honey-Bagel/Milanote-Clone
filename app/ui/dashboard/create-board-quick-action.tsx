@@ -1,11 +1,22 @@
 'use client'
 
 import { Plus } from "lucide-react";
-import { useCreateBoard } from "@/lib/hooks/use-create-board";
 import { QuickActionCard } from "./quick-action-card";
+import { useCreateBoard } from "@/lib/hooks/boards/use-create-board";
+import { useRouter } from "next/navigation";
 
 export function CreateBoardQuickAction() {
+	const router = useRouter();
 	const { createBoard, isLoading } = useCreateBoard();
+
+	const handleClick = async () => {
+		const boardId = await createBoard();
+
+		if (boardId) {
+			router.push(`/board/${boardId}`);
+			router.refresh();
+		}
+	};
 
 	return (
 		<QuickActionCard
@@ -13,7 +24,7 @@ export function CreateBoardQuickAction() {
 			title={isLoading ? "Creating..." : "Create Board"}
 			subtitle="Start from scratch"
 			color="indigo"
-			onClick={createBoard}
+			onClick={handleClick}
 		/>
 	);
 }

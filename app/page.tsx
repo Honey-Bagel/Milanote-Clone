@@ -1,29 +1,20 @@
 'use client';
 
 import Link from "next/link";
-import { createClient } from '@/lib/supabase/client';
 import React, { useEffect, useState, useRef } from "react";
-import { User } from "@supabase/supabase-js";
 import { ArrowRight, Calendar, Check, CheckSquare, Code, Figma, Github, Globe, ImageIcon, Layers, Menu, MessageSquare, Sparkles, Type } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 
 export default function LandingPage() {
-	const supabase = createClient();
-	const [user, setUser] = useState<User | null>(null);
 	const [mousePos, setMousePos] = useState<{ x: number, y: number, parallaxX?: number, parallaxY?: number}>({ x: 0, y: 0 });
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
 	const containerRef = useRef(null);
 	const [email, setEmail] = useState("");
+	const { isSignedIn } = useUser();
 
 	useEffect(() => {
-		const fetchUser = async () => {
-			const { data, error } = await supabase.auth.getUser();
-			if (error) return;
-			setUser(data.user);
-		}
-		fetchUser();
-
-		const handleMouseMove = (e) => {
+		const handleMouseMove = (e: MouseEvent) => {
 			if (containerRef.current) {
 				setMousePos({
 					x: e.clientX,
@@ -45,13 +36,13 @@ export default function LandingPage() {
 			window.removeEventListener('mousemove', handleMouseMove);
 			window.removeEventListener('scroll', handleScroll);
 		}
-	}, [supabase.auth]);
+	});
 
 	return (
 		<div ref={containerRef} className="min-h-screen bg-[#020617] text-slate-300 font-sans overflow-x-hidden relative selection:bg-cyan-500/30 selection:text-cyan-50">
 			{/* Background */}
 			<div className="fixed inset-0 pointer-events-none z-0">
-				<div className="absolute w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[100px] mix-blend-screen transition-transform duration-75 ease-out" style={{ left: -400, top: -400, transform: `translate(${mousePos.x}px, ${mousePos.y}px)` }} />
+				<div className="absolute w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[100px] mix-blend-screen" style={{ left: -400, top: -400, transform: `translate(${mousePos.x}px, ${mousePos.y}px)` }} />
 				<div className="absolute inset-0 opacity-[0.03]" style={{filter: 'contrast(120%)', backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`}}></div>
 				<div className="absolute inset-0 opacity-[0.25]" style={{ backgroundImage: `linear-gradient(to right, #475569 1px, transparent 1px), linear-gradient(to bottom, #475569 1px, transparent 1px)`, backgroundSize: '60px 60px', transform: `perspective(1000px) rotateX(20deg) translate(${mousePos.parallaxX}px, ${mousePos.parallaxY}px)`, maskImage: 'radial-gradient(circle at center, black 0%, transparent 85%)' }} />
 			</div>
@@ -63,7 +54,7 @@ export default function LandingPage() {
 						<div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
 							<Layers size={16} className="text-white" />
 						</div>
-						<span className="font-bold text-lg tracking-tight text-white">Note App</span>
+						<span className="font-bold text-lg tracking-tight text-white">Notera</span>
 					</div>
 					<div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
 						<a href="#use-cases" className="hover:text-white transition-colors">Use Cases</a>
@@ -71,7 +62,7 @@ export default function LandingPage() {
 						<Link href="/pricing" className="hover:text-white tarnsition-colors">Pricing</Link>
 						<div className={`h-4 w-px bg-slate-800 transition-opacity duration-700 ${scrolled ? 'opacity-100' : 'opacity-0'}`}></div>
 						{/* Auth buttons */}
-						{!user ? (
+						{!isSignedIn ? (
 							<>
 								<Link
 									href="/auth"
@@ -97,10 +88,72 @@ export default function LandingPage() {
 							)
 						}
 					</div>
-					<div className="md:hidden text-slate-400">
-						<Menu size={24} onClick={() => setIsMenuOpen(!isMenuOpen)} />
-					</div>
+					<button
+						className="md:hidden text-slate-400 hover:text-white transition-colors p-2 -mr-2"
+						onClick={() => setIsMenuOpen(!isMenuOpen)}
+						aria-label="Toggle menu"
+					>
+						<Menu size={24} />
+					</button>
 				</div>
+
+				{/* Mobile Menu */}
+				{isMenuOpen && (
+					<div className="md:hidden absolute top-20 left-0 right-0 bg-[#020617]/98 backdrop-blur-md border-b border-white/10 shadow-2xl">
+						<div className="px-6 py-6 space-y-4">
+							<a
+								href="#use-cases"
+								className="block py-3 text-sm font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5"
+								onClick={() => setIsMenuOpen(false)}
+							>
+								Use Cases
+							</a>
+							<a
+								href="#visual-engine"
+								className="block py-3 text-sm font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5"
+								onClick={() => setIsMenuOpen(false)}
+							>
+								Visual Engine
+							</a>
+							<Link
+								href="/pricing"
+								className="block py-3 text-sm font-medium text-slate-400 hover:text-white transition-colors border-b border-white/5"
+								onClick={() => setIsMenuOpen(false)}
+							>
+								Pricing
+							</Link>
+
+							<div className="pt-4 space-y-3">
+								{!isSignedIn ? (
+									<>
+										<Link
+											href="/auth"
+											className="block w-full text-center py-3 text-white hover:text-cyan-400 transition-colors border border-white/10 rounded-lg"
+											onClick={() => setIsMenuOpen(false)}
+										>
+											Log In
+										</Link>
+										<Link
+											href="/auth?mode=signup"
+											className="block w-full text-center px-5 py-3 bg-white text-slate-950 hover:bg-slate-200 rounded-lg text-sm font-bold transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+											onClick={() => setIsMenuOpen(false)}
+										>
+											Sign up
+										</Link>
+									</>
+								) : (
+									<Link
+										href="/dashboard"
+										className="block w-full text-center px-5 py-3 bg-white text-slate-950 hover:bg-slate-200 rounded-lg text-sm font-bold transition-all shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+										onClick={() => setIsMenuOpen(false)}
+									>
+										Dashboard
+									</Link>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
 			</nav>
 
 			<main className="relative z-10 w-full min-h-screen pt-32 pb-20 px-4">
@@ -116,9 +169,9 @@ export default function LandingPage() {
 							The infinite <br /> paper for your <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-300">digital mind.</span>
 						</h1>
 						<p className="text-lg text-slate-400 max-w-xl mb-10 leading-relaxed font-light">
-							Linear docs are for finishing ideas. Milanote Clone is for finding them. Drag, drop, and connect your thoughts on an infinite spatial plane.
+							Linear docs are for finishing ideas. Notera is for finding them. Drag, drop, and connect your thoughts on an infinite spatial plane.
 						</p>
-						{!user ? (
+						{!isSignedIn ? (
 							<form onSubmit={(e) => {e.preventDefault();}} className="flex flex-col sm:flex-row gap-3 max-w-md">
 								<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="test@email.com" className="flex-1 bg-[#0f172a] border border-slate-700 rounded-lg px-4 py-3 text-white focus:ring-1 focus:ring-indigo-500 outline-none transition-all placeholder-slate-500" />
 								<button className="bg-white hover:bg-slate-200 text-black px-6 py-3 rounded-lg font-bold transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">Join Beta <ArrowRight size={16}/></button>
@@ -246,7 +299,7 @@ export default function LandingPage() {
 								}}>
 									<i className="fas fa-layer-group text-[var(--foreground)] text-sm"></i>
 								</div>
-								<span className="text-lg font-bold">Milanote</span>
+								<span className="text-lg font-bold">Notera</span>
 							</div>
 							<p className="text-[var(--muted)] text-sm">
 								The visual workspace for creative projects.
@@ -290,7 +343,7 @@ export default function LandingPage() {
 					{/* Bottom Bar */}
 					<div className="pt-8 border-t border-[var(--border)] flex flex-col md:flex-row justify-between items-center">
 						<p className="text-[var(--muted)] text-sm mb-4 md:mb-0">
-							© 2024 Milanote. All rights reserved.
+							© 2026 Notera. All rights reserved.
 						</p>
 						<div className="flex items-center space-x-6">
 							<a href="#" className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">

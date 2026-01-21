@@ -1,14 +1,17 @@
 'use client';
 
-import { ContextMenuProps } from '@/lib/types';
-import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { CardData, ContextMenuProps } from '@/lib/types';
+import { Copy, Edit, Palette, ArrowUp, ArrowDown, Trash2, Lock, Unlock } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { GetCardTypeContextMenu } from '@/components/canvas/cards/CardComponentContextMenus';
+import { useUndoStore } from '@/lib/stores/undo-store';
+import { CardService } from '@/lib/services/card-service';
+import { deleteCard } from '@/lib/services/card-service';
 
-export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps) {
+export default function ContextMenu({ isOpen, data, allCards, onClose }: ContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
-	const { setEditingCardId, deleteCard, bringToFront, sendToBack } = useCanvasStore();
+	const { setEditingCardId } = useCanvasStore();
 
 	useLayoutEffect(() => {
 		if (isOpen && contextMenuRef.current) {
@@ -53,17 +56,69 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 	};
 
 	const handleDeleteButton = () => {
-		deleteCard(data?.card?.id);
+		const cardId = data?.card?.id;
+		const boardId = data?.card?.board_id;
+
+		if (!cardId || !boardId) return;
+
+		// Store card data for undo and cascade delete
+		const cardToDelete = data.card as CardData;
+
+		// Delete from database
+		deleteCard(cardId, boardId, { withUndo: true, cardData: cardToDelete });
+
 		onClose();
 	};
 
-	const handleBringToFront = () => {
-		bringToFront(data?.card?.id);
+	const handleDuplicateButton = async () => {
+		const card = data?.card;
+
+		if (!card) return;
+
+		// Duplicate card with a 20px offset
+		//await duplicateCard(card, { x: 20, y: 20 });
+
+		onClose();
+	};
+
+	const handleBringToFront = async() => {
+		const cardId = data?.card?.id;
+		const boardId = data?.card?.board_id;
+
+		if (!cardId || !boardId) return;
+
+		const allCardsArray = Array.from(allCards.values());
+		CardService.bringCardsToFront([cardId], boardId, allCardsArray);
+
 		onClose();
 	};
 
 	const handleSendToBack = () => {
-		sendToBack(data?.card?.id);
+		const cardId = data?.card?.id;
+		const boardId = data?.card?.board_id;
+
+		if (!cardId || !boardId) return;
+
+		const allCardsArray = Array.from(allCards.values());
+		CardService.sendCardsToBack([cardId], boardId, allCardsArray);
+
+		onClose();
+	};
+
+	const handleToggleLock = async () => {
+		const card = data?.card;
+		const boardId = data?.card?.board_id;
+
+		if (!card || !boardId) return;
+
+		const newLockedState = !card.is_position_locked;
+
+		CardService.toggleCardPositionLock(
+			card.id,
+			boardId,
+			newLockedState
+		);
+
 		onClose();
 	};
 
@@ -81,26 +136,40 @@ export default function ContextMenu({ isOpen, data, onClose }: ContextMenuProps)
 			{data.card && (
 				GetCardTypeContextMenu(data.card, onClose)
 			)}
-			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<Copy className="w-4 h-4 text-slate-400" />
+			<button onClick={handleDuplicateButton} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Copy className="w-4 h-4 text-secondary-foreground" />
 				<span>Duplicate</span>
 			</button>
-			<button onClick={handleEditButton} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<Edit className="w-4 h-4 text-slate-400" />
+			<button onClick={handleEditButton} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Edit className="w-4 h-4 text-secondary-foreground" />
 				<span>Edit</span>
 			</button>
-			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<Palette className="w-4 h-4 text-slate-400" />
+			<button className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<Palette className="w-4 h-4 text-secondary-foreground" />
 				<span>Change Color</span>
 			</button>
 			<div className="h-px bg-white/10 my-1.5"></div>
-			<button onClick={handleBringToFront} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<ArrowUp className="w-4 h-4 text-slate-400" />
+			<button onClick={handleBringToFront} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<ArrowUp className="w-4 h-4 text-secondary-foreground" />
 				<span>Bring Forward</span>
 			</button>
-			<button onClick={handleSendToBack} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<ArrowDown className="w-4 h-4 text-slate-400" />
+			<button onClick={handleSendToBack} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<ArrowDown className="w-4 h-4 text-secondary-foreground" />
 				<span>Send Backward</span>
+			</button>
+			<div className="h-px bg-white/10 my-1.5"></div>
+			<button onClick={handleToggleLock} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				{data.card?.is_position_locked ? (
+					<>
+						<Unlock className="w-4 h-4 text-secondary-foreground" />
+						<span>Unlock Position</span>
+					</>
+				) : (
+					<>
+						<Lock className="w-4 h-4 text-secondary-foreground" />
+						<span>Lock Position</span>
+					</>
+				)}
 			</button>
 			<div className="h-px bg-white/10 my-1.5"></div>
 			<button onClick={handleDeleteButton} className="w-full px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-3 transition-colors">

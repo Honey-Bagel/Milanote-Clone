@@ -1,86 +1,90 @@
-import TopToolbar from '@/app/ui/board/top-toolbar';
-import { Canvas } from '@/components/canvas/Canvas';
-import { getBoardCards } from '@/lib/data/cards';
-import { getBoardBreadcrumbs } from '@/lib/data/board-breadcrumbs';
-import { createClient } from '@/lib/supabase/server';
-import { notFound, redirect } from 'next/navigation';
+'use client';
 
-export default async function BoardPage({ params }: { params: Promise<{ id: string }> }) {
-	const { id } = await params;
+import TopToolbar from "@/app/ui/board/toolbars/top-toolbar";
+import { Canvas } from "@/components/canvas/Canvas";
+import { useBoard } from "@/lib/hooks/boards";
+import { notFound } from "next/navigation";
+import { use } from "react";
+import { db } from "@/lib/instant/db";
+import { DndContextProvider } from "@/components/canvas/DndContextProvider";
+import { useBoardCards } from "@/lib/hooks/cards";
+import type { CardData } from "@/lib/types";
+import { useBoardStore } from "@/lib/stores/board-store";
+import { ImportDrawer } from "@/components/import/ImportDrawer";
+import { PresentationSidebar } from "@/components/presentation";
+import { useCanvasStore } from "@/lib/stores/canvas-store";
+import EmptyBoardSuggestion from "@/components/templates/EmptyBoardSuggestion";
+import ShareModal from "@/app/ui/board/share-modal";
+import { CardsLoadingIndicator } from "@/app/ui/board/cards-loading-indicator";
 
-	const supabase = await createClient();
+export default function BoardPage({ params }: { params: Promise<{ id: string }> }) {
+	const { id } = use(params);
+	const { isLoading: isAuthLoading } = db.useAuth();
+	const { board, error } = useBoard(id);
+	const { cards: cardArray, isLoading: isCardsLoading } = useBoardCards(id);
+	const { importDrawerOpen, setImportDrawerOpen, presentationSidebarOpen, setPresentationSidebarOpen, shareModalOpen, setShareModalOpen } = useBoardStore();
+	const { clearSelection } = useCanvasStore();
 
-	// Get current user
-	const { data: { user } } = await supabase.auth.getUser();
+	// Wait for auth to complete
+	if (isAuthLoading) {
+		return null;
+	}
 
-	// Fetch board with public status
-	const { data: board, error } = await supabase
-		.from("boards")
-		.select('id, title, color, owner_id, is_public, share_token')
-		.eq('id', id)
-		.single();
-
-	if (error || !board) {
+	if (error) {
 		notFound();
 	}
 
-	// Check user role and access
-	let userRole: 'owner' | 'editor' | 'viewer' | null = null;
-	let isViewerOnly = false;
+	// Show board UI immediately, even if data is still loading
+	// Board metadata and cards will populate as they arrive
+	const boardTitle = board?.title || 'Loading...';
+	const boardColor = board?.color || '#4f46e5';
+	const boardId = board?.id || id;
 
-	if (user) {
-		const isOwner = board.owner_id === user.id;
-
-		if (isOwner) {
-			userRole = 'owner';
-		} else {
-			// Check if user is a collaborator and get their role
-			const { data: collaboration } = await supabase
-				.from("board_collaborators")
-				.select('role')
-				.eq('board_id', id)
-				.eq('user_id', user.id)
-				.single();
-
-			if (collaboration) {
-				userRole = collaboration.role as 'editor' | 'viewer';
-				isViewerOnly = collaboration.role === 'viewer';
-			} else if (board.is_public && board.share_token) {
-				// User is not owner/collaborator but board is public - redirect
-				redirect(`/board/public/${board.share_token}`);
-			}
-		}
-	} else if (board.is_public && board.share_token) {
-		// No user logged in but board is public - redirect to public view
-		redirect(`/board/public/${board.share_token}`);
-	}
-
-	// Fetch cards and breadcrumbs in parallel
-	const [cards, breadcrumbs] = await Promise.all([
-		getBoardCards(id),
-		getBoardBreadcrumbs(id)
-	]);
+	// Create cards map for DndContextProvider (empty initially, will populate)
+	const allCardsMap = new Map<string, CardData>(
+		cardArray.map((card) => [card.id, card])
+	);
 
 	return (
-		<div className="min-h-screen bg-[#020617] text-slate-300 font-sans overflow-hidden flex flex-col h-screen selection:bg-indigo-500/30 selection:text-white">
-			<TopToolbar
-				boardId={board.id}
-				boardTitle={board.title}
-				boardColor={board.color}
-				initialBreadcrumbs={breadcrumbs}
-				isViewerOnly={isViewerOnly}
-			/>
-			<main className="flex-1 overflow-hidden relative">
-				<Canvas
-					initialCards={cards}
-					boardId={id}
-					enablePan={true}
-					enableZoom={true}
-					enableKeyboardShortcuts={!isViewerOnly}
-					enableSelectionBox={!isViewerOnly}
-					isPublicView={isViewerOnly}
-				/>
-			</main>
-		</div>
+		<db.SignedIn>
+			<DndContextProvider boardId={id} allCardsMap={allCardsMap}>
+				<div className="min-h-screen bg-[#020617] text-foreground font-sans overflow-hidden flex flex-col h-screen selection:bg-primary/30 selection:text-white">
+					<TopToolbar
+						boardId={boardId}
+						boardTitle={boardTitle}
+						boardColor={boardColor}
+						isViewerOnly={false}
+					/>
+					<main className="flex-1 overflow-hidden relative">
+						{/* Cards loading indicator */}
+						{isCardsLoading && <CardsLoadingIndicator />}
+
+						{/* Empty Board Suggestion - only when cards done loading */}
+						{!isCardsLoading && cardArray.length === 0 && <EmptyBoardSuggestion boardId={id} />}
+
+						<Canvas
+							boardId={id}
+							enablePan={true}
+							enableZoom={true}
+							enableKeyboardShortcuts={true}
+							enableSelectionBox={true}
+							isPublicView={false}
+						/>
+						<ImportDrawer boardId={id} onOpen={() => setImportDrawerOpen(true)} onClose={() => setImportDrawerOpen(false)} isOpen={importDrawerOpen} />
+						{presentationSidebarOpen && (
+							<PresentationSidebar
+								boardId={id}
+								onClose={() => {
+									setPresentationSidebarOpen(false);
+									clearSelection();
+								}}
+							/>
+						)}
+
+						<ShareModal boardId={id} isOpen={shareModalOpen} onClose={() => setShareModalOpen(false)} />
+					</main>
+				</div>
+			</DndContextProvider>
+		</db.SignedIn>
 	);
 }

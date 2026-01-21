@@ -11,11 +11,11 @@ const nextConfig: NextConfig = {
 			},
 			{
 				protocol: 'https',
-				hostname: 'cjwizcvnujouehwhvowe.supabase.co',
+				hostname: 'www.google.com'
 			},
 			{
 				protocol: 'https',
-				hostname: 'www.google.com'
+				hostname: 'pub-765d54631444422ba1ea7243d1b0bb91.r2.dev'
 			}
 		],
 	},

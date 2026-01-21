@@ -2,40 +2,63 @@
 @import "tw-animate-css";
 
 :root {
-  /* Default theme colors - will be overridden by ThemeProvider */
-  --primary: oklch(0.205 0 0);
-  --secondary: oklch(0.97 0 0);
-  --accent: oklch(0.97 0 0);
-  --muted: oklch(0.97 0 0);
-  --border: oklch(0.922 0 0);
-  --card: oklch(1 0 0);
-  --card-hover: #374151;
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Dark theme colors - mapped to actual Tailwind colors used in app */
+  --background: #020617; /* Very dark blue-gray background */
+  --foreground: #cbd5e1; /* slate-300 - primary text */
+
+  /* Primary accent - Indigo */
+  --primary: #4f46e5; /* indigo-600 - buttons, CTAs */
+  --primary-foreground: #ffffff; /* white text on primary */
+
+  /* Secondary/Muted colors - Slate family */
+  --secondary: #1e293b; /* slate-800 - card backgrounds */
+  --secondary-foreground: #94a3b8; /* slate-400 - secondary text */
+
+  /* Accent - Cyan */
+  --accent: #06b6d4; /* cyan-500 - interactive elements, hover states */
+  --accent-foreground: #ffffff; /* white text on accent */
+
+  /* Muted text */
+  --muted: #334155; /* slate-700 - muted backgrounds */
+  --muted-foreground: #64748b; /* slate-500 - muted text */
+
+  /* Card colors */
+  --card: #1e293b; /* slate-800 - card background */
+  --card-foreground: #cbd5e1; /* slate-300 - card text */
+  --card-hover: #334155; /* slate-700 - card hover state */
+
+  /* Border and input */
+  --border: rgb(255, 255, 255, 0.1); /* white/10 - most common border */
+  --input: #1e293b; /* slate-800 - input background */
+  --ring: #06b6d4; /* cyan-500 - focus ring */
+
+  /* Popover */
+  --popover: #1e293b; /* slate-800 */
+  --popover-foreground: #cbd5e1; /* slate-300 */
+
+  /* Destructive */
+  --destructive: #ef4444; /* red-500 - error/delete states */
+  --destructive-foreground: #ffffff;
+
+  /* Chart colors */
+  --chart-1: #4f46e5; /* indigo-600 */
+  --chart-2: #06b6d4; /* cyan-500 */
+  --chart-3: #8b5cf6; /* purple-500 */
+  --chart-4: #10b981; /* emerald-500 */
+  --chart-5: #f59e0b; /* amber-500 */
+
+  /* Sidebar (if used) */
+  --sidebar: #1e293b; /* slate-800 */
+  --sidebar-foreground: #cbd5e1; /* slate-300 */
+  --sidebar-primary: #4f46e5; /* indigo-600 */
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #06b6d4; /* cyan-500 */
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.1); /* white/10 */
+  --sidebar-ring: #06b6d4; /* cyan-500 */
+
+  /* Border radius */
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -243,11 +266,7 @@ button:disabled,
   user-select: none;
 }
 
-.card.selected {
-  outline: 3px solid var(--primary);
-  outline-offset: -3px;
-}
-
+/* Legacy selection-outline - kept for backwards compatibility */
 .selection-outline {
   position: absolute;
   inset: 0;
@@ -262,6 +281,11 @@ button:disabled,
 
 .drag-handle.editing {
   cursor: text;
+}
+
+.drag-handle:focus,
+.drag-handle:focus-visible {
+  outline: none !important;
 }
 
 [draggable="false"] {
@@ -312,6 +336,149 @@ button:disabled,
   background: rgba(59, 130, 246, 0.3) !important;
 }
 
+/* TipTap list styling */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 2rem;
+  margin: 0.75rem 0;
+  display: block;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+  list-style-position: outside;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  list-style-position: outside;
+}
+
+.ProseMirror li {
+  display: list-item;
+  margin: 0.25rem 0;
+  color: inherit;
+  padding-left: 0.25rem;
+}
+
+.ProseMirror li p {
+  margin: 0;
+  display: inline;
+}
+
+/* Remove extra spacing from empty paragraphs after lists */
+.ProseMirror ul + p:empty,
+.ProseMirror ol + p:empty {
+  display: none;
+}
+
+/* Nested lists */
+.ProseMirror ul ul,
+.ProseMirror ol ol,
+.ProseMirror ul ol,
+.ProseMirror ol ul {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+
+/* TipTap heading styles */
+.ProseMirror h1 {
+  font-size: 1.875rem;
+  font-weight: 700;
+  line-height: 2.25rem;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 2rem;
+  margin: 0.875rem 0 0.5rem 0;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.75rem;
+  margin: 0.75rem 0 0.5rem 0;
+}
+
+/* TipTap bold, italic, underline, strike styles */
+.ProseMirror strong {
+  font-weight: 700;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror u {
+  text-decoration: underline;
+}
+
+.ProseMirror s {
+  text-decoration: line-through;
+}
+
+/* TipTap horizontal rule */
+.ProseMirror hr {
+  border: none;
+  border-top: 2px solid currentColor;
+  opacity: 0.2;
+  margin: 1rem 0;
+}
+
+/* TipTap highlight */
+.ProseMirror mark {
+  background-color: #fef08a;
+  color: #000;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.125rem;
+}
+
+/* Note Card TipTap styling */
+.note-card .ProseMirror {
+  min-height: 40px;
+}
+
+.note-card .ProseMirror p.is-editor-empty:first-child::before {
+  color: inherit;
+  opacity: 0.4;
+}
+
+.note-card .ProseMirror p {
+  margin: 0 0 0.5rem 0;
+}
+
+.note-card .ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+/* Note card placeholder colors */
+.note-card.default .ProseMirror p.is-editor-empty:first-child::before {
+  color: #64748b;
+}
+
+.note-card.yellow .ProseMirror p.is-editor-empty:first-child::before {
+  color: #92400e;
+}
+
+.note-card.blue .ProseMirror p.is-editor-empty:first-child::before {
+  color: #0369a1;
+}
+
+.note-card.green .ProseMirror p.is-editor-empty:first-child::before {
+  color: #047857;
+}
+
+.note-card.pink .ProseMirror p.is-editor-empty:first-child::before {
+  color: #be185d;
+}
+
+.note-card.purple .ProseMirror p.is-editor-empty:first-child::before {
+  color: #6d28d9;
+}
+
 /* Custom scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
 	width: 8px;
@@ -329,6 +496,21 @@ button:disabled,
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 	background: var(--muted);
+}
+
+/* Hide scrollbar while maintaining functionality */
+.scrollbar-hide {
+	-ms-overflow-style: none;  /* IE and Edge */
+	scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+	display: none;  /* Chrome, Safari, Opera */
+}
+
+.drag-handle.focus,
+.drag-handle:focus-visible {
+	outline: none !important;
 }
 
 @layer base {

@@ -6,6 +6,7 @@
  */
 
 import type { Position, Viewport } from '@/lib/stores/canvas-store';
+import { ZOOM_STEPS, MIN_ZOOM, MAX_ZOOM } from '../constants/defaults';
 
 // ============================================================================
 // VIEWPORT TRANSFORMS
@@ -176,11 +177,10 @@ export function zoomToPoint(
   currentViewport: Viewport,
   zoomDelta: number,
   pointX: number,
-  pointY: number,
-  minZoom = 0.1,
-  maxZoom = 3
+  pointY: number
 ): Viewport {
-  const newZoom = Math.max(minZoom, Math.min(maxZoom, currentViewport.zoom * zoomDelta));
+	console.log(MIN_ZOOM, MAX_ZOOM)
+  const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentViewport.zoom * zoomDelta));
   const zoomRatio = newZoom / currentViewport.zoom;
 
   return {

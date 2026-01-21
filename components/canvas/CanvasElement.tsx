@@ -1,160 +1,219 @@
+/**
+ * CanvasElement Component - Simplified Positioning Layer
+ *
+ * This component handles ONLY:
+ * - Absolute positioning on canvas (position_x, position_y)
+ * - Z-index calculation from order_key
+ * - Drag handling via useDraggable
+ * - Click/double-click/context menu event delegation
+ *
+ * All other concerns (selection outline, resize handles, connection handles)
+ * are delegated to CardFrame.
+ */
+
 'use client';
 
-import type { Card, ConnectionSide } from '@/lib/types';
+import { useCallback, memo, useState } from 'react';
+import type { Card, CardData, LineCard } from '@/lib/types';
 import type { Editor } from '@tiptap/react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
-import { useDraggable } from '@/lib/hooks/useDraggable';
+import { useBoardStore } from '@/lib/stores/board-store';
 import { CardRenderer } from './cards/CardRenderer';
-import { useResizable } from '@/lib/hooks/useResizable';
-import { getDefaultCardDimensions } from '@/lib/utils';
-import { ConnectionHandles } from './ConnectionHandle';
-import { useCallback } from 'react';
+import { CardProvider } from './cards/CardContext';
+import { CardFrame } from './cards/CardFrame';
+import { useDraggable } from '@dnd-kit/core';
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Check if a card is inside a column
+ */
+function isCardInAnyColumn(cardId: string, allCards: Map<string, Card | CardData>): boolean {
+	for (const c of allCards.values()) {
+		if (c.card_type === 'column') {
+			const items = (c as any).column_items as any[] | undefined;
+			if (items?.some(item => item.card_id === cardId)) return true;
+		}
+	}
+	return false;
+}
+
+function hasBlockedAttachments(lineCard: LineCard, allCards: Map<string, Card | CardData>): boolean {
+	const attachedIds = [
+		lineCard.line_start_attached_card_id,
+		lineCard.line_end_attached_card_id,
+	].filter(Boolean) as string[];
+
+	for (const attachedId of attachedIds) {
+		const attachedCard = allCards.get(attachedId);
+		if (!attachedCard) continue;
+
+		const cannotMove = attachedCard.is_position_locked || isCardInAnyColumn(attachedId, allCards);
+		if (cannotMove) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface CanvasElementProps {
 	card: Card;
 	boardId?: string | null;
-	onCardClick?: (cardId: string) => void;
+	allCards: Map<string, Card | CardData>;
+	onCardClick?: (cardId: string, isMultiSelect?: boolean) => void;
 	onCardDoubleClick?: (cardId: string) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 	onEditorReady?: (cardId: string, editor: Editor) => void;
-	isInsideColumn?: boolean; // NEW: indicates if rendered inside a column
-	isReadOnly?: boolean; // NEW: indicates if this is read-only (public view)
+	isInsideColumn?: boolean;
+	isReadOnly?: boolean;
 }
 
-function orderKeyToZIndex(orderKey: string): number {
-	let hash = 0;
-	for (let i = 0; i < orderKey.length; i++) {
-		const char = orderKey.charCodeAt(i);
-		hash = ((hash << 5) - hash) + char;
-		hash = hash & hash; // Convert to 32 bit int
-	}
+interface CardOptions {
+	lastDoubleClick?: {
+		clientX: number;
+		clientY: number;
+	};
+};
 
-	return Math.abs(hash) % 100000;
-}
+// ============================================================================
+// Z-INDEX CALCULATION
+// ============================================================================
 
-export function useCardZIndex(card: Card, allCards: Map<string, Card>): number {
+export function useCardZIndex(card: Card, allCards: Map<string, Card | CardData>): number {
 	const sortedCards = Array.from(allCards.values())
-		.sort((a, b) => a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1 : 0);
+		.sort((a, b) => a.order_key < b.order_key ? -1 : a.order_key > b.order_key ? 1
+			: 0);
 
 	const index = sortedCards.findIndex(c => c.id === card.id);
+	const baseZIndex = index >= 0 ? index : 0;
 
-	return index >= 0 ? index : 0;
+	if (card.card_type === 'line') {
+		return baseZIndex + 10000;
+	}
+
+	return baseZIndex;
 }
 
-export function CanvasElement({
+// ============================================================================
+// CANVAS ELEMENT
+// ============================================================================
+
+export const CanvasElement = memo(function CanvasElement({
 	card,
 	boardId,
+	allCards,
 	onCardClick,
 	onCardDoubleClick,
 	onContextMenu,
 	onEditorReady,
-	isInsideColumn = false, // Default to false for backwards compatibility
-	isReadOnly = false // Default to false for backwards compatibility
+	isInsideColumn = false,
+	isReadOnly = false,
 }: CanvasElementProps) {
+	// Canvas store state
 	const {
 		selectedCardIds,
 		setEditingCardId,
 		editingCardId,
-		cards: allCards,
 		snapToGrid,
-		isConnectionMode,
+		dragPositions,
 		isDraggingLineEndpoint,
-		pendingConnection,
-		startConnection,
-		completeConnection,
+		interactionMode,
+		setInteractionMode,
+		presentationMode,
 	} = useCanvasStore();
-	
+	const { presentationSidebarOpen } = useBoardStore();
+	const [cardOptions, setCardOptions] = useState<CardOptions | null>(null);
+
 	const isSelected = selectedCardIds.has(card.id);
 	const isEditing = editingCardId === card.id;
-	const { canResize } = getDefaultCardDimensions(card.card_type);
 
+	// Check if presentation node should be non-interactive (when hidden)
+	const isPresentationNodeHidden =
+		card.card_type === 'presentation_node' &&
+		(!presentationSidebarOpen || presentationMode.isActive);
+
+	// Check if this drawing card is being edited in drawing mode
+	const isBeingEditedInDrawingMode =
+		card.card_type === 'drawing' &&
+		interactionMode.mode === 'drawing' &&
+		interactionMode.editingCardId === card.id;
+
+	// Z-index calculation
 	const cssZIndex = useCardZIndex(card, allCards);
 
-	// Only enable dragging/resizing if NOT inside a column
-	const { handleMouseDown, isDragging } = useDraggable({
-		card: card,
-		snapToGrid: snapToGrid,
-		dragThreshold: 3
+	const isLineWithBlockedAttachments =
+		card.card_type === "line" && hasBlockedAttachments(card as LineCard, allCards);
+
+	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform} = useDraggable({
+		id: card.id,
+		data: {
+			type: 'canvas-card',
+			card_type: card.card_type
+		},
+		disabled: isInsideColumn || isReadOnly || isEditing || isDraggingLineEndpoint || card.is_position_locked || isLineWithBlockedAttachments || isPresentationNodeHidden,
 	});
 
-	const { handleMouseDown: handleMouseDownResizable, isResizing } = useResizable({
-		cardId: card.id,
-		maxWidth: 1200,
-		maxHeight: 1200,
-	});
-
-	const handleClick = (e: React.MouseEvent) => {
+	// Event handlers
+	const handleClick = useCallback((e: React.MouseEvent) => {
 		e.stopPropagation();
-
-		// Disable interactions in read-only mode
-		if (isReadOnly) return;
+		if (isReadOnly || isPresentationNodeHidden) return;
 
 		const isMultiSelect = e.metaKey || e.ctrlKey || e.shiftKey;
 
-		if (isMultiSelect) return;
+		// Call parent click handler with multi-select info
+		onCardClick?.(card.id, isMultiSelect);
+	}, [card.id, isReadOnly, isPresentationNodeHidden, onCardClick]);
 
-		onCardClick?.(card.id);
-	};
-
-	const handleDoubleClick = (e: React.MouseEvent) => {
+	const handleDoubleClick = useCallback((e: React.MouseEvent) => {
 		e.stopPropagation();
+		if (isReadOnly || isPresentationNodeHidden) return;
 
-		// Disable editing in read-only mode
-		if (isReadOnly) return;
+		// If this is a drawing card, enter drawing mode instead of text editing
+		if (card.card_type === 'drawing') {
+			setInteractionMode({
+				mode: 'drawing',
+				editingCardId: card.id,
+			});
+			return;
+		}
 
 		setEditingCardId(card.id);
 		onCardDoubleClick?.(card.id);
-	};
+		setCardOptions({
+			lastDoubleClick: {
+				clientX: e.clientX,
+				clientY: e.clientY,
+			}
+		});
+	}, [card.id, card.card_type, isReadOnly, setEditingCardId, setInteractionMode, onCardDoubleClick, isPresentationNodeHidden]);
 
-	const handleCardMouseDown = (e: React.MouseEvent) => {
-		// Disable dragging in read-only mode
-		if (isReadOnly) {
-			e.stopPropagation();
-			return;
-		}
-
-		// If editing, don't interfere with text selection
-		if (isEditing) {
-			e.stopPropagation();
-			return;
-		}
-
-		// Allow dragging even from inside column
-		// The useDraggable hook will handle extracting it from the column
-		handleMouseDown(e);
-	};
-
-	const handleContextMenu = (e: React.MouseEvent) => {
+	const handleContextMenu = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();
-
-		// Disable context menu in read-only mode
-		if (isReadOnly) return;
+		if (isReadOnly || isPresentationNodeHidden) return;
 
 		onContextMenu?.(e, card);
+	}, [card, isReadOnly, isPresentationNodeHidden, onContextMenu]);
+
+	const handleEditorReady = useCallback((editor: Editor) => {
+		onEditorReady?.(card.id, editor);
+	}, [card.id, onEditorReady]);
+
+	// Hide drawing cards when being edited in drawing mode
+	if (isBeingEditedInDrawingMode) {
+		return null;
 	}
 
-	const handleEditorReady = (editor: Editor) => {
-		if (onEditorReady) {
-			onEditorReady(card.id, editor);
-		}
-	};
+	// ========================================================================
+	// IN-COLUMN RENDERING
+	// ========================================================================
 
-	// Connection handling
-	const handleStartConnection = useCallback((cardId: string, side: ConnectionSide, offset: number) => {
-		startConnection(cardId, side, offset);
-	}, [startConnection]);
-
-	const handleCompleteConnection = useCallback((cardId: string, side: ConnectionSide, offset: number) => {
-		if (pendingConnection) {
-			completeConnection(cardId, side, offset);
-		} else {
-			startConnection(cardId, side, offset);
-		}
-	}, [pendingConnection, completeConnection, startConnection]);
-
-	// Different styling for in-column vs canvas rendering
 	if (isInsideColumn) {
-		// In-column: use relative positioning, no absolute positioning
 		return (
 			<div
 				data-element-id={card.id}
@@ -166,8 +225,6 @@ export function CanvasElement({
 					width: '100%',
 					userSelect: isEditing ? 'auto' : 'none',
 					WebkitUserSelect: isEditing ? 'auto' : 'none',
-					MozUserSelect: isEditing ? 'auto' : 'none',
-					msUserSelect: isEditing ? 'auto' : 'none',
 				}}
 			>
 				<div
@@ -180,51 +237,82 @@ export function CanvasElement({
 					onClick={handleClick}
 					onDoubleClick={handleDoubleClick}
 					onContextMenu={handleContextMenu}
-					onMouseDown={handleMouseDown}
 					style={{
 						width: '100%',
-						height: card.height || 'auto',
-						minHeight: card.height ? card.height : 'auto',
+						height: 'auto',
 						userSelect: isEditing ? 'auto' : 'none',
-						WebkitUserSelect: isEditing ? 'auto' : 'none',
 						cursor: isEditing ? 'auto' : 'pointer',
-						position: 'relative'
+						position: 'relative',
 					}}
 				>
-					{/* Render the actual card content */}
-					<CardRenderer
+					<CardProvider
 						card={card}
-						isEditing={isEditing}
-						isPublicView={isReadOnly}
-						onEditorReady={handleEditorReady}
-					/>
-					
-					{/* Selection indicator */}
-					{isSelected && (
-						<div className="selection-outline" />
-					)}
-
-					{/* No resize handle for cards in columns */}
+						boardId={boardId || card.board_id}
+						isSelected={isSelected}
+						isReadOnly={isReadOnly}
+						isInsideColumn={true}
+						allCards={allCards}
+					>
+						<CardFrame
+							card={card}
+							isSelected={isSelected}
+							isEditing={isEditing}
+							isInsideColumn={true}
+							isReadOnly={isReadOnly}
+							cssZIndex={cssZIndex}
+						>
+							<CardRenderer
+								card={card}
+								boardId={boardId ?? null}
+								isEditing={isEditing}
+								isSelected={isSelected}
+								isPublicView={isReadOnly}
+								allCards={allCards}
+								onEditorReady={handleEditorReady}
+								onContextMenu={onContextMenu}
+								options={{}}
+							/>
+						</CardFrame>
+					</CardProvider>
 				</div>
 			</div>
 		);
 	}
 
-	// Normal canvas rendering: absolute positioning
+	// ========================================================================
+	// CANVAS RENDERING (Absolute positioning)
+	// ========================================================================
+
+	// Check if this card has a drag position override (for multi-select)
+	const dragPos = dragPositions.get(card.id);
+	let displayX = card.position_x;
+	let displayY = card.position_y;
+
+	if (!isInsideColumn) {
+		if (dragPos) {
+			// Card is being dragged as part of multi-select
+			displayX = dragPos.x;
+			displayY = dragPos.y;
+		} else if (transform) {
+			// This is the active dragged card
+			displayX = card.position_x + (transform.x ?? 0);
+			displayY = card.position_y + (transform.y ?? 0);
+		}
+	}
+
 	return (
 		<div
+			ref={setNodeRef}
 			data-element-id={card.id}
 			data-card="true"
-			className="canvas-element select-none"
+			className="canvas-element card-appear select-none"
 			style={{
 				position: 'absolute',
-				top: card.position_y,
-				left: card.position_x,
+				top: displayY,
+				left: displayX,
 				zIndex: cssZIndex,
 				userSelect: isEditing ? 'auto' : 'none',
 				WebkitUserSelect: isEditing ? 'auto' : 'none',
-				MozUserSelect: isEditing ? 'auto' : 'none',
-				msUserSelect: isEditing ? 'auto' : 'none',
 			}}
 		>
 			<div
@@ -233,79 +321,57 @@ export function CanvasElement({
 				draggable={false}
 			>
 				<div
+					ref={setActivatorNodeRef}
 					className={`
 						card drag-handle group
 						${isSelected ? 'selected' : ''}
 						${isEditing ? 'editing' : ''}
 						${selectedCardIds.size === 1 && isSelected ? 'selected-single' : ''}
 					`}
-					onMouseDown={handleCardMouseDown}
+					{...listeners}
+					{...attributes}
 					onClick={handleClick}
 					onDoubleClick={handleDoubleClick}
 					onContextMenu={handleContextMenu}
 					style={{
 						display: 'block',
-						// Line cards need no width/height constraint - they render their own SVG
-						width: card.card_type === 'line' ? 0 : card.width,
-						height: card.card_type === 'line' ? 0 : (card.height || 'auto'),
-						minHeight: card.card_type === 'line' ? 0 : (card.height ? card.height : 'auto'),
-						overflow: card.card_type === 'line' ? 'visible' : undefined,
 						userSelect: isEditing ? 'auto' : 'none',
-						WebkitUserSelect: isEditing ? 'auto' : 'none',
-						cursor: isEditing ? 'auto' : (isConnectionMode ? 'crosshair' : 'pointer'),
-						pointerEvents: isEditing || !isDragging ? 'auto' : 'none',
-						position: 'relative'
+						cursor: isEditing ? 'auto' : 'pointer',
+						pointerEvents: isPresentationNodeHidden ? 'none' : 'auto',
+						position: 'relative',
 					}}
 				>
-					{/* Render the actual card content based on type */}
-					<CardRenderer
+					<CardProvider
 						card={card}
-						isEditing={isEditing}
+						boardId={boardId || card.board_id}
 						isSelected={isSelected}
-						isPublicView={isReadOnly}
-						onEditorReady={handleEditorReady}
-					/>
-
-					{/* Selection indicator - not for line cards (they have their own) */}
-					{isSelected && card.card_type !== 'line' && (
-						<div className="selection-outline" />
-					)}
-
-					{/* Connection Handles - Show in connection mode or when dragging line endpoint (not for lines) */}
-					{card.card_type !== 'line' && (
-						<ConnectionHandles
-							cardId={card.id}
-							isConnectionMode={isConnectionMode || !!pendingConnection || isDraggingLineEndpoint}
-							hasPendingConnection={!!pendingConnection}
-							pendingSourceCardId={pendingConnection?.fromCardId}
-							pendingSourceSide={pendingConnection?.fromSide}
-							onStartConnection={handleStartConnection}
-							onCompleteConnection={handleCompleteConnection}
-						/>
-					)}
-
-					{/* Resize Handle - Only show when selected and editing */}
-					{canResize && isSelected && !isEditing && (
-						<div
-							aria-label="Resize South-East"
-							onMouseDown={(e) => handleMouseDownResizable(e, 'se')}
-							className="resize-handle resize-handle-se"
-							style={{
-								position: 'absolute',
-								right: -4,
-								bottom: -4,
-								width: 8,
-								height: 8,
-								cursor: 'se-resize',
-								zIndex: cssZIndex + 1,
-								backgroundColor: '#3B82F6',
-								border: '1px solid white',
-								borderRadius: '50%',
-							}}
-						/>
-					)}
+						isReadOnly={isReadOnly}
+						isInsideColumn={false}
+						allCards={allCards}
+					>
+						<CardFrame
+							card={card}
+							isSelected={isSelected}
+							isEditing={isEditing}
+							isInsideColumn={false}
+							isReadOnly={isReadOnly}
+							cssZIndex={cssZIndex}
+						>
+							<CardRenderer
+								card={card}
+								boardId={boardId ?? null}
+								isEditing={isEditing}
+								isSelected={isSelected}
+								isPublicView={isReadOnly}
+								allCards={allCards}
+								onEditorReady={handleEditorReady}
+								onContextMenu={onContextMenu}
+								options={cardOptions}
+							/>
+						</CardFrame>
+					</CardProvider>
 				</div>
 			</div>
 		</div>
 	);
-}
+});

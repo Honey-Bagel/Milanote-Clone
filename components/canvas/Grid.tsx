@@ -6,6 +6,8 @@
 
 'use client';
 
+import { GRID_SIZE } from "@/lib/constants/defaults";
+
 interface GridProps {
 	/**
 	 * Grid cell size in pixels
@@ -27,7 +29,7 @@ interface GridProps {
 }
 
 export function Grid({
-	gridSize = 20,
+	gridSize = GRID_SIZE,
 	gridColor = '#e5e7eb',
 	opacity = 0.5,
 }: GridProps) {

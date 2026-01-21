@@ -3,16 +3,28 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { StickyNote, CheckSquare } from 'lucide-react';
+import { CardData } from '@/lib/types';
 
 interface CanvasContextMenuProps {
+	cards: Map<string, CardData>;
 	isOpen: boolean;
 	position: { x: number, y: number },
 	onClose: () => void;
 };
 
-export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasContextMenuProps) {
-	const { selectAll } = useCanvasStore();
+export default function CanvasContextMenu({ cards, isOpen, position, onClose }: CanvasContextMenuProps) {
 	const contextMenuRef = useRef<HTMLDivElement | null>(null);
+	const { selectCards } = useCanvasStore();
+
+	const selectAll = () => {
+		const selectableCards: string[] = [];
+		cards.forEach((card) => {
+			if (card.card_type !== "presentation_node") {
+				selectableCards.push(card.id);
+			}
+		})
+		selectCards(selectableCards);
+	}
 
 	useLayoutEffect(() => {
 		if (isOpen && contextMenuRef.current) {
@@ -68,13 +80,13 @@ export default function CanvasContextMenu({ isOpen, position, onClose }: CanvasC
 				left: `${position.x}px`
 			}}
 		>
-			<button className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<StickyNote className="w-4 h-4 text-slate-400" />
+			<button className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<StickyNote className="w-4 h-4 text-secondary-foreground" />
 				<span>Add Note</span>
 			</button>
 			<div className="h-px bg-white/10 my-1.5"></div>
-			<button onClick={onSelectAll} className="w-full px-4 py-2.5 text-left text-sm text-slate-300 hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
-				<CheckSquare className="w-4 h-4 text-slate-400" />
+			<button onClick={onSelectAll} className="w-full px-4 py-2.5 text-left text-sm text-foreground hover:bg-white/5 hover:text-white flex items-center gap-3 transition-colors">
+				<CheckSquare className="w-4 h-4 text-secondary-foreground" />
 				<span>Select All</span>
 			</button>
 		</div>

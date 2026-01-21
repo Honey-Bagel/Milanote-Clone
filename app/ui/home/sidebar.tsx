@@ -1,42 +1,18 @@
 'use client';
 
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
-import { useState, useEffect } from "react";
 import LoadingSkeleton from "@/app/ui/board/loading-skeleton";
 import { useCreateBoard } from "@/lib/hooks/use-create-board";
-import { Menu, ChevronDown, Plus, Search, Home, Star, Clock, Trash2, MoreHorizontal, Users, Settings } from 'lucide-react';
+import { Menu, ChevronDown, Plus, Search, Home, Star, Clock, Trash2, Settings } from 'lucide-react';
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 
 export default function Sidebar() {
-	const [user, setUser] = useState<User | null>(null);
-	const [loading, setLoading] = useState(true);
+	const { user, isLoaded } = useUser();
 	const { createBoard, isLoading: createBoardIsLoading } = useCreateBoard();
 	const pathname = usePathname();
-	const supabase = createClient();
 
-	useEffect(() => {
-		// Get initial user
-		async function loadUser() {
-			const { data: { user } } = await supabase.auth.getUser();
-			setUser(user);
-			setLoading(false);
-		}
-		loadUser();
-
-		// Listen for auth changes
-		const { data: { subscription } } = supabase.auth.onAuthStateChange(
-			(_event, session) => {
-				setUser(session?.user ?? null);
-			}
-		);
-
-		// Cleanup subscription
-		return () => subscription.unsubscribe();
-	}, [supabase]);
-
-	if (loading) {
+	if (!isLoaded) {
 		return <LoadingSkeleton />
 	}
 
@@ -57,7 +33,7 @@ export default function Sidebar() {
 			{/* Logo & User */}
 			<div className="p-4 border-b border-[var(--border)]">
 				<div className="flex items-center justify-between mb-4">
-					<h1 className="text-2xl font-bold text-[var(--foreground)]">Milanote</h1>
+					<h1 className="text-2xl font-bold text-[var(--foreground)]">Notera</h1>
 					<button className="text-[var(--muted)] hover:text-[var(--foreground)]">
 						<Menu className="w-5 h-5" />
 					</button>
@@ -70,7 +46,7 @@ export default function Sidebar() {
 					}}>
 						JD
 					</div>
-					<p className="text-sm font-semibold text-[var(--foreground)]">{user?.user_metadata?.display_name}</p>
+					<p className="text-sm font-semibold text-[var(--foreground)]">{user?.fullName || user?.firstName || 'User'}</p>
 					<ChevronDown className="text-[var(--muted)] w-3 h-3 ml-auto" />
 				</div>
 			</div>

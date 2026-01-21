@@ -1,30 +1,40 @@
 'use client';
 
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { createViewportMatrix, screenToCanvas } from '@/lib/utils/transform';
-import { useCanvasInteractions } from '@/lib/hooks/useCanvasInteractions';
-import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
-import { useSelectionBox } from '@/lib/hooks/useSelectionBox';
+import { useCanvasInteractions } from '@/lib/hooks/use-canvas-interactions';
+import { useCanvasTouchGestures } from '@/lib/hooks/use-canvas-touch-gestures';
+import { useKeyboardShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
+import { useSelectionBox } from '@/lib/hooks/use-selection-box';
 import { Grid } from './Grid';
 import { CanvasElement } from './CanvasElement';
 import { SelectionBox } from './SelectionBox';
 import { ConnectionLayer } from './ConnectionLayer';
-import type { Card, LineCard } from '@/lib/types';
+import type { Card, CardData, LineCard, DrawingCard, DrawingStroke, PresentationNodeCard } from '@/lib/types';
 import { type Editor } from '@tiptap/react';
-import ElementToolbar from '@/app/ui/board/element-toolbar';
-import TextEditorToolbar from '@/app/ui/board/text-editor-toolbar';
-import LinePropertiesToolbar from '@/app/ui/board/line-properties-toolbar';
+import ElementToolbar from '@/app/ui/board/toolbars/element-toolbar';
+import TextEditorToolbar from '@/app/ui/board/toolbars/text-editor-toolbar';
+import LinePropertiesToolbar from '@/app/ui/board/toolbars/line-properties-toolbar';
+import DrawingToolbar from '@/app/ui/board/toolbars/drawing-toolbar';
 import ContextMenu from '@/app/ui/board/context-menu';
 import CanvasContextMenu from '@/app/ui/board/canvas-context-menu';
-import { useCanvasDrop } from '@/lib/hooks/useCanvasDrop';
+import { useCanvasDrop } from '@/lib/hooks/use-canvas-drop';
 import { getCanvasCards } from "@/lib/utils/canvas-render-helper";
-import { CardRenderer } from './cards/CardRenderer';
 import { getDefaultCardDimensions } from '@/lib/utils';
 import type { Point } from '@/lib/utils/connection-path';
+import { useBoardCards } from '@/lib/hooks/cards';
+import { CardProvider, CardRenderer } from './cards';
+import { DrawingLayer } from './drawing/DrawingLayer';
+import { clusterStrokes, makeStrokesRelative, makeStrokesAbsolute, convertStrokesToViewport, calculateStrokeBounds, StrokeCluster } from '@/lib/utils/stroke-clustering';
+import { CardService } from '@/lib/services/card-service';
+import { cardsToOrderKeyList, getOrderKeyForNewCard } from '@/lib/utils/order-key-manager';
+import { PresentationOverlay } from '@/components/presentation/PresentationOverlay';
+import { CameraAnimator } from '@/lib/utils/presentation-animator';
+import { Cursors } from '@instantdb/react';
+import { db } from '@/lib/instant/db';
 
 interface CanvasProps {
-	initialCards?: Card[];
 	boardId: string | null;
 	className?: string;
 	enablePan?: boolean;
@@ -36,14 +46,7 @@ interface CanvasProps {
 	onCardDoubleClick?: (cardId: string) => void;
 }
 
-export interface DragPreviewState {
-	cardType: Card['card_type'];
-	canvasX: number;
-	canvasY: number;
-}
-
 export function Canvas({
-	initialCards = [],
 	boardId,
 	className = '',
 	enablePan = true,
@@ -56,16 +59,30 @@ export function Canvas({
 }: CanvasProps) {
 	const canvasRef = useRef<HTMLDivElement>(null);
 	const canvasViewportRef = useRef<HTMLDivElement>(null);
+	const animatorRef = useRef(new CameraAnimator());
 	const [selectedEditor, setSelectedEditor] = useState<Editor | null>(null);
 	const [cardContextMenuVisible, setCardContextMenuVisible] = useState(false);
-	const [cardContextMenuData, setCardContextMenuData] = useState<{ card: null | Card, position: { x: number, y: number }}>({card: null, position: { x: 0, y: 0}});
-	const [canvasContextMenuData, setCanvasContextMenuData] = useState({ open: false, position: { x: 0, y: 0 } });
+	const [cardContextMenuData, setCardContextMenuData] = useState<{
+		card: null | Card;
+		position: { x: number; y: number };
+	}>({ card: null, position: { x: 0, y: 0 } });
+	const [canvasContextMenuData, setCanvasContextMenuData] = useState({
+		open: false,
+		position: { x: 0, y: 0 }
+	});
+
+	const { cards: cardArray, isLoading } = useBoardCards(boardId);
+	const cards: Map<string, CardData> = useMemo(
+		() => new Map(cardArray.map((card) => [card.id, card])),
+		[cardArray]
+	);
+
+	const room = db.room("board", boardId || '');
 
 	const {
 		viewport,
-		cards,
+		setViewport,
 		connections,
-		loadCards,
 		clearSelection,
 		setEditingCardId,
 		editingCardId,
@@ -77,26 +94,100 @@ export function Canvas({
 		cancelConnection,
 		deleteConnection,
 		uploadingCards,
-		optimisticCards,
+		setBoardId,
+		interactionMode,
+		setInteractionMode,
+		presentationMode,
 	} = useCanvasStore();
 
-	// Merge real cards with optimistic cards for rendering
-	const allCardsMap = new Map(cards);
-	optimisticCards.forEach((optimistic) => {
-		allCardsMap.set(optimistic.tempId, optimistic.card);
+	useEffect(() => {
+		if (boardId) {
+			setBoardId(boardId);
+		}
+	}, [boardId, setBoardId]);
+
+	const allCardsMap = new Map<string, CardData>();
+	cards.forEach((card) => {
+		allCardsMap.set(card.id, card);
 	});
 
 	// Mouse position tracking for connection preview
 	const [mousePosition, setMousePosition] = useState<Point | null>(null);
 	const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+	
+	const getColorFromLocalStorage = () => {
+		const savedColor = localStorage.getItem('drawing-color');
+		if (savedColor && /^#[0-9A-Fa-f]{6}$/i.test(savedColor)) {
+			return savedColor;
+		}
+		return '#ffffff';
+	}
+
+	// Drawing mode state
+	const isDrawingMode = interactionMode.mode === 'drawing';
+	const [drawingTool, setDrawingTool] = useState({
+		type: 'pen' as 'pen' | 'eraser',
+		color: getColorFromLocalStorage(),
+		size: 4,
+	});
+	const [currentDrawingStrokes, setCurrentDrawingStrokes] = useState<DrawingStroke[]>([]);
 
 	const { isDraggingOver, handleDragOver, handleDragLeave, handleDrop } = useCanvasDrop(boardId || '');
+
+	useEffect(() => {
+		try {
+			localStorage.setItem('drawing-color', drawingTool.color);
+		} catch (error) {
+			console.warn('Failed to save color preference:', error);
+		}
+	}, [drawingTool.color]);
+
+	// ============================================================================
+	// PRESENTATION MODE ANIMATION
+	// ============================================================================
+
+	useEffect(() => {
+		if (
+			presentationMode.type === 'advanced' &&
+			presentationMode.isTransitioning
+		) {
+			const nodeId =
+				presentationMode.nodeSequence[presentationMode.currentNodeIndex];
+			const node = cards.get(nodeId) as PresentationNodeCard | undefined;
+
+			if (node) {
+				animatorRef.current.animate(viewport, node, {
+					duration: node.presentation_transition_duration,
+					easingType: node.presentation_transition_type,
+					curvePath: node.presentation_curve_path || undefined,
+					onUpdate: (newViewport) => setViewport(newViewport),
+					onComplete: () => {
+						useCanvasStore.getState().onTransitionComplete(node);
+					},
+				});
+			} else {
+				console.warn('[Presentation] Node not found:', nodeId, 'Available nodes:', Array.from(cards.keys()));
+				// Still mark transition as complete to avoid getting stuck
+				useCanvasStore.getState().onTransitionComplete(null);
+			}
+		}
+
+		return () => {
+			animatorRef.current.cancel();
+		};
+	// Note: viewport, setViewport, and cards are intentionally excluded to prevent infinite animation loop
+	// cards is excluded because we only need to read from it when the effect runs, not react to changes
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [presentationMode.currentNodeIndex, presentationMode.isTransitioning, presentationMode.type]);
+
+	// ============================================================================
+	// EXISTING EVENT HANDLERS
+	// ============================================================================
 
 	const mouseDownHandler = (e: React.MouseEvent) => {
 		if (e.button !== 0) return;
 		if (e.target !== e.currentTarget) return;
 
-		// Cancel pending connection on canvas click
 		if (pendingConnection) {
 			cancelConnection();
 		}
@@ -107,7 +198,6 @@ export function Canvas({
 		setSelectedEditor(null);
 	};
 
-	// Track mouse position for connection preview
 	const handleCanvasMouseMove = useCallback((e: React.MouseEvent) => {
 		if (pendingConnection && canvasViewportRef.current) {
 			const rect = canvasViewportRef.current.getBoundingClientRect();
@@ -120,21 +210,135 @@ export function Canvas({
 		}
 	}, [pendingConnection, viewport]);
 
-	// Handle connection click
 	const handleConnectionClick = useCallback((connectionId: string, event: React.MouseEvent) => {
 		event.stopPropagation();
 		setSelectedConnectionId(connectionId);
 		clearSelection();
 	}, [clearSelection]);
 
-	// Handle delete key for connections
+	// ============================================================================
+	// DRAWING MODE HANDLERS
+	// ============================================================================
+
+	const handleSaveDrawing = useCallback(async (strokes: DrawingStroke[]) => {
+		if (!boardId || strokes.length === 0) {
+			setInteractionMode({ mode: 'idle' });
+			setCurrentDrawingStrokes([]);
+			setDrawingTool(prev => ({ ...prev, type: 'pen' }));
+			return;
+		}
+
+		// Check if we're editing an existing card
+		const editingCardId = interactionMode.mode === 'drawing' ? interactionMode.editingCardId : undefined;
+
+		// Exit drawing mode immediately to prevent overlap
+		setInteractionMode({ mode: 'idle' });
+		setCurrentDrawingStrokes([]);
+		setDrawingTool(prev => ({ ...prev, type: 'pen' }));
+
+		if (editingCardId) {
+			const clusters = clusterStrokes(strokes, 50);
+
+			// Find the primary cluster (closest to original card position)
+			const card = (cards.get(editingCardId) as unknown) as DrawingCard;
+			if (!card) return;
+
+			let primaryCluster: StrokeCluster | null = null;
+			let minDistance = Infinity;
+
+			for (const cluster of clusters) {
+				const distance = Math.sqrt(
+					Math.pow(cluster.position.x - card.position_x, 2) +
+					Math.pow(cluster.position.y - card.position_y, 2)
+				);
+				if (distance < minDistance) {
+					minDistance = distance;
+					primaryCluster = cluster;
+				}
+			}
+			if (primaryCluster) {
+				// Update original card with primary cluster
+				const relativeStrokes = makeStrokesRelative(
+					primaryCluster.strokes,
+					primaryCluster.position.x,
+					primaryCluster.position.y
+				);
+
+				CardService.updateDrawingCardComplete({
+					cardId: editingCardId,
+					boardId: card.board_id,
+					position: { x: primaryCluster.position.x, y: primaryCluster.position.y },
+					width: Math.max(20, primaryCluster.width),
+					height: Math.max(20, primaryCluster.height),
+					strokes: relativeStrokes,
+					withUndo: true,
+					previousState: {
+						position_x: card.position_x,
+						position_y: card.position_y,
+						width: card.width,
+						height: card.height,
+						drawing_strokes: card.drawing_strokes,
+					},
+				});
+
+				// Create new cards for additional clusters
+				for (const cluster of clusters) {
+					if (cluster !== primaryCluster) {
+						const relativeStrokes = makeStrokesRelative(
+							cluster.strokes,
+							cluster.position.x,
+							cluster.position.y,
+						);
+
+						const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cardArray));
+
+						CardService.createDrawingCard({
+							boardId,
+							orderKey,
+							position: cluster.position,
+							width: Math.max(20, cluster.width),
+							height: Math.max(20, cluster.height),
+							strokes: relativeStrokes,
+						});
+					}
+				}
+			}
+		} else {
+			const clusters = clusterStrokes(strokes, 50);
+
+			for (const cluster of clusters) {
+				const relativeStrokes = makeStrokesRelative(
+					cluster.strokes,
+					cluster.position.x,
+					cluster.position.y
+				);
+
+				const orderKey = getOrderKeyForNewCard(cardsToOrderKeyList(cardArray));
+
+				CardService.createDrawingCard({
+					boardId,
+					orderKey,
+					position: cluster.position,
+					width: Math.max(20, cluster.width),
+					height: Math.max(20, cluster.height),
+					strokes: relativeStrokes,
+				});
+			}
+		}
+	}, [boardId, interactionMode, setInteractionMode, setCurrentDrawingStrokes, cards, cardArray]);
+
+	const handleCancelDrawing = useCallback(() => {
+		setInteractionMode({ mode: 'idle' });
+		setCurrentDrawingStrokes([]);
+		setDrawingTool(prev => ({ ...prev, type: 'pen' }));
+	}, [setInteractionMode, setCurrentDrawingStrokes]);
+
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (selectedConnectionId && (e.key === 'Delete' || e.key === 'Backspace')) {
 				deleteConnection(selectedConnectionId);
 				setSelectedConnectionId(null);
 			}
-			// Escape cancels pending connection
 			if (e.key === 'Escape' && pendingConnection) {
 				cancelConnection();
 			}
@@ -145,51 +349,47 @@ export function Canvas({
 	}, [selectedConnectionId, deleteConnection, pendingConnection, cancelConnection]);
 
 	useEffect(() => {
-		if (initialCards.length > 0) {
-			loadCards(initialCards);
-		} else {
-			loadCards([]);
-		}
-	}, [initialCards, loadCards]);
-
-	useEffect(() => {
 		if (!editingCardId) {
 			setSelectedEditor(null);
 		}
 	}, [editingCardId]);
 
-	useCanvasInteractions(canvasRef, {
+	useCanvasInteractions(canvasRef, { enablePan, enableZoom });
+	useCanvasTouchGestures(canvasRef, {
 		enablePan,
 		enableZoom,
+		enableLongPress: !isPublicView,
+		onLongPress: (x, y) => {
+			// Trigger canvas context menu on long press
+			const event = new MouseEvent('contextmenu', {
+				bubbles: true,
+				cancelable: true,
+				clientX: x,
+				clientY: y,
+			});
+			canvasRef.current?.dispatchEvent(event);
+		},
 	});
-	
-	useKeyboardShortcuts({
-		enabled: enableKeyboardShortcuts,
-	});
-	
-	useSelectionBox(canvasRef, {
-		enabled: enableSelectionBox,
-	});
+	useKeyboardShortcuts(boardId, { enabled: enableKeyboardShortcuts && !presentationMode.isActive });
+	useSelectionBox(canvasRef, { enabled: enableSelectionBox && !presentationMode.isActive });
 
-	const handleCardClick = (cardId: string) => {
-		selectCard(cardId);
+	const handleCardClick = (cardId: string, isMultiSelect: boolean = false) => {
+		selectCard(cardId, isMultiSelect);
 		onCardClick?.(cardId);
 	};
 
 	const handleCardContextMenu = (e: React.MouseEvent, card: Card) => {
 		setCardContextMenuVisible(true);
+		selectCard(card.id);
+		setEditingCardId(null);
 		setCardContextMenuData({ card, position: { x: e.clientX, y: e.clientY } });
 	};
 
 	const handleCanvasContextMenu = (e: React.MouseEvent) => {
 		e.preventDefault();
-
-		if (e.target !== canvasRef.current) {
-			return;
-		}
-
-		setCanvasContextMenuData({ open: true, position: {x: e.clientX, y: e.clientY } });
-	}
+		if (e.target !== canvasRef.current) return;
+		setCanvasContextMenuData({ open: true, position: { x: e.clientX, y: e.clientY } });
+	};
 
 	const handleEditorReady = (cardId: string, editor: Editor) => {
 		if (editingCardId === cardId) {
@@ -197,32 +397,20 @@ export function Canvas({
 		}
 	};
 
-	/**
-	 * Helper to check if a card is inside any column
-	 */
 	const isCardInColumn = (cardId: string): boolean => {
 		const allCardsArray = Array.from(allCardsMap.values());
-		return allCardsArray.some(c =>
+		return allCardsArray.some((c): c is import('@/lib/types').ColumnCard =>
 			c.card_type === 'column' &&
-			c.column_cards?.column_items?.some(item => item.card_id === cardId)
+			(c as import('@/lib/types').ColumnCard).column_items?.some((item: import('@/lib/types/helpers').ColumnItem) => item.card_id === cardId)
 		);
 	};
 
-	/**
-	 * Separate cards into:
-	 * - Column cards (will render their own children)
-	 * - Free cards (not in any column)
-	 * Uses allCardsMap which includes optimistic cards
-	 */
 	const allCards = getCanvasCards(allCardsMap);
 	const columnCards = allCards.filter(c => c.card_type === 'column');
 	const freeCards = allCards.filter(c =>
 		c.card_type !== 'column' && !isCardInColumn(c.id)
 	);
 
-	/**
-	 * Create a preview card mock object
-	 */
 	const createPreviewCard = (cardType: Card['card_type'], x: number, y: number): Card | null => {
 		const dimensions = getDefaultCardDimensions(cardType);
 		const baseCard = {
@@ -239,129 +427,110 @@ export function Canvas({
 			updated_at: new Date().toISOString(),
 		};
 
-		// Create type-specific preview card
+		// Create type-specific preview card using flat InstantDB structure
 		switch (cardType) {
 			case 'note':
 				return {
 					...baseCard,
 					card_type: 'note',
-					note_cards: {
-						content: '<p>Type something...</>',
-						color: 'yellow' as const,
-					},
+					note_content: '<p>Type something...</p>',
+					note_color: 'default' as const,
 				} as Card;
-			
+
 			case 'text':
 				return {
 					...baseCard,
 					card_type: 'text',
-					text_cards: {
-						title: 'New Text',
-						content: 'Type your text here...',
-					},
+					text_title: 'New Text',
+					text_content: 'Type your text here...',
 				} as Card;
-			
+
 			case 'task_list':
 				return {
 					...baseCard,
 					card_type: 'task_list',
-					task_list_cards: {
-						title: 'New Task List',
-						tasks: [],
-					},
+					task_list_title: 'New Task List',
+					tasks: [],
 				} as Card;
-			
+
 			case 'image':
 				return {
 					...baseCard,
 					card_type: 'image',
-					image_cards: {
-						image_url: '',
-						caption: null,
-						alt_text: null,
-					},
+					image_url: '',
+					image_caption: null,
+					image_alt_text: null,
 				} as Card;
-			
+
 			case 'link':
 				return {
 					...baseCard,
 					card_type: 'link',
-					link_cards: {
-						title: 'New Link',
-						url: 'https://example.com',
-						favicon_url: null,
-					},
+					link_title: 'New Link',
+					link_url: 'https://example.com',
+					link_favicon_url: null,
 				} as Card;
-			
+
 			case 'file':
 				return {
 					...baseCard,
 					card_type: 'file',
-					file_cards: {
-						file_name: 'document.pdf',
-						file_url: '',
-						file_size: null,
-						file_type: 'pdf',
-						mime_type: null,
-					},
+					file_name: 'document.pdf',
+					file_url: '',
+					file_size: null,
+					file_type: 'pdf',
+					file_mime_type: null,
 				} as Card;
-			
+
 			case 'color_palette':
 				return {
 					...baseCard,
 					card_type: 'color_palette',
-					color_palette_cards: {
-						title: 'New Palette',
-						description: null,
-						colors: ['#3B82F6', '#8B5CF6', '#EC4899'],
-					},
+					palette_title: 'New Palette',
+					palette_description: null,
+					palette_colors: ['#3B82F6', '#8B5CF6', '#EC4899'],
 				} as Card;
-			
+
 			case 'column':
 				return {
 					...baseCard,
 					card_type: 'column',
-					column_cards: {
-						title: 'New Column',
-						background_color: '#f3f4f6',
-						is_collapsed: false,
-						column_items: [],
-					},
+					column_title: 'New Column',
+					column_background_color: '#f3f4f6',
+					column_is_collapsed: false,
+					column_items: [],
 				} as Card;
-			
+
 			case 'board':
 				return {
 					...baseCard,
 					card_type: 'board',
-					board_cards: {
-						linked_board_id: '',
-						board_title: 'New Board',
-						board_color: '#3B82F6',
-						card_count: 0,
-					},
+					linked_board_id: '',
+					board_title: 'New Board',
+					board_color: '#3B82F6',
+					board_card_count: '0',
 				} as Card;
 
 			case 'line':
 				return {
 					...baseCard,
 					card_type: 'line',
-					line_cards: {
-						start_x: 0,
-						start_y: 50,
-						end_x: 200,
-						end_y: 50,
-						color: '#6b7280',
-						stroke_width: 2,
-						line_style: 'solid',
-						start_cap: 'none',
-						end_cap: 'arrow',
-						curvature: 0,
-						control_point_offset: 0,
-						start_attached_card_id: null,
-						start_attached_side: null,
-						end_attached_card_id: null,
-						end_attached_side: null,
-					},
+					line_start_x: 0,
+					line_start_y: 50,
+					line_end_x: 200,
+					line_end_y: 50,
+					line_color: '#6b7280',
+					line_stroke_width: 2,
+					line_style: 'solid' as const,
+					line_start_cap: 'none' as const,
+					line_end_cap: 'arrow' as const,
+					line_curvature: 0,
+					line_directional_bias: 0,
+					line_reroute_nodes: null,
+					line_start_attached_card_id: null,
+					line_start_attached_side: null,
+					line_end_attached_card_id: null,
+					line_end_attached_side: null,
 				} as Card;
 
 			default:
@@ -369,7 +538,6 @@ export function Canvas({
 		}
 	};
 
-	// Check if a single line card is selected
 	const selectedLineCard = selectedCardIds.size === 1
 		? (() => {
 			const cardId = Array.from(selectedCardIds)[0];
@@ -379,22 +547,30 @@ export function Canvas({
 		: null;
 
 	return (
-		<div className="flex flex-col h-screen bg-[#020617] text-slate-300">
+		<div className="flex flex-col h-screen bg-[#020617] text-foreground">
 			{/* Toolbar */}
-			<div className="h-[56px] flex-shrink-0 z-40">
-				{selectedEditor ? (
-					<TextEditorToolbar editor={selectedEditor} />
-				) : selectedLineCard ? (
-					<LinePropertiesToolbar card={selectedLineCard} />
-				) : (
-					<ElementToolbar
-						onCreateCard={() => {}}
-						canvasRef={canvasViewportRef}
-						isPublicView={isPublicView}
-					/>
-				)}
-			</div>
-			
+			{!presentationMode.isActive && (
+				<div className="h-[56px] flex-shrink-0 z-40">
+					{isDrawingMode ? (
+						<DrawingToolbar
+							tool={drawingTool}
+							onToolChange={(changes) => setDrawingTool({ ...drawingTool, ...changes })}
+							onSave={() => handleSaveDrawing(currentDrawingStrokes)}
+							onCancel={handleCancelDrawing}
+						/>
+					) : selectedEditor ? (
+						<TextEditorToolbar editor={selectedEditor} />
+					) : selectedLineCard ? (
+						<LinePropertiesToolbar card={selectedLineCard} />
+					) : (
+						<ElementToolbar
+							onCreateCard={() => {}}
+							canvasRef={canvasViewportRef}
+							isPublicView={isPublicView}
+						/>
+					)}
+				</div>
+			)}
 			{/* Canvas */}
 			<div
 				className={`canvas-viewport relative w-full h-full overflow-hidden bg-[#020617] select-none ${className}`}
@@ -408,167 +584,203 @@ export function Canvas({
 				onContextMenu={handleCanvasContextMenu}
 				onMouseMove={handleCanvasMouseMove}
 			>
+				<Cursors
+					room={room}
+					className="h-full w-full"
+					userCursorColor="tomato"
+				>
 				<div ref={canvasRef} className="canvas-scroll-area w-full h-full">
-					<div
-						className="canvas-document"
-						id="canvas-root"
-						data-allow-double-click-creates="true"
-						style={{
-							position: 'relative',
-							transform: createViewportMatrix(viewport.x, viewport.y, viewport.zoom),
-							transformOrigin: '0 0',
-							willChange: 'transform',
-						}}
-						onMouseDown={mouseDownHandler}
-					>
-						{/* Background Grid */}
-						{showGrid && <Grid />}
+						<div
+							className="canvas-document"
+							id="canvas-root"
+							data-allow-double-click-creates="true"
+							style={{
+								position: 'relative',
+								transform: createViewportMatrix(viewport.x, viewport.y, viewport.zoom),
+								transformOrigin: '0 0',
+								willChange: 'transform',
+							}}
+						>
+							{showGrid && <Grid />}
 
-						{/* Connection Layer - Renders below cards */}
-						<ConnectionLayer
-							connections={connections}
-							cards={cards}
-							pendingConnection={pendingConnection}
-							mousePosition={mousePosition}
-							selectedConnectionId={selectedConnectionId}
-							onConnectionClick={handleConnectionClick}
-						/>
+							<ConnectionLayer
+								connections={connections}
+								cards={cards}
+								pendingConnection={pendingConnection}
+								mousePosition={mousePosition}
+								selectedConnectionId={selectedConnectionId}
+								onConnectionClick={handleConnectionClick}
+							/>
 
-						{/* Column Cards Layer (renders first, includes their child cards) */}
-						<div className="columns-layer">
-							{columnCards.map((card) => (
-								<CanvasElement
-									key={card.id}
-									card={card}
-									boardId={boardId}
-									onCardClick={handleCardClick}
-									onCardDoubleClick={onCardDoubleClick}
-									onContextMenu={handleCardContextMenu}
-									onEditorReady={handleEditorReady}
-									isReadOnly={isPublicView}
-								/>
-							))}
-						</div>
-
-						{/* Free Cards Layer (only cards NOT in columns) */}
-						<div className="cards-layer">
-							{freeCards.map((card) => (
-								<CanvasElement
-									key={card.id}
-									card={card}
-									boardId={boardId}
-									onCardClick={handleCardClick}
-									onCardDoubleClick={onCardDoubleClick}
-									onContextMenu={handleCardContextMenu}
-									onEditorReady={handleEditorReady}
-									isReadOnly={isPublicView}
-								/>
-							))}
-						</div>
-
-						{/* Uploading Cards Placeholders */}
-						{Array.from(uploadingCards.values()).map((uploadingCard) => (
-							<div
-								key={uploadingCard.id}
-								className="uploading-card-placeholder"
-								style={{
-									position: 'absolute',
-									left: uploadingCard.x,
-									top: uploadingCard.y,
-									width: uploadingCard.type === 'image' ? 300 : 250,
-									minHeight: 100,
-									backgroundColor: '#1e293b',
-									borderRadius: '12px',
-									boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									justifyContent: 'center',
-									padding: '16px',
-									gap: '12px',
-									border: '1px dashed #6366f1',
-									zIndex: 9999,
-								}}
-							>
-								<div
-									className="loading-spinner"
-									style={{
-										width: 32,
-										height: 32,
-										border: '3px solid rgba(255,255,255,0.1)',
-										borderTopColor: '#6366f1',
-										borderRadius: '50%',
-										animation: 'spin 1s linear infinite',
-									}}
-								/>
-								<span style={{ fontSize: 14, color: '#94a3b8', textAlign: 'center', wordBreak: 'break-word' }}>
-									Uploading {uploadingCard.filename}...
-								</span>
+							<div className="columns-layer">
+								{columnCards.map((card) => (
+									<CanvasElement
+										key={card.id}
+										card={card}
+										boardId={boardId}
+										allCards={allCardsMap}
+										onCardClick={handleCardClick}
+										onCardDoubleClick={onCardDoubleClick}
+										onContextMenu={handleCardContextMenu}
+										onEditorReady={handleEditorReady}
+										isReadOnly={isPublicView}
+									/>
+								))}
 							</div>
-						))}
 
-						{/* Drag Preview Ghost Layer */}
-						{dragPreview && (
-							<div
-								className="preview-ghost-layer pointer-events-none"
-								style={{
-									position: 'absolute',
-									left: dragPreview.canvasX,
-									top: dragPreview.canvasY,
-									transform: 'translate(-50%, -50%)',
-									opacity: 0.6,
-									transition: 'none',
-									zIndex: 10000,
-								}}
-							>
-								<div 
-									className="preview-card-wrapper"
+							<div className="cards-layer">
+								{freeCards.map((card) => (
+									<CanvasElement
+										key={card.id}
+										card={card}
+										boardId={boardId}
+										allCards={allCardsMap}
+										onCardClick={handleCardClick}
+										onCardDoubleClick={onCardDoubleClick}
+										onContextMenu={handleCardContextMenu}
+										onEditorReady={handleEditorReady}
+										isReadOnly={isPublicView}
+									/>
+								))}
+							</div>
+
+							{/* Uploading Cards Placeholders */}
+							{Array.from(uploadingCards.values()).map((uploadingCard) => (
+								<div
+									key={uploadingCard.id}
+									className="uploading-card-placeholder"
 									style={{
-										filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))',
+										position: 'absolute',
+										left: uploadingCard.x,
+										top: uploadingCard.y,
+										width: uploadingCard.type === 'image' ? 300 : 250,
+										minHeight: 100,
+										backgroundColor: '#1e293b',
+										borderRadius: '12px',
+										boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+										display: 'flex',
+										flexDirection: 'column',
+										alignItems: 'center',
+										justifyContent: 'center',
+										padding: '16px',
+										gap: '12px',
+										border: '1px dashed #6366f1',
+										zIndex: 9999,
 									}}
 								>
-									{(() => {
-										const previewCard = createPreviewCard(
-											dragPreview.cardType || 'note',
-											dragPreview.canvasX,
-											dragPreview.canvasY
-										);
-										
-										if (!previewCard) return null;
-
-										return (
-											<div 
-												style={{
-													width: `${previewCard.width}px`,
-													overflow: 'hidden',
-												}}
-											>
-												<CardRenderer
-													card={previewCard}
-													isEditing={false}
-													isSelected={false}
-												/>
-											</div>
-										);
-									})()}
+									<div
+										className="loading-spinner"
+										style={{
+											width: 32,
+											height: 32,
+											border: '3px solid rgba(255,255,255,0.1)',
+											borderTopColor: '#6366f1',
+											borderRadius: '50%',
+											animation: 'spin 1s linear infinite',
+										}}
+									/>
+									<span style={{ fontSize: 14, color: '#94a3b8', textAlign: 'center', wordBreak: 'break-word' }}>
+										Uploading {uploadingCard.filename}...
+									</span>
 								</div>
-							</div>
-						)}
-					</div>
-				</div>
-				
-				{/* Selection Box */}
-				<SelectionBox />
+							))}
 
-				{/* Card context menu */}
-				<ContextMenu isOpen={cardContextMenuVisible} data={cardContextMenuData} onClose={() => setCardContextMenuVisible(false)}/>
-				
-				{/* Canvas Context Menu */}
+							{/* Drag Preview Ghost Layer */}
+							{dragPreview && (
+								<div
+									className="preview-ghost-layer pointer-events-none"
+									style={{
+										position: 'absolute',
+										left: dragPreview.canvasX,
+										top: dragPreview.canvasY,
+										transform: 'translate(-50%, -50%)',
+										opacity: 0.6,
+										transition: 'none',
+										zIndex: 10000,
+									}}
+								>
+									<div 
+										className="preview-card-wrapper"
+										style={{
+											filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.3))',
+										}}
+									>
+										{(() => {
+											const previewCard = createPreviewCard(
+												dragPreview.cardType || 'note',
+												dragPreview.canvasX,
+												dragPreview.canvasY
+											);
+											
+											if (!previewCard) return null;
+
+											return (
+												<div
+													style={{
+														width: `${previewCard.width}px`,
+														overflow: 'hidden',
+													}}
+												>
+													<CardProvider
+														card={previewCard}
+														boardId={boardId || previewCard.board_id}
+														isSelected={false}
+														isReadOnly={true}
+														isInsideColumn={false}
+													>
+														<CardRenderer
+															card={previewCard}
+															isEditing={false}
+															isSelected={false}
+															boardId={boardId}
+														/>
+													</CardProvider>
+												</div>
+											);
+										})()}
+									</div>
+								</div>
+							)}
+						</div>
+				</div>
+				</Cursors>
+				{/* Drawing Layer - shown when in drawing mode */}
+				{isDrawingMode && (
+					<DrawingLayer
+						key={interactionMode.mode === 'drawing' ? interactionMode.editingCardId || 'new' : 'drawing'}
+						onSave={handleSaveDrawing}
+						onCancel={handleCancelDrawing}
+						initialStrokes={
+							interactionMode.mode === 'drawing' && interactionMode.editingCardId
+								? (() => {
+									const card = (cards.get(interactionMode.editingCardId) as unknown) as DrawingCard;
+									if (!card?.drawing_strokes) return [];
+									// Convert relative strokes to absolute coordinates for editing
+									return makeStrokesAbsolute(card.drawing_strokes, card.position_x, card.position_y);
+								})()
+								: currentDrawingStrokes
+						}
+						editingCardId={interactionMode.mode === 'drawing' ? interactionMode.editingCardId : undefined}
+						tool={drawingTool}
+						onStrokesChange={setCurrentDrawingStrokes}
+					/>
+				)}
+
+				<SelectionBox />
+				<ContextMenu
+					isOpen={cardContextMenuVisible}
+					data={cardContextMenuData}
+					allCards={allCardsMap}
+					onClose={() => setCardContextMenuVisible(false)}
+				/>
 				<CanvasContextMenu
+					cards={allCardsMap}
 					isOpen={canvasContextMenuData.open}
 					position={canvasContextMenuData.position}
-					onClose={() => setCanvasContextMenuData({open: false, position: { x: 0, y: 0 } } )}
+					onClose={() => setCanvasContextMenuData({ open: false, position: { x: 0, y: 0 } })}
 				/>
+
+				<PresentationOverlay />
 			</div>
 		</div>
 	);

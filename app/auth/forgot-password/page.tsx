@@ -1,11 +1,14 @@
-import { ForgotPasswordForm } from "@/components/forgot-password-form";
+// app/auth/reset-password/page.tsx
+"use client";
 
-export default function Page() {
-	return (
-		<div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-			<div className="w-full max-w-sm">
-				<ForgotPasswordForm />
-			</div>
-		</div>
-	);
+import { SignIn } from "@clerk/nextjs";
+
+export default function ResetPasswordPage() {
+  return (
+    <SignIn
+      routing="path"
+      path="/auth/reset-password"
+      appearance={{ elements: { card: "bg-transparent shadow-none" } }}
+    />
+  );
 }

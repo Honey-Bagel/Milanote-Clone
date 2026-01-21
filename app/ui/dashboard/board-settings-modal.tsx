@@ -4,9 +4,9 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { X, Trash2, Loader2, Palette } from 'lucide-react';
+import { updateBoard, deleteBoard } from '@/lib/services/board-service';
 
 interface BoardSettingsModalProps {
 	board: {
@@ -57,19 +57,10 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 	const handleSave = async () => {
 		setIsLoading(true);
 		try {
-			const supabase = createClient();
-			const { error } = await supabase
-				.from('boards')
-				.update({
-					title,
-					description,
-					color,
-					updated_at: new Date().toISOString(),
-				})
-				.eq('id', board.id);
-
-			if (error) throw error;
-
+			await updateBoard(board.id, {
+				title,
+				color
+			});
 			router.refresh();
 			onClose();
 		} catch (error) {
@@ -87,14 +78,7 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 
 		setIsDeleting(true);
 		try {
-			const supabase = createClient();
-			const { error } = await supabase
-				.from('boards')
-				.delete()
-				.eq('id', board.id);
-
-			if (error) throw error;
-
+			await deleteBoard(board.id);
 			router.refresh();
 			onClose();
 		} catch (error) {
@@ -164,7 +148,7 @@ export function BoardSettingsModal({ board, isOpen, onClose }: BoardSettingsModa
 										<button
 											key={`wildcard-${index}`}
 											onClick={handleWildcardClick}
-											className="w-8 h-8 rounded-md transition-all bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 hover:scale-110 flex items-center justify-center"
+											className="w-8 h-8 rounded-md transition-all bg-gradient-to-br from-pink-500 via-purple-500 to-primary hover:scale-110 flex items-center justify-center"
 											aria-label="Open color picker"
 										>
 											<Palette className="w-4 h-4 text-white" />

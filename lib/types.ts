@@ -133,6 +133,7 @@ export interface ContextMenuProps {
 			y: number;
 		};
 	};
+	allCards: Map<string, CardData>;
 	onClose: () => void;
 }
 
@@ -153,8 +154,8 @@ export type BaseCard = {
 	position_y: number;
 	width: number;
 	height: number | null;
-	z_index: number;
 	order_key: string;
+	is_position_locked?: boolean;
 	created_by: string | null;
 	created_at: string;
 	updated_at: string;
@@ -162,82 +163,66 @@ export type BaseCard = {
 
 export type NoteCard = BaseCard & {
 	card_type: "note";
-	note_cards: {
-		content: string;
-		color: "yellow" | "blue" | "green" | "pink" | "purple";
-	};
+	note_content: string;
+	note_color: "default" | "yellow" | "blue" | "green" | "pink" | "purple";
 };
 
 export type ImageCard = BaseCard & {
 	card_type: "image";
-	image_cards: {
-		image_url: string;
-		caption: string | null;
-		alt_text: string | null;
-	};
+	image_url: string;
+	image_caption: string | null;
+	image_alt_text: string | null;
 };
 
 export type TextCard = BaseCard & {
 	card_type: "text";
-	text_cards: {
-		title: string | null;
-		content: string;
-	};
+	text_title: string | null;
+	text_content: string;
 };
 
 export type TaskListCard = BaseCard & {
 	card_type: "task_list";
-	task_list_cards: {
-		title: string;
-		tasks: Array<{
-			id: string;
-			text: string;
-			completed: boolean;
-			position: number;
-		}>;
-	};
+	task_list_title: string;
+	tasks: Array<{
+		id?: string;
+		text: string;
+		completed: boolean;
+		position: number;
+	}>;
 };
 
 export type LinkCard = BaseCard & {
 	card_type: "link";
-	link_cards: {
-		title: string;
-		url: string;
-		favicon_url: string | null;
-	};
+	link_title: string;
+	link_url: string;
+	link_favicon_url: string | null;
 };
 
 export type FileCard = BaseCard & {
 	card_type: "file";
-	file_cards: {
-		file_name: string;
-		file_url: string;
-		file_size: number | null;
-		file_type: string | null;
-		mime_type: string | null;
-	};
+	file_name: string;
+	file_url: string;
+	file_size: number | null;
+	file_type: string | null;
+	file_mime_type: string | null;
 };
 
 export type ColorPaletteCard = BaseCard & {
 	card_type: "color_palette";
-	color_palette_cards: {
-		title: string;
-		description: string | null;
-		colors: string[];
-	};
+	palette_title: string;
+	palette_description: string | null;
+	palette_colors: string[];
 };
 
 export type ColumnCard = BaseCard & {
 	card_type: "column";
-	column_cards: {
-		title: string;
-		background_color: string;
-		is_collapsed: boolean;
-		column_items: Array<{
-			card_id: string;
-			position: number;
-		}>;
-	};
+	column_title: string;
+	column_background_color: string;
+	column_is_collapsed: boolean;
+	column_items: Array<{
+		card_id: string;
+		position: number;
+	}>;
 };
 
 // Reroute node for line breaks (like UE5 Blueprint reroute nodes)
@@ -251,31 +236,65 @@ export interface RerouteNode {
 
 export type LineCard = BaseCard & {
 	card_type: "line";
-	line_cards: {
-		// Start and end points (relative to card position)
-		start_x: number;
-		start_y: number;
-		end_x: number;
-		end_y: number;
-		// Styling
-		color: string;
-		stroke_width: number;
-		line_style: "solid" | "dashed" | "dotted";
-		// End caps
-		start_cap: "none" | "arrow" | "dot" | "diamond";
-		end_cap: "none" | "arrow" | "dot" | "diamond";
-		// Curvature: 0 = straight, positive/negative = curve direction & amount
-		curvature: number;
-		// Control point offset (perpendicular distance from midpoint, can be negative)
-		control_point_offset: number;
-		// Reroute nodes - intermediate points for line routing
-		reroute_nodes: RerouteNode[] | null;
-		// Optional card attachments
-		start_attached_card_id: string | null;
-		start_attached_side: "top" | "right" | "bottom" | "left" | null;
-		end_attached_card_id: string | null;
-		end_attached_side: "top" | "right" | "bottom" | "left" | null;
+	// Start and end points (relative to card position)
+	line_start_x: number;
+	line_start_y: number;
+	line_end_x: number;
+	line_end_y: number;
+	// Styling
+	line_color: string;
+	line_stroke_width: number;
+	line_style: "solid" | "dashed" | "dotted";
+	// End caps
+	line_start_cap: "none" | "arrow" | "dot" | "diamond";
+	line_end_cap: "none" | "arrow" | "dot" | "diamond";
+	// New 2-DOF control model (replaces legacy control_point_offset)
+	// Curvature: controls bend magnitude in pixels (unrestricted), 0 = straight
+	line_curvature: number;
+	// Directional bias: controls curve asymmetry (unrestricted), 0 = symmetric
+	line_directional_bias: number;
+	// Legacy: Control point offset (perpendicular distance from midpoint, can be negative)
+	// Kept for backward compatibility, will be converted to curvature/bias
+	line_control_point_offset?: number;
+	// Reroute nodes - intermediate points for line routing
+	line_reroute_nodes: RerouteNode[] | null;
+	// Optional card attachments - center-based dynamic attachment
+	// When attached to a card, the endpoint is computed as the intersection
+	// of a ray from the card's center toward the other endpoint with the card's edge
+	line_start_attached_card_id: string | null;
+	line_end_attached_card_id: string | null;
+};
+
+export interface DrawingStroke {
+	points: number[][];
+	color: string;
+	size: number;
+	timestamp: number;
+}
+
+export type DrawingCard = BaseCard & {
+	card_type: "drawing";
+	drawing_strokes: DrawingStroke[];
+};
+
+export type PresentationNodeCard = BaseCard & {
+	card_type: "presentation_node";
+	presentation_target: {
+		x: number;
+		y: number;
+		zoom: number;
 	};
+	presentation_title: string | null;
+	presentation_order: number;
+	presentation_transition_type: "linear" | "ease-in-out" | "ease-in" | "ease-out";
+	presentation_transition_duration: number;
+	presentation_auto_advance_delay: number | null;
+	presentation_curve_path: {
+		controlPoint1X: number;
+		controlPoint1Y: number;
+		controlPoint2X: number;
+		controlPoint2Y: number;
+	} | null;
 };
 
 export type Card =
@@ -288,7 +307,9 @@ export type Card =
 	| ColorPaletteCard
 	| ColumnCard
 	| BoardCard
-	| LineCard;
+	| LineCard
+	| DrawingCard
+	| PresentationNodeCard;
 
 // Type-specific data for creating cards
 export type NoteCardData = {
@@ -301,6 +322,7 @@ export type ImageCardData = {
 	image_url: string;
 	caption?: string;
 	alt_text?: string;
+	image_size?: number;
 };
 
 export type TextCardData = {
@@ -359,6 +381,10 @@ export type LineCardData = {
 	end_attached_side?: "top" | "right" | "bottom" | "left" | null;
 };
 
+export type DrawingCardData = {
+	strokes?: DrawingStroke[];
+};
+
 // Union type for all card-specific data
 export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? NoteCardData
@@ -380,16 +406,16 @@ export type CardTypeData<T extends Card["card_type"]> = T extends "note"
 	? BoardCardData
 	: T extends "line"
 	? LineCardData
+	: T extends "drawing"
+	? DrawingCardData
 	: never;
 
 export type BoardCard = BaseCard & {
 	card_type: "board";
-	board_cards: {
-		linked_board_id: string;
-		board_title: string;
-		board_color: string;
-		card_count: number;
-	};
+	linked_board_id: string;
+	board_title: string;
+	board_color: string;
+	board_card_count: string;
 };
 
 export type BoardCardData = {
@@ -494,4 +520,91 @@ export interface UserPreferences {
 export interface UserSettings {
 	profile: UserProfile;
 	preferences: UserPreferences;
+}
+
+export type CardData = {
+	id: string;
+	board_id: string;
+	card_type: 'note' | 'image' | 'text' | 'task_list' | 'link' | 'file' | 'color_palette' | 'column' | 'board' | 'line' | 'drawing' | 'presentation_node';
+	position_x: number;
+	position_y: number;
+	width: number;
+	height?: number;
+	order_key: string;
+	is_position_locked?: boolean;
+	created_by?: string;
+
+	// All type-specific fields as optional
+	note_content?: string;
+	note_color?: string;
+	image_url?: string;
+	image_caption?: string;
+	text_title?: string;
+	text_content?: string;
+	task_list_title?: string;
+	tasks?: Array<{ text: string; completed: boolean; position: number }>;
+	link_title?: string;
+	link_url?: string;
+	file_name?: string;
+	file_url?: string;
+	palette_title?: string;
+	palette_colors?: string[];
+	column_title?: string;
+	column_background_color?: string;
+	column_is_collapsed?: boolean;
+	column_items?: Array<{ card_id: string; position: number }>;
+	linked_board_id?: string;
+	board_title?: string;
+	line_start_x?: number;
+	line_start_y?: number;
+	line_end_x?: number;
+	line_end_y?: number;
+	line_color?: string;
+	line_stroke_width?: number;
+	line_style?: string;
+	line_start_cap?: string;
+	line_end_cap?: string;
+	line_curvature?: number;
+	line_control_point_offset?: number;
+	line_reroute_nodes?: JSON;
+	line_start_attached_card_id?: string;
+	line_start_attached_side?: string;
+	line_end_attached_card_id?: string;
+	line_end_attached_side?: string;
+	drawing_strokes?: DrawingStroke[];
+
+	created_at: number;
+	updated_at: number;
+};
+
+export type CollaboratorRole = 'owner' | 'editor' | 'viewer';
+
+// OAuth Providers
+export type OAuthProvider = 'google_drive' | 'pinterest';
+
+export interface LinkedAccount {
+	id: string;
+	provider: OAuthProvider;
+	provider_user_id: string;
+	provider_email: string;
+	provider_name?: string;
+	scopes: string[];
+	connected_at: number;
+	last_synced_at?: number;
+	is_active: boolean;
+	// Note: tokens not exposed to frontend
+};
+
+// R2 Upload API Types
+export interface PresignedUrlResponse {
+	uploadUrl: string;
+	publicUrl: string;
+	key: string;
+	expiresIn: number;
+	reservationId: string;
+}
+
+export interface DeleteFileResponse {
+	success: boolean;
+	key: string;
 }

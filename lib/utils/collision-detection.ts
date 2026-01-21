@@ -4,7 +4,7 @@
  * Detects when cards overlap for column card drop interactions
  */
 
-import type { Card, ColumnCard } from '@/lib/types';
+import type { Card, ColumnCard, CardData } from '@/lib/types';
 
 export interface Rect {
 	x: number;
@@ -16,7 +16,7 @@ export interface Rect {
 /**
  * Get bounding rectangle for a card
  */
-export function getCardRect(card: Card): Rect {
+export function getCardRect(card: Card | CardData): Rect {
 	return {
 		x: card.position_x,
 		y: card.position_y,
@@ -59,14 +59,14 @@ export function doRectsOverlap(rect1: Rect, rect2: Rect, threshold = 0.4): boole
  */
 export function findOverlappingColumns(
 	draggedCardId: string,
-	allCards: Map<string, Card>
+	allCards: Map<string, Card | CardData>
 ): ColumnCard[] {
 	const draggedCard = allCards.get(draggedCardId);
 	if (!draggedCard) return [];
-	
+
 	const draggedRect = getCardRect(draggedCard);
 	const overlappingColumns: ColumnCard[] = [];
-	
+
 	allCards.forEach((card) => {
 		// Only check column cards that:
 		// 1. Are column type
@@ -78,13 +78,13 @@ export function findOverlappingColumns(
 			card.order_key < draggedCard.order_key &&
 			card.id !== draggedCardId
 		) {
-			const columnCard = card as ColumnCard;
-			
+			const columnCard = card as unknown as ColumnCard;
+
 			// Check if card is already in this column
-			const alreadyInColumn = columnCard.column_cards.column_items?.some(
+			const alreadyInColumn = columnCard.column_items?.some(
 				item => item.card_id === draggedCardId
 			) || false;
-			
+
 			if (!alreadyInColumn) {
 				const columnRect = getCardRect(card);
 				if (doRectsOverlap(draggedRect, columnRect)) {
@@ -93,7 +93,7 @@ export function findOverlappingColumns(
 			}
 		}
 	});
-	
+
 	// Sort by z-index descending - prefer the topmost column if multiple overlap
 	return overlappingColumns.sort((a, b) => a.order_key < b.order_key ? 1 : a.order_key > b.order_key ? -1 : 0);
 }
