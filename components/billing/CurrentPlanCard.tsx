@@ -12,6 +12,30 @@ export function CurrentPlanCard() {
 	
 	// State to control the modal
 	const [isPricingOpen, setIsPricingOpen] = useState(false);
+	const [isLoadingPortal, setIsLoadingPortal] = useState(false);
+
+	const handleManageSubscription = async () => {
+		setIsLoadingPortal(true);
+
+		try {
+			const response = await fetch('/api/billing/portal', {
+				method: 'POST',
+			});
+
+			const { url, error } = await response.json();
+
+			if (error) {
+				throw new Error(error);
+			}
+
+			window.location.href = url;
+		} catch (error) {
+			console.error('Portal error:', error);
+			alert('Failed to open customer portal');
+		} finally {
+			setIsLoadingPortal(false);
+		}
+	}
 
 	return (
 		<>
@@ -63,7 +87,7 @@ export function CurrentPlanCard() {
 						<span>Upgrade Plan</span>
 					</button>
 
-					<button className="flex-1 px-4 py-2 bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors rounded-lg font-medium text-sm flex items-center justify-center gap-2">
+					<button onClick={async () => await handleManageSubscription()} className="flex-1 px-4 py-2 bg-white/5 text-white border border-white/10 hover:bg-white/10 transition-colors rounded-lg font-medium text-sm flex items-center justify-center gap-2">
 						Manage Subscription
 						<ExternalLink size={14} className="opacity-70" />
 					</button>

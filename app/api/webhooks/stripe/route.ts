@@ -184,6 +184,18 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 	console.log(`[Webhook] Payment succeeded: User ${userId} → active`);
 }
 
+async function handleCustomerUpdated(customer: Stripe.Customer) {
+	const userId = await getUserByStripeCustomer(customer.id);
+	console.log(`[Webhook] Customer ${userId} payment method updated`);
+}
+
+async function handleSetupIntentSucceeded(setupIntent: Stripe.SetupIntent) {
+	const userId = setupIntent?.metadata?.user_id;
+	if (userId) {
+		console.log(`[Webhook] Setup intent succeded for user ${userId}`);
+	}
+}
+
 export async function POST(req: Request) {
 	try {
 		const event = await verifyWebhook(req);
@@ -209,12 +221,20 @@ export async function POST(req: Request) {
 				await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
 				break;
 
+			case 'customer.updated':
+				await handleCustomerUpdated(event.data.object as Stripe.Customer);
+				break;
+
 			case 'invoice.payment_failed':
 				await handlePaymentFailed(event.data.object as Stripe.Invoice);
 				break;
 
 			case 'invoice.payment_succeeded':
 				await handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+				break;
+
+			case 'setup_intent.succeeded':
+				await handleSetupIntentSucceeded(event.data.object as Stripe.SetupIntent);
 				break;
 
 			default:

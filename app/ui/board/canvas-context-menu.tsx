@@ -3,8 +3,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { StickyNote, CheckSquare } from 'lucide-react';
-import { getDefaultCardData, getDefaultCardDimensions } from '@/lib/utils';
-import { cardsToOrderKeyList, getOrderKeyForNewCard } from '@/lib/utils/order-key-manager';
 import { CardData } from '@/lib/types';
 
 interface CanvasContextMenuProps {

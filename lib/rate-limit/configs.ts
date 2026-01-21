@@ -39,7 +39,7 @@ export const RATE_LIMITS = {
 
 	BILLING_PORTAL: {
 		interval: 60 * 1000,
-		maxRequests: 5,
+		maxRequests: 10,
 	} as RateLimitConfig,
 
 	// Resource creation
@@ -79,5 +79,27 @@ export const RATE_LIMITS = {
 	BILLING_USAGE: {
 		interval: 60 * 1000,
 		maxRequests: 30,
-	} as RateLimitConfig
+	} as RateLimitConfig,
+
+	// Payment method operations
+	BILLING_PAYMENT_METHOD: {
+		interval: 60 * 1000,
+		maxRequests: 20,
+	} as RateLimitConfig,
+
+	BILLING_INVOICES: {
+		interval: 60 * 1000,
+		maxRequests: 20,
+	} as RateLimitConfig,
+
+	BILLING_SETUP_INTENT: {
+		interval: 60 * 1000,
+		maxRequests: 5,
+	} as RateLimitConfig,
+
+	BILLING_UPDATE_PAYMENT_METHOD: {
+		interval: 60 * 1000,
+		maxRequests: 10,
+	} as RateLimitConfig,
+
 } as const;

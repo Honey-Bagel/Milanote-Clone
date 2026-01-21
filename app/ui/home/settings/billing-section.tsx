@@ -1,19 +1,30 @@
 'use client';
 
+import { useState } from 'react';
 import { useUserUsage } from '@/lib/hooks/user/use-user-usage';
 import { formatBytes } from '@/lib/utils';
 import { CurrentPlanCard } from '@/components/billing/CurrentPlanCard';
-import { CreditCard, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
+import { CreditCard, FileText, AlertCircle, CheckCircle2, Download } from "lucide-react";
 import { TIER_LIMITS } from '@/lib/billing/tier-limits';
 import { useUserPlan } from '@/lib/hooks/user/use-user-plan';
+import { usePaymentMethod } from '@/lib/hooks/billing/use-payment-method';
+import { useInvoices } from '@/lib/hooks/billing/use-invoices';
+import { UpdatePaymentModal } from '@/components/billing/UpdatePaymentModal';
+import { format } from 'date-fns';
 
 export function BillingSection() {
 	const { boardCount, fileUsage, isLoading, error } = useUserUsage();
 	const { tier } = useUserPlan();
+	const { paymentMethod, isLoading: isLoadingPayment, refresh: refreshPayment } = usePaymentMethod();
+	const { invoices, isLoading: isLoadingInvoices } = useInvoices();
+	const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
-	// Mock limits (These would now come from your TIER_LIMITS as numbers or 'unlimited')
 	const limit = TIER_LIMITS[tier];
 	const cardCount = 88;
+
+	const handlePaymentUpdateSuccess = () => {
+		refreshPayment();
+	};
 
 	return (
 		<div className="max-w-[1400px] space-y-6">
@@ -63,32 +74,75 @@ export function BillingSection() {
 					<div className="p-6 bg-[#020617] border border-white/10 rounded-xl shadow-sm flex-none">
 						<div className="flex items-center justify-between mb-6">
 							 <h4 className="text-base font-semibold text-white">Payment Method</h4>
-							 <button className="text-xs text-primary hover:text-primary/80 transition-colors">Update</button>
+							 <button onClick={() => setIsUpdateModalOpen(true)} className="text-xs text-primary hover:text-primary/80 transition-colors">Update</button>
 						</div>
 						
 						{/* Credit Card Display */}
-						<div className="flex items-start gap-4 mb-6">
-							<div className="p-2.5 bg-white/5 rounded-lg border border-white/5 text-white shrink-0">
-								<CreditCard size={20} />
-							</div>
-							<div className="flex-1">
-								<div className="flex items-center justify-between">
-									<p className="text-sm font-medium text-white">Visa ending in 4242</p>
-									<span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20">DEFAULT</span>
+						{isLoadingPayment ? (
+							<div className="h-16 bg-white/5 rounded-lg animate-pulse"></div>
+						) : paymentMethod ? (
+							<div className="flex items-start gap-4 mb-6">
+								<div className="p-2.5 bg-white/5 rounded-lg border border-white/5 text-white shrink-0">
+									<CreditCard size={20} />
 								</div>
-								<p className="text-xs text-secondary-foreground mt-0.5">Expires 12/2028</p>
-								<p className="text-xs text-secondary-foreground mt-0.5">billing@example.com</p>
+								<div className="flex-1">
+									<div className="flex items-center justify-between">
+										<p className="text-sm font-medium text-white capitalize">
+											{paymentMethod.brand} ending in {paymentMethod.last4}
+										</p>
+										{paymentMethod.isDefault && (
+											<span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 border border-green-500/20">
+												DEFAULT
+											</span>
+										)}
+									</div>
+									<p className="text-xs text-secondary-foreground mt-0.5">
+										Expires {paymentMethod.expMonth}/{paymentMethod.expYear}
+									</p>
+								</div>
 							</div>
-						</div>
+						) : (
+							<div className="text-sm text-secondary-foreground mb-6">
+								No payment method on file
+							</div>
+						)}
 
 						<div className="space-y-3 pt-6 border-t border-white/5">
-							<h5 className="text-[11px] font-semibold text-secondary-foreground uppercase tracking-wider mb-3">Recent Invoices</h5>
-							<InvoiceRow date="Oct 24, 2025" amount="$0.00" status="Paid" />
-							<InvoiceRow date="Sep 24, 2025" amount="$0.00" status="Paid" />
+							<h5 className="text-[11px] font-semibold text-secondary-foreground uppercase tracking-wider mb-3">
+								Recent Invoices
+							</h5>
+
+							{isLoadingInvoices ? (
+								<div className="space-y-3">
+									<div className="h-8 bg-white/5 rounded animate-pulse"></div>
+									<div className="h-8 bg-white/5 rounded animate-pulse"></div>
+								</div>
+							) : invoices.length > 0 ? (
+								<div className="space-y-3">
+									{invoices.slice(0, 5).map((invoice) => (
+										<InvoiceRow
+											key={invoice.id}
+											date={format(new Date(invoice.created), 'MMM d, yyyy')}
+											amount={`$${invoice.amount.toFixed(2)}`}
+											status={invoice.status}
+											pdfUrl={invoice.pdfUrl}
+										/>
+									))}
+								</div>
+							) : (
+								<p className="text-sm text-secondary-foreground">No invoices yet</p>
+							)}
 						</div>
 					</div>
 				</div>
 			</div>
+
+			{/* Update Payment Modal */}
+			<UpdatePaymentModal
+				isOpen={isUpdateModalOpen}
+				onClose={() => setIsUpdateModalOpen(false)}
+				onSuccess={handlePaymentUpdateSuccess}
+			/>
 		</div>
 	);
 }
@@ -140,7 +194,7 @@ function UsageRow({
 	);
 }
 
-function InvoiceRow({ date, amount, status }: { date: string, amount: string, status: string }) {
+function InvoiceRow({ date, amount, status, pdfUrl }: { date: string, amount: string, status: string, pdfUrl: string | null }) {
 	return (
 		<div className="flex items-center justify-between group cursor-pointer">
 			<div className="flex items-center gap-3">
@@ -149,6 +203,16 @@ function InvoiceRow({ date, amount, status }: { date: string, amount: string, st
 			</div>
 			<div className="flex items-center gap-3">
 				<span className="text-sm text-secondary-foreground font-medium">{amount}</span>
+				{pdfUrl && (
+					<a
+						href={pdfUrl}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-primary hover:text-primary/80 transition-colors"
+					>
+						<Download size={14} />
+					</a>
+				)}
 			</div>
 		</div>
 	);
