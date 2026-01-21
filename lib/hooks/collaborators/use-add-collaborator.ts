@@ -41,13 +41,10 @@ export function useAddCollaboratorByEmail() {
 			// Find user by email
 			const { data: userData } = await db.queryOnce({
 				$users: {
-					$: {
-						where: {
-							email: email.toLowerCase(),
-						},
-					},
 				},
 			});
+
+			console.log(`${email}:`, userData);
 
 			const userToAdd = userData?.$users?.[0];
 

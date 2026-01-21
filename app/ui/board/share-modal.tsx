@@ -70,13 +70,26 @@ export default function ShareModal({ boardId, isOpen, onClose }: ShareModalProps
 
 		setError(null);
 
-		const result = await addCollaboratorByEmail(boardId, email, selectedRole);
+		const result = await addCollaborator(boardId, email, selectedRole);
 
-		if (result?.user) {
+		if (result.success) {
 			setEmail('');
 			setSelectedRole('viewer');
 		}
 	};
+
+	const addCollaborator = async (boardId: string, email: string, role: string) => {
+		const collaboratorResponse = await fetch('/api/collaborators/invite', {
+			method: 'POST',
+			body: JSON.stringify({
+				boardId,
+				email,
+				role,
+			})
+		});
+
+		return await collaboratorResponse.json();
+	}
 
 	const handleRoleChange = async (collabId: string, newRole: BoardRole) => {
 		const success = await updateRole(collabId, newRole, boardId);

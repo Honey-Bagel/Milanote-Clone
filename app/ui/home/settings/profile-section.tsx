@@ -70,6 +70,7 @@ export function ProfileSection() {
 		}
 
 		// Validate file size (max 10MB)
+		console.log(file.size);
 		if (file.size > 10 * 1024 * 1024) {
 			toast.error('Image size must be less than 10MB');
 			return;

@@ -63,8 +63,6 @@ export async function applyRateLimit(
 ): Promise<RateLimitResult | NextResponse> {
 	const result = await rateLimit(identifier, config);
 
-	console.log(result);
-
 	if (!result.success) {
 		// Log rate limit violation
 		console.warn(`[RateLimit] ${logContext || identifier} exceeded imit: ${config.maxRequests}/${config.interval}ms`);

@@ -54,6 +54,7 @@ export function useCanvasDrop(boardId: string) {
 	const { cards } = useBoardCards(boardId);
 	const { board } = useBoard(boardId);
 	const { preferences, error, isLoading } = useUserPreferences();
+	const { user } = db.useAuth();
 
 	/**
 	 * Determine card type based on file mime type
@@ -155,6 +156,7 @@ export function useCanvasDrop(boardId: string) {
 
 				// Create card in database with stacked positioning (no await for instant UI update)
 				CardService.createCard({
+					userId: user?.id,
 					boardId: boardId,
 					cardType: cardType,
 					position: { x: posX, y: posY },
@@ -222,6 +224,7 @@ export function useCanvasDrop(boardId: string) {
 			// Create appropriate card
 			if (result.type === 'image') {
 				await CardService.createCard({
+					userId: user?.id,
 					boardId,
 					cardType: 'image',
 					position: { x: canvasX - 150, y: canvasY - 150 },
@@ -232,6 +235,7 @@ export function useCanvasDrop(boardId: string) {
 				});
 			} else {
 				await CardService.createCard({
+					userId: user?.id,
 					boardId,
 					cardType: 'link',
 					position: { x: canvasX - 150, y: canvasY - 50 },
@@ -247,7 +251,7 @@ export function useCanvasDrop(boardId: string) {
 			console.error('Import failed:', error);
 			removeUploadingCard(tempId);
 		}
-	}, [boardId, viewport, addUploadingCard, removeUploadingCard, cards]);
+	}, [viewport, addUploadingCard, removeUploadingCard, cards, user]);
 
 	const handleDragOver = useCallback((e: React.DragEvent) => {
 		e.preventDefault();
@@ -386,6 +390,7 @@ export function useCanvasDrop(boardId: string) {
 		} else {
 			// Create card in database (no await for instant UI update)
 			CardService.createCard({
+				userId: user?.id,
 				boardId: boardId,
 				cardType: cardType,
 				position: { x: posX, y: posY },

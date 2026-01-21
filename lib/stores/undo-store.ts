@@ -18,7 +18,7 @@ export interface UndoAction {
   type: UndoActionType;
   timestamp: number;
   description: string; // For debugging/display
-  do: () => Promise<void>; // Forward action
+  do: () => Promise<void | string>; // Forward action
   undo: () => Promise<void>; // Reverse action
 }
 

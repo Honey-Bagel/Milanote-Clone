@@ -78,11 +78,11 @@ export default function Dashboard() {
 		// First: Tab filtering
 		switch(activeTab) {
 			case 'my-boards':
-				result = boards.filter(board => board.owner.id === user.id);
+				result = boards.filter(board => board?.owner?.id === user.id);
 				break;
 			case 'shared':
 				// Boards NOT owned by the user (shared with them)
-				result = boards.filter(board => board.owner.id !== user.id);
+				result = boards.filter(board => board.owner?.id !== user.id);
 				break;
 			case 'favorites':
 				// Filter boards that are in the user's favorite_boards array
@@ -220,7 +220,6 @@ export default function Dashboard() {
 								onClick={() => setShowTemplateBrowser(true)}
 							/>
 							<QuickActionCardWrapper iconName="Palette" title="Import Board" subtitle="Use a board from somewhere else	" color="purple"/>
-							<QuickActionCardWrapper iconName="Code" title="Tech specs" subtitle="Documentation" color="emerald"/>
 						</div>
 					</div>
 

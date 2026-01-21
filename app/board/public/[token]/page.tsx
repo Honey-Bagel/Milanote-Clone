@@ -1,17 +1,23 @@
-import TopToolbar from '@/app/ui/board/top-toolbar';
-import { Canvas } from '@/components/canvas/Canvas';
-import { getBoardByShareToken } from '@/lib/instant/server-queries';
-import { notFound } from 'next/navigation';
+"use client";
 
-export default async function PublicBoardPage({ params }: { params: Promise<{ token: string }> }) {
-	const { token } = await params;
+import TopToolbar from '@/app/ui/board/toolbars/top-toolbar';
+import { Canvas } from '@/components/canvas/Canvas';
+import { notFound } from 'next/navigation';
+import { use } from "react";
+import { useBoardByShareToken } from '@/lib/hooks/boards/use-board-by-share-token';
+
+export default function PublicBoardPage({ params }: { params: Promise<{ token: string }> }) {
+	const { token } = use(params);
 
 	// Fetch board by share token
-	const board = await getBoardByShareToken(token);
+	const { board, isLoading } = useBoardByShareToken(token);
 
-	if (!board) {
+	console.log(board);
+	if (!board && !isLoading) {
 		notFound();
 	}
+
+	if (!board) return;
 
 	// Cards will be loaded by InstantDB in the Canvas component via useBoardCards hook
 

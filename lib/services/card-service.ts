@@ -24,6 +24,7 @@ import { TIER_LIMITS, type SubscriptionTier } from '../billing/tier-limits';
 // ============================================================================
 
 export interface CreateCardParams {
+	userId: string | undefined;
 	boardId: string;
 	cardType: CardData['card_type'];
 	position: { x: number; y: number };
@@ -316,11 +317,11 @@ function validateCardData(
  */
 export async function createCard(params: CreateCardParams): Promise<string> {
 	const orderKey = params.orderKey || await generateOrderKey(params.boardId);
-
 	// Validate and apply defaults for type-specific data
 	const validatedData = validateCardData(params.cardType, params.data);
 
 	const cardData: Partial<CardData> = {
+		created_by: params.userId,
 		board_id: params.boardId,
 		card_type: params.cardType,
 		position_x: params.position.x,
@@ -401,10 +402,8 @@ export async function createCard(params: CreateCardParams): Promise<string> {
 			type: 'card_create',
 			timestamp: now,
 			description: `Create ${params.cardType} card`,
-			do: async () => {
-				// Already created
-			},
-			undo: () => deleteCard(cardId, params.boardId, { withUndo: false }),
+			do: () => createCard(params),
+			undo: () => deleteCard(cardId, params.boardId, { withUndo: true }),
 		});
 	}
 
@@ -600,14 +599,7 @@ export async function deleteCard(
 		linkedBoardId: options?.cardData && 'linked_board_id' in options.cardData ? (options.cardData as { linked_board_id?: string }).linked_board_id : undefined,
 	});
 
-	// Get board owner for counter decrement
-	const { init } = await import('@instantdb/admin');
-	const adminDB = init({
-		appId: process.env.NEXT_PUBLIC_INSTANT_APP_ID!,
-		adminToken: process.env.INSTANT_ADMIN_TOKEN!,
-	});
-
-	const boardData = await adminDB.query({
+	const { data: boardData } = await db.queryOnce({
 		boards: {
 			$: { where: { id: boardId } },
 			owner: {},

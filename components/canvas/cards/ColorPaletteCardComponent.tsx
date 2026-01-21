@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useCallback, useRef, useLayoutEffect } from 'react';
+import { useState, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import type { ColorPaletteCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import { PlusIcon } from "@radix-ui/react-icons";
@@ -41,6 +41,7 @@ export function ColorPaletteCardComponent({
 
 	const [newColor, setNewColor] = useState('#000000');
 	const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+	const [localTitle, setLocalTitle] = useState<string>(card.palette_title);
 	const rootRef = useRef<HTMLDivElement | null>(null);
 
 	// Keep CardDimensions in sync with actual rendered height
@@ -58,8 +59,19 @@ export function ColorPaletteCardComponent({
 		return () => observer.disconnect();
 	}, [reportContentHeight]);
 
+	useEffect(() => {
+		if (!isEditing) {
+			setLocalTitle(card.palette_title || '');
+		}
+	}, [card.palette_title, isEditing]);
+
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+		const newTitle = e.target.value;
+		setLocalTitle(newTitle);
+	}, []);
+
+	const handleBlur = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
 		saveContent({ palette_title: e.target.value });
 	}, [saveContent]);
 
@@ -109,8 +121,10 @@ export function ColorPaletteCardComponent({
 					{isEditing ? (
 						<input
 							type="text"
-							value={card.palette_title}
+							value={localTitle}
 							onChange={handleTitleChange}
+							onSubmit={handleBlur}
+							onBlur={handleBlur}
 							className="font-semibold text-white flex-1 bg-transparent border-none outline-none focus:ring-1 focus:ring-ring rounded px-1"
 							placeholder="Palette name"
 							onClick={(e) => e.stopPropagation()}

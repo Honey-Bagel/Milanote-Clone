@@ -102,4 +102,9 @@ export const RATE_LIMITS = {
 		maxRequests: 10,
 	} as RateLimitConfig,
 
+	COLLABORATORS_INVITE: {
+		interval: 60 * 1000,
+		maxRequests: 30,
+	} as RateLimitConfig,
+
 } as const;
