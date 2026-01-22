@@ -6,7 +6,11 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export function useInvoices() {
 	const { data, error } = useSWR<{ invoices: Invoice[] }>(
 		'/api/billing/invoices',
-		fetcher
+		fetcher,
+		{
+			dedupingInterval: 5000,
+			revalidateOnFocus: false,
+		}
 	);
 
 	return {

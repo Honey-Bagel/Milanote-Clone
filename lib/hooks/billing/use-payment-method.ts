@@ -6,7 +6,11 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export function usePaymentMethod() {
 	const { data, error, mutate } = useSWR<{ paymentMethod: PaymentMethod | null}>(
 		'/api/billing/payment-method',
-		fetcher
+		fetcher,
+		{
+			dedupingInterval: 5000,
+			revalidateOnFocus: false,
+		}
 	);
 
 	return {
