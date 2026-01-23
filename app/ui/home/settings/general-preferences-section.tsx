@@ -20,6 +20,13 @@ export function GeneralPreferencesSection() {
 						onChange={(checked) => updatePreferences({ autoSaveEnabled: checked })}
 					/>
 
+					<ToggleCard
+						title="Compact Board Cards"
+						description="Display nested boards as compact icons instead of full cards"
+						checked={preferences.compactBoardCards}
+						onChange={(checked) => updatePreferences({ compactBoardCards: checked })}
+					/>
+
 					<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">
 						<label className="block text-sm font-medium text-white mb-3">
 							Default Board Color

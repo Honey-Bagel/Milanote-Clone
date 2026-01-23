@@ -28,6 +28,7 @@ interface ColumnCardComponentProps {
 	allCards?: Map<string, Card | CardData>;
 	onEditorReady?: (cardId: string, editor: any) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
+	compactBoardCards?: boolean;
 }
 
 // ============================================================================
@@ -40,7 +41,8 @@ export function ColumnCardComponent({
 	isSelected: propIsSelected,
 	allCards: allCardsProp,
 	onEditorReady,
-	onContextMenu: onContextMenuProp
+	onContextMenu: onContextMenuProp,
+	compactBoardCards = false,
 }: ColumnCardComponentProps) {
 	// Try to use context, fall back to props for backwards compatibility
 	const context = useOptionalCardContext();
@@ -249,6 +251,7 @@ export function ColumnCardComponent({
 										onCardDoubleClick={handleCardDoubleClick}
 										onContextMenu={handleCardContextMenu}
 										onEditorReady={onEditorReady}
+										compactBoardCards={compactBoardCards}
 									/>
 								</div>
 							))}

@@ -5,6 +5,7 @@ export interface UserPreferences {
 	defaultBoardColor: string;
 	autoSaveEnabled: boolean;
 	gridSnapEnabled: boolean;
+	compactBoardCards: boolean;
 	emailNotifications: boolean;
 	boardActivityNotifications: boolean;
 	shareNotifications: boolean;
@@ -17,6 +18,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 	defaultBoardColor: '#6366f1',
 	autoSaveEnabled: true,
 	gridSnapEnabled: true,
+	compactBoardCards: false,
 	emailNotifications: true,
 	boardActivityNotifications: true,
 	shareNotifications: true,

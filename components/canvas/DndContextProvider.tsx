@@ -8,6 +8,7 @@ import { CardProvider } from './cards/CardContext';
 import { CardFrame } from './cards';
 import { CardRenderer } from './cards/CardRenderer';
 import type { CardData } from '@/lib/types';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
 interface DndContextProviderProps {
 	boardId: string | null;
@@ -17,6 +18,7 @@ interface DndContextProviderProps {
 
 export function DndContextProvider({ boardId, allCardsMap, children }: DndContextProviderProps) {
 	const { viewport, selectedCardIds, selectCard } = useCanvasStore();
+	const { preferences } = useUserPreferences();
 
 	const {
 		sensors,
@@ -49,52 +51,70 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 
 			<DragOverlay dropAnimation={null} style={{ zIndex: 9999 }}>
 				{activeDragCard && activeDragType === 'column-card' ? (
-					<div
-						style={{
-							opacity: 0.85,
-							cursor: 'grabbing',
-							pointerEvents: 'none',
-							width: activeDragCard.width,
-							height: activeDragCard.height || 'auto',
-							position: 'relative',
-						}}
-					>
-						<div className="card">
-							<CardProvider
-								card={activeDragCard}
-								boardId={activeDragCard.board_id}
-								isSelected={false}
-								isReadOnly={true}
-								isInsideColumn={activeDragType === 'column-card'}
-								allCards={allCardsMap}
+					(() => {
+						// Check if this is a compact board card
+						const isCompactBoard = activeDragCard.card_type === 'board' && preferences.compactBoardCards;
+						const compactWidth = 100;
+						const overlayWidth = isCompactBoard ? compactWidth : activeDragCard.width;
+						const overlayHeight = isCompactBoard ? 110 : (activeDragCard.height || 'auto');
+
+						// Calculate offset to center the compact card under cursor
+						// When inside a column, compact cards are centered, so we need to offset
+						// by half the difference between column width and compact width
+						const offsetX = isCompactBoard ? (activeDragCard.width - compactWidth) / 2 : 0;
+
+						return (
+							<div
+								style={{
+									opacity: 0.85,
+									cursor: 'grabbing',
+									pointerEvents: 'none',
+									width: overlayWidth,
+									height: overlayHeight,
+									position: 'relative',
+									transform: offsetX ? `translateX(${offsetX}px)` : undefined,
+								}}
 							>
-								<CardFrame
-									card={activeDragCard}
-									isSelected={false}
-									isEditing={false}
-									isInsideColumn={activeDragType === 'column-card'}
-									isReadOnly={true}
-									cssZIndex={9999}
-								>
-									<CardRenderer
+								<div className="card">
+									<CardProvider
 										card={activeDragCard}
 										boardId={activeDragCard.board_id}
-										isEditing={false}
 										isSelected={false}
-										isPublicView={true}
+										isReadOnly={true}
+										isInsideColumn={activeDragType === 'column-card'}
 										allCards={allCardsMap}
-									/>
-								</CardFrame>
-							</CardProvider>
-						</div>
+									>
+										<CardFrame
+											card={activeDragCard}
+											isSelected={false}
+											isEditing={false}
+											isInsideColumn={false}
+											isReadOnly={true}
+											cssZIndex={9999}
+											compactBoardCards={preferences.compactBoardCards}
+										>
+											<CardRenderer
+												card={activeDragCard}
+												boardId={activeDragCard.board_id}
+												isEditing={false}
+												isSelected={false}
+												isPublicView={true}
+												allCards={allCardsMap}
+												compactBoardCards={preferences.compactBoardCards}
+											/>
+										</CardFrame>
+									</CardProvider>
+								</div>
 
-						{/* Multi-select indicator badge */}
-						{selectedCardIds.size > 1 && (
-							<div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
-								{selectedCardIds.size}
+								{/* Multi-select indicator badge */}
+								{selectedCardIds.size > 1 && (
+									<div className="absolute -top-2 -right-2 bg-accent text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-lg ring-2 ring-cyan-400/50">
+										{selectedCardIds.size}
+									</div>
+								)}
 							</div>
-						)}
-					</div>
+						);
+					})()
 				) : null}
 			</DragOverlay>
 		</DndContext>

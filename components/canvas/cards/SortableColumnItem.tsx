@@ -16,6 +16,7 @@ interface SortableColumnItemProps {
 	onCardDoubleClick?: (cardId: string) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 	onEditorReady?: (cardId: string, editor: Editor) => void;
+	compactBoardCards?: boolean;
 };
 
 export function SortableColumnItem({
@@ -28,6 +29,7 @@ export function SortableColumnItem({
 	onCardDoubleClick,
 	onContextMenu,
 	onEditorReady,
+	compactBoardCards = false,
 }: SortableColumnItemProps) {
 	const {
 		attributes,
@@ -67,6 +69,7 @@ export function SortableColumnItem({
 					onContextMenu={onContextMenu}
 					onEditorReady={onEditorReady}
 					isInsideColumn={true}
+					compactBoardCards={compactBoardCards}
 				/>
 			</div>
 		</div>

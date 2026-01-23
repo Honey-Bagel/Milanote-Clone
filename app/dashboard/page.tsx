@@ -12,7 +12,7 @@ import { DashboardLoadingSkeleton } from '../ui/dashboard/dashboard-loading-skel
 import { useMemo, useState, useEffect } from 'react';
 import { BoardListRow } from '../ui/dashboard/board-list-row';
 import { Separator } from "radix-ui";
-import { DateFilterDropdown, DateFilterField } from '../ui/dashboard/date-filter-dropdown';
+import { DateFilterDropdown, DateFilterField, BoardTypeFilter } from '../ui/dashboard/date-filter-dropdown';
 import { useDebounce, DateFilterType, getDateRangeTimestamp, isWithinDateRange } from '@/lib/utils';
 import TemplateBrowserModal from '@/components/templates/TemplateBrowserModal';
 import { useRouter } from 'next/navigation';
@@ -24,7 +24,11 @@ type Tabtype = 'my-boards' | 'shared' | 'favorites';
 
 export default function Dashboard() {
 	const { user } = db.useAuth();
-	const { boards, isLoading } = useBoardsWithCollaborators(true);
+
+	// Board type filter state (root boards only by default)
+	const [boardTypeFilter, setBoardTypeFilter] = useState<BoardTypeFilter>('root');
+
+	const { boards: allBoards, isLoading } = useBoardsWithCollaborators(false);
 	const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 	const [activeTab, setActiveTab] = useState<Tabtype>('my-boards');
 
@@ -69,41 +73,41 @@ export default function Dashboard() {
 		return () => window.removeEventListener('keydown', handleKeyDown);
 	}, [isSmallScreen]);
 
-	// Filter boards based on active tab, search, and date filters
+	// Filter boards based on active tab, search, date filters, and board type
 	const filteredBoards = useMemo(() => {
-		if (!boards || !user) return [];
+		if (!allBoards || !user) return [];
 
-		let result = boards;
+		let result = allBoards;
 
-		// First: Tab filtering
+		// First: Board type filtering (root boards only vs all boards)
+		if (boardTypeFilter === 'root') {
+			result = result.filter(board => !board.parent_board_id);
+		}
+
+		// Second: Tab filtering
 		switch(activeTab) {
 			case 'my-boards':
-				result = boards.filter(board => board?.owner?.id === user.id);
+				result = result.filter(board => board?.owner?.id === user.id);
 				break;
 			case 'shared':
 				// Boards NOT owned by the user (shared with them)
-				result = boards.filter(board => board.owner?.id !== user.id);
+				result = result.filter(board => board.owner?.id !== user.id);
 				break;
 			case 'favorites':
 				// Filter boards that are in the user's favorite_boards array
-				result = boards.filter(board => board.is_favorite);
+				result = result.filter(board => board.is_favorite);
 				break;
-			default:
-				result = boards;
 		}
 
-		// Second: Search filtering
+		// Third: Search filtering
 		if (debouncedSearchQuery.trim()) {
 			const query = debouncedSearchQuery.toLowerCase();
 			result = result.filter(board =>
 				board.title.toLowerCase().includes(query)
-				// Future: Add more searchable fields here
-				// || board.owner.email.toLowerCase().includes(query)
-				// || board.collaborators.some(c => c.user.display_name?.toLowerCase().includes(query))
 			);
 		}
 
-		// Third: Date filtering
+		// Fourth: Date filtering
 		if (dateFilterType !== 'all') {
 			const dateRange = getDateRangeTimestamp(dateFilterType);
 			result = result.filter(board => {
@@ -115,7 +119,7 @@ export default function Dashboard() {
 		}
 
 		return result;
-	}, [boards, activeTab, user, debouncedSearchQuery, dateFilterType, dateFilterField]);
+	}, [allBoards, activeTab, user, debouncedSearchQuery, dateFilterType, dateFilterField, boardTypeFilter]);
 
 	// Show loading skeleton while data is being fetched
 	if (isLoading) {
@@ -230,7 +234,7 @@ export default function Dashboard() {
 						<div className="flex items-center gap-2 flex-wrap">
 							<div className="text-xs sm:text-sm text-secondary-foreground">
 								{filteredBoards.length} {filteredBoards.length === 1 ? 'board' : 'boards'}
-								{(debouncedSearchQuery || dateFilterType !== 'all') && boards && ` (filtered from ${boards.length})`}
+								{(debouncedSearchQuery || dateFilterType !== 'all' || boardTypeFilter !== 'root') && allBoards && ` (filtered from ${allBoards.length})`}
 							</div>
 							{/* Active Filter Indicators */}
 							{debouncedSearchQuery && (
@@ -260,15 +264,28 @@ export default function Dashboard() {
 									</button>
 								</span>
 							)}
+							{boardTypeFilter === 'all' && (
+								<span className="px-2 py-1 bg-primary/20 text-primary rounded flex items-center gap-1 text-xs">
+									All Boards
+									<button
+										onClick={() => setBoardTypeFilter('root')}
+										className="ml-1 hover:bg-primary/30 rounded p-0.5"
+									>
+										<X size={12} />
+									</button>
+								</span>
+							)}
 						</div>
 						<div className="flex items-center gap-2 flex-shrink-0">
 							<DateFilterDropdown
 								filterType={dateFilterType}
 								filterField={dateFilterField}
+								boardTypeFilter={boardTypeFilter}
 								onFilterChange={(type, field) => {
 									setDateFilterType(type);
 									setDateFilterField(field);
 								}}
+								onBoardTypeChange={setBoardTypeFilter}
 							/>
 							<button
 								onClick={() => setViewMode('grid')}
@@ -309,7 +326,7 @@ export default function Dashboard() {
 					) : (
 						<>
 							{/* Check if empty due to filters */}
-							{(debouncedSearchQuery || dateFilterType !== 'all') && boards && boards.length > 0 ? (
+							{(debouncedSearchQuery || dateFilterType !== 'all' || boardTypeFilter !== 'root') && allBoards && allBoards.length > 0 ? (
 								<div className="flex flex-col items-center justify-center py-24 px-4">
 									<Search size={48} className="text-slate-600 mb-4" />
 									<h3 className="text-xl font-semibold text-white mb-2">No boards found</h3>

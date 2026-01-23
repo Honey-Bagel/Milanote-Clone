@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, Calendar, Clock } from 'lucide-react';
+import { Filter, Calendar, Clock, Layers, FolderTree } from 'lucide-react';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -14,15 +14,18 @@ import {
 import { DateFilterType } from '@/lib/utils';
 
 export type DateFilterField = 'created_at' | 'updated_at';
+export type BoardTypeFilter = 'root' | 'all';
 
 interface DateFilterDropdownProps {
 	filterType: DateFilterType;
 	filterField: DateFilterField;
+	boardTypeFilter: BoardTypeFilter;
 	onFilterChange: (type: DateFilterType, field: DateFilterField) => void;
+	onBoardTypeChange: (boardType: BoardTypeFilter) => void;
 }
 
-export function DateFilterDropdown({ filterType, filterField, onFilterChange }: DateFilterDropdownProps) {
-	const isActive = filterType !== 'all';
+export function DateFilterDropdown({ filterType, filterField, boardTypeFilter, onFilterChange, onBoardTypeChange }: DateFilterDropdownProps) {
+	const isActive = filterType !== 'all' || boardTypeFilter !== 'root';
 
 	return (
 		<DropdownMenu>
@@ -100,6 +103,29 @@ export function DateFilterDropdown({ filterType, filterField, onFilterChange }: 
 					>
 						<Calendar size={14} className="mr-2" />
 						Date Created
+					</DropdownMenuRadioItem>
+				</DropdownMenuRadioGroup>
+
+				<DropdownMenuSeparator className="bg-white/10" />
+				<DropdownMenuLabel className="text-secondary-foreground">Board Type</DropdownMenuLabel>
+
+				<DropdownMenuRadioGroup
+					value={boardTypeFilter}
+					onValueChange={(value) => onBoardTypeChange(value as BoardTypeFilter)}
+				>
+					<DropdownMenuRadioItem
+						value="root"
+						className="focus:bg-white/5 focus:text-white cursor-pointer"
+					>
+						<Layers size={14} className="mr-2" />
+						Root Boards Only
+					</DropdownMenuRadioItem>
+					<DropdownMenuRadioItem
+						value="all"
+						className="focus:bg-white/5 focus:text-white cursor-pointer"
+					>
+						<FolderTree size={14} className="mr-2" />
+						All Boards
 					</DropdownMenuRadioItem>
 				</DropdownMenuRadioGroup>
 			</DropdownMenuContent>

@@ -34,6 +34,7 @@ interface CardFrameProps {
 	isInsideColumn: boolean;
 	isReadOnly: boolean;
 	cssZIndex: number;
+	compactBoardCards?: boolean;
 }
 
 interface SelectionOutlineProps {
@@ -191,6 +192,10 @@ const ResizeHandles = memo(function ResizeHandles({
 // CARD FRAME
 // ============================================================================
 
+// Compact board card dimensions
+const COMPACT_BOARD_WIDTH = 100;
+const COMPACT_BOARD_HEIGHT = 110;
+
 export const CardFrame = memo(function CardFrame({
 	children,
 	card,
@@ -199,6 +204,7 @@ export const CardFrame = memo(function CardFrame({
 	isInsideColumn,
 	isReadOnly,
 	cssZIndex,
+	compactBoardCards = false,
 }: CardFrameProps) {
 	// Get connection state and viewport from canvas store
 	const {
@@ -246,24 +252,44 @@ export const CardFrame = memo(function CardFrame({
 		return <>{children}</>;
 	}
 
+	// Check if this is a compact board card
+	const isCompactBoard = card.card_type === 'board' && compactBoardCards;
+
 	// Calculate frame dimensions
-	const frameWidth = isInsideColumn ? '100%' : currentDimensions.width;
-	const isAutoHeight = dimensions.height === 'auto' || card.card_type === "image"; // TODO: Fix this bandaid image fix
+	let frameWidth: number | string;
+	let frameHeight: number | string | undefined;
+
+	if (isCompactBoard) {
+		// Use compact dimensions for board cards
+		frameWidth = COMPACT_BOARD_WIDTH;
+		frameHeight = COMPACT_BOARD_HEIGHT;
+	} else {
+		frameWidth = isInsideColumn ? '100%' : currentDimensions.width;
+		const isAutoHeight = dimensions.height === 'auto' || card.card_type === "image"; // TODO: Fix this bandaid image fix
+
+		if (isAutoHeight) {
+			frameHeight = 'auto';
+		} else {
+			// Use effectiveHeight during editing to account for temporary expansion
+			frameHeight = isEditing ? dimensions.effectiveHeight : currentDimensions.height;
+		}
+	}
 
 	const frameStyle: React.CSSProperties = {
 		width: frameWidth,
+		height: frameHeight,
 		position: 'relative',
 		boxSizing: 'border-box',
 	};
 
-	if (isAutoHeight) {
-		frameStyle.height = 'auto';
-		if (dimensions.minHeight != null && card.card_type !== "image") { // TODO: Part of bandaid image height fix
-			frameStyle.minHeight = dimensions.minHeight;
-		}
-	} else {
-		// Use effectiveHeight during editing to account for temporary expansion
-		frameStyle.height = isEditing ? dimensions.effectiveHeight : currentDimensions.height;
+	// Center compact board cards horizontally when inside a column
+	if (isCompactBoard && isInsideColumn) {
+		frameStyle.margin = '0 auto';
+	}
+
+	// Add minHeight for auto-height cards (but not compact boards)
+	if (!isCompactBoard && frameHeight === 'auto' && dimensions.minHeight != null && card.card_type !== "image") {
+		frameStyle.minHeight = dimensions.minHeight;
 	}
 
 	// Show connection handles when:

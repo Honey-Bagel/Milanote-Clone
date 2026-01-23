@@ -33,6 +33,7 @@ import { PresentationOverlay } from '@/components/presentation/PresentationOverl
 import { CameraAnimator } from '@/lib/utils/presentation-animator';
 import { Cursors } from '@instantdb/react';
 import { db } from '@/lib/instant/db';
+import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
 
 interface CanvasProps {
 	boardId: string | null;
@@ -76,6 +77,9 @@ export function Canvas({
 		() => new Map(cardArray.map((card) => [card.id, card])),
 		[cardArray]
 	);
+
+	// User preferences for board display
+	const { preferences } = useUserPreferences();
 
 	const room = db.room("board", boardId || '');
 
@@ -624,6 +628,7 @@ export function Canvas({
 										onContextMenu={handleCardContextMenu}
 										onEditorReady={handleEditorReady}
 										isReadOnly={isPublicView}
+										compactBoardCards={preferences.compactBoardCards}
 									/>
 								))}
 							</div>
@@ -640,6 +645,7 @@ export function Canvas({
 										onContextMenu={handleCardContextMenu}
 										onEditorReady={handleEditorReady}
 										isReadOnly={isPublicView}
+										compactBoardCards={preferences.compactBoardCards}
 									/>
 								))}
 							</div>

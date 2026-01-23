@@ -47,6 +47,7 @@ const graph = i.schema({
 			defaultBoardColor: i.string(),
 			autoSaveEnabled: i.boolean(),
 			gridSnapEnabled: i.boolean(),
+			compactBoardCards: i.boolean(), // Use compact board card display
 
 			// Notification Preferences
 			emailNotifications: i.boolean(),

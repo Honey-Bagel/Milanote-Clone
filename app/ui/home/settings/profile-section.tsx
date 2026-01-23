@@ -275,12 +275,6 @@ export function ProfileSection() {
 							}
 						</span>
 					</div>
-					<div className="flex justify-between items-center p-3 bg-[#020617] border border-white/10 rounded-lg">
-						<span className="text-sm text-secondary-foreground">User ID</span>
-						<span className="text-sm text-foreground font-mono">
-							{user.id.substring(0, 16)}...
-						</span>
-					</div>
 				</div>
 			</div>
 		</div>

@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { MobileToolbarMenu } from './mobile-toolbar-menu';
 import { useIsSmallScreen } from '@/lib/hooks/use-media-query';
 import { NotificationBell } from '../notifications/notification-bell';
+import { BoardColorPicker } from '../board-color-picker';
 
 type TopToolbarProps = {
 	boardId: string;
@@ -49,6 +50,7 @@ type DroppableBreadcrumbItemProps = {
 	handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 	index: number;
 	isBreadcrumbsCondensed: boolean;
+	currentBoardId: string;
 };
 
 function DroppableBreadcrumbItem({
@@ -65,6 +67,7 @@ function DroppableBreadcrumbItem({
 	handleKeyDown,
 	index,
 	isBreadcrumbsCondensed,
+	currentBoardId,
 }: DroppableBreadcrumbItemProps) {
 	// Make parent breadcrumbs droppable (but not the current board)
 	const { setNodeRef, isOver } = useDroppable({
@@ -85,9 +88,10 @@ function DroppableBreadcrumbItem({
 					// Current board - editable on double click
 					<BreadcrumbPage className="flex items-center space-x-2" onDoubleClick={handleDoubleClick}>
 						{crumb.color && (
-							<div
-								className="w-4 h-4 rounded shadow-[0_0_8px_rgba(255,255,255,0.2)]"
-								style={{ backgroundColor: crumb.color }}
+							<BoardColorPicker
+								boardId={currentBoardId}
+								currentColor={crumb.color}
+								disabled={isPublicView || isViewerOnly}
 							/>
 						)}
 						{isEditingTitle ? (
@@ -413,6 +417,7 @@ export default function TopToolbar({
 											handleKeyDown={handleKeyDown}
 											index={index}
 											isBreadcrumbsCondensed={isBreadcrumbsCondensed}
+											currentBoardId={boardId}
 										/>
 									);
 								})}

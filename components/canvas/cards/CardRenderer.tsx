@@ -1,6 +1,6 @@
 /**
  * CardRenderer Component - With TipTap Support
- * 
+ *
  * Routes to the appropriate card type component based on your DB schema
  */
 
@@ -23,6 +23,7 @@ import {
 	DrawingCardComponent,
 	PresentationNodeComponent
 } from '.';
+import { CompactBoardCardComponent } from './CompactBoardCardComponent';
 
 interface CardRendererProps {
 	card: Card;
@@ -35,13 +36,14 @@ interface CardRendererProps {
 	onHeightChange?: (newHeight: number) => void;
 	onContextMenu?: (e: React.MouseEvent, card: Card) => void;
 	options?: any;
+	compactBoardCards?: boolean;
 }
 
 /**
  * Main router component for rendering different card types
  * Routes based on your database card_type field
  */
-export function CardRenderer({ card, boardId, isEditing, isSelected, isPublicView, allCards, onEditorReady, onHeightChange, onContextMenu, options }: CardRendererProps) {
+export function CardRenderer({ card, boardId, isEditing, isSelected, isPublicView, allCards, onEditorReady, onHeightChange, onContextMenu, options, compactBoardCards }: CardRendererProps) {
 	switch (card.card_type) {
 		case 'note':
 			return <NoteCardComponent onEditorReady={onEditorReady} options={options} />
@@ -62,9 +64,12 @@ export function CardRenderer({ card, boardId, isEditing, isSelected, isPublicVie
 			return <ColorPaletteCardComponent card={card} isEditing={isEditing} />;
 
 		case 'column':
-			return <ColumnCardComponent card={card} isEditing={isEditing} isSelected={isSelected} allCards={allCards} onContextMenu={onContextMenu} />;
+			return <ColumnCardComponent card={card} isEditing={isEditing} isSelected={isSelected} allCards={allCards} onContextMenu={onContextMenu} compactBoardCards={compactBoardCards} />;
 
 		case 'board':
+			if (compactBoardCards) {
+				return <CompactBoardCardComponent card={card} isEditing={isEditing} isPublicView={isPublicView} />;
+			}
 			return <BoardCardComponent card={card} isEditing={isEditing} isPublicView={isPublicView} />;
 
 		case 'line':

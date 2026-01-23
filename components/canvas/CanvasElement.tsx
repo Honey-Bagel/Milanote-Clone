@@ -72,6 +72,7 @@ interface CanvasElementProps {
 	onEditorReady?: (cardId: string, editor: Editor) => void;
 	isInsideColumn?: boolean;
 	isReadOnly?: boolean;
+	compactBoardCards?: boolean;
 }
 
 interface CardOptions {
@@ -114,6 +115,7 @@ export const CanvasElement = memo(function CanvasElement({
 	onEditorReady,
 	isInsideColumn = false,
 	isReadOnly = false,
+	compactBoardCards = false,
 }: CanvasElementProps) {
 	// Canvas store state
 	const {
@@ -260,6 +262,7 @@ export const CanvasElement = memo(function CanvasElement({
 							isInsideColumn={true}
 							isReadOnly={isReadOnly}
 							cssZIndex={cssZIndex}
+							compactBoardCards={compactBoardCards}
 						>
 							<CardRenderer
 								card={card}
@@ -271,6 +274,7 @@ export const CanvasElement = memo(function CanvasElement({
 								onEditorReady={handleEditorReady}
 								onContextMenu={onContextMenu}
 								options={{}}
+								compactBoardCards={compactBoardCards}
 							/>
 						</CardFrame>
 					</CardProvider>
@@ -356,6 +360,7 @@ export const CanvasElement = memo(function CanvasElement({
 							isInsideColumn={false}
 							isReadOnly={isReadOnly}
 							cssZIndex={cssZIndex}
+							compactBoardCards={compactBoardCards}
 						>
 							<CardRenderer
 								card={card}
@@ -367,6 +372,7 @@ export const CanvasElement = memo(function CanvasElement({
 								onEditorReady={handleEditorReady}
 								onContextMenu={onContextMenu}
 								options={cardOptions}
+								compactBoardCards={compactBoardCards}
 							/>
 						</CardFrame>
 					</CardProvider>
