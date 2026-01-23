@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BoardCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import { BoardService } from '@/lib/services';
@@ -64,9 +64,34 @@ export function BoardCardComponent({
 	const [newBoardColor, setNewBoardColor] = useState('#3B82F6');
 	const [localTitle, setLocalTitle] = useState(card.board_title || '');
 
+	// Track previous editing state to save on exit
+	const wasEditingRef = useRef(isEditing);
+	const justSavedRef = useRef(false);
+
+	// Save when exiting edit mode (e.g., clicking on canvas)
+	useEffect(() => {
+		if (wasEditingRef.current && !isEditing) {
+			// Was editing, now not - save the current local state
+			saveContent({ board_title: localTitle });
+			justSavedRef.current = true;
+			// Also sync with linked board
+			if (card.linked_board_id) {
+				syncBoardTitle(card.linked_board_id, localTitle).catch(err => {
+					console.error('Failed to sync board title:', err);
+				});
+			}
+		}
+		wasEditingRef.current = isEditing;
+	}, [isEditing, localTitle, saveContent, card.linked_board_id]);
+
 	// Update local title when card prop changes (from DB) and not editing
 	useEffect(() => {
 		if (!isEditing) {
+			// Skip sync if we just saved - wait for DB to catch up
+			if (justSavedRef.current) {
+				justSavedRef.current = false;
+				return;
+			}
 			setLocalTitle(card.board_title || '');
 		}
 	}, [card.board_title, isEditing]);
@@ -139,31 +164,27 @@ export function BoardCardComponent({
 		});
 	}, [saveContentImmediate]);
 
-	const handleTitleChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-		const newTitle = e.target.value;
-		setLocalTitle(newTitle);
+	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+		setLocalTitle(e.target.value);
+	}, []);
 
-		// Update the card's board_title field locally (optimistic update)
-		saveContent({
-			board_title: newTitle,
-		});
-	}, [saveContent]);
+	const handleTitleSubmit = useCallback(async () => {
+		// Save to card
+		saveContent({ board_title: localTitle });
 
-	const handleTitleSubmit = useCallback(async (e: React.FocusEvent | React.KeyboardEvent) => {
-		const title = e.target.value;
-
+		// Sync with linked board
 		if (card.linked_board_id) {
 			try {
-				await syncBoardTitle(card.linked_board_id, title);
+				await syncBoardTitle(card.linked_board_id, localTitle);
 			} catch (error) {
 				console.error('Failed to sync board title:', error);
 			}
 		}
-	}, [card.linked_board_id]);
+	}, [saveContent, localTitle, card.linked_board_id]);
 
 	const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
 		if (e.key === "Enter") {
-			handleTitleSubmit(e);
+			handleTitleSubmit();
 		}
 	}, [handleTitleSubmit]);
 

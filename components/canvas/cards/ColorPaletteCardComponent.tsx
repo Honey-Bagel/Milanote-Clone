@@ -41,7 +41,8 @@ export function ColorPaletteCardComponent({
 
 	const [newColor, setNewColor] = useState('#000000');
 	const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-	const [localTitle, setLocalTitle] = useState<string>(card.palette_title);
+	const [localTitle, setLocalTitle] = useState<string>(card.palette_title || '');
+	const [localDescription, setLocalDescription] = useState<string>(card.palette_description || '');
 	const rootRef = useRef<HTMLDivElement | null>(null);
 
 	// Keep CardDimensions in sync with actual rendered height
@@ -59,11 +60,32 @@ export function ColorPaletteCardComponent({
 		return () => observer.disconnect();
 	}, [reportContentHeight]);
 
+	// Track previous editing state to save on exit
+	const wasEditingRef = useRef(isEditing);
+	const justSavedRef = useRef(false);
+
+	// Save when exiting edit mode (e.g., clicking on canvas)
+	useEffect(() => {
+		if (wasEditingRef.current && !isEditing) {
+			// Was editing, now not - save the current local state
+			saveContent({ palette_title: localTitle, palette_description: localDescription });
+			justSavedRef.current = true;
+		}
+		wasEditingRef.current = isEditing;
+	}, [isEditing, localTitle, localDescription, saveContent]);
+
+	// Sync local state when card changes from DB and not editing
 	useEffect(() => {
 		if (!isEditing) {
+			// Skip sync if we just saved - wait for DB to catch up
+			if (justSavedRef.current) {
+				justSavedRef.current = false;
+				return;
+			}
 			setLocalTitle(card.palette_title || '');
+			setLocalDescription(card.palette_description || '');
 		}
-	}, [card.palette_title, isEditing]);
+	}, [card.palette_title, card.palette_description, isEditing]);
 
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -76,8 +98,12 @@ export function ColorPaletteCardComponent({
 	}, [saveContent]);
 
 	const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-		saveContent({ palette_description: e.target.value });
-	}, [saveContent]);
+		setLocalDescription(e.target.value);
+	}, []);
+
+	const handleDescriptionBlur = useCallback(() => {
+		saveContent({ palette_description: localDescription });
+	}, [saveContent, localDescription]);
 
 	const handleAddColor = useCallback(async () => {
 		const updatedColors = [...card.palette_colors, newColor];
@@ -152,8 +178,9 @@ export function ColorPaletteCardComponent({
 				{/* Description Section */}
 				{isEditing ? (
 					<textarea
-						value={card.palette_description || ''}
+						value={localDescription}
 						onChange={handleDescriptionChange}
+						onBlur={handleDescriptionBlur}
 						className="text-xs text-secondary-foreground mb-4 w-full bg-transparent border-none outline-none focus:ring-1 focus:ring-ring rounded px-1 resize-none"
 						placeholder="Description (optional)"
 						rows={2}

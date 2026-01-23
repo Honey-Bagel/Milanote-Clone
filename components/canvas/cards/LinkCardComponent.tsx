@@ -42,9 +42,40 @@ export function LinkCardComponent({
 
 	const { isDragging } = useDraggable({ id: card.id });
 
-	// Use refs for input elements to manage uncontrolled inputs
+	// Local state for text inputs
+	const [localTitle, setLocalTitle] = useState(card.link_title || '');
+	const [localUrl, setLocalUrl] = useState(card.link_url || '');
+
+	// Use refs for input elements
 	const titleInputRef = useRef<HTMLInputElement>(null);
 	const urlInputRef = useRef<HTMLInputElement>(null);
+
+	// Track previous editing state to save on exit
+	const wasEditingRef = useRef(isEditing);
+	const justSavedRef = useRef(false);
+
+	// Save when exiting edit mode (e.g., clicking on canvas)
+	useEffect(() => {
+		if (wasEditingRef.current && !isEditing) {
+			// Was editing, now not - save the current local state
+			saveContent({ link_title: localTitle, link_url: localUrl });
+			justSavedRef.current = true;
+		}
+		wasEditingRef.current = isEditing;
+	}, [isEditing, localTitle, localUrl, saveContent]);
+
+	// Sync local state when card changes from DB and not editing
+	useEffect(() => {
+		if (!isEditing) {
+			// Skip sync if we just saved - wait for DB to catch up
+			if (justSavedRef.current) {
+				justSavedRef.current = false;
+				return;
+			}
+			setLocalTitle(card.link_title || '');
+			setLocalUrl(card.link_url || '');
+		}
+	}, [card.link_title, card.link_url, isEditing]);
 
 	// Compute full URL (derived state, not effect)
 	const fullURL = useMemo(() => {
@@ -93,16 +124,22 @@ export function LinkCardComponent({
 		};
 	}, [isEditing, stopEditing]);
 
-	// Event handlers - use uncontrolled inputs to avoid DB sync issues
+	// Event handlers - use local state with blur save
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const newValue = e.target.value;
-		saveContent({ link_title: newValue });
-	}, [saveContent]);
+		setLocalTitle(e.target.value);
+	}, []);
+
+	const handleTitleBlur = useCallback(() => {
+		saveContent({ link_title: localTitle });
+	}, [saveContent, localTitle]);
 
 	const handleUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const newValue = e.target.value;
-		saveContent({ link_url: newValue });
-	}, [saveContent]);
+		setLocalUrl(e.target.value);
+	}, []);
+
+	const handleUrlBlur = useCallback(() => {
+		saveContent({ link_url: localUrl });
+	}, [saveContent, localUrl]);
 
 	// ========================================================================
 	// EDITING MODE
@@ -118,9 +155,9 @@ export function LinkCardComponent({
 							<input
 								ref={titleInputRef}
 								type="text"
-								key={`title-${card.id}-${isEditing}`}
-								defaultValue={card.link_title}
+								value={localTitle}
 								onChange={handleTitleChange}
+								onBlur={handleTitleBlur}
 								className="w-full px-2 py-1 text-sm bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
 								placeholder="Link title"
 								onClick={(e) => e.stopPropagation()}
@@ -131,9 +168,9 @@ export function LinkCardComponent({
 							<input
 								ref={urlInputRef}
 								type="url"
-								key={`url-${card.id}-${isEditing}`}
-								defaultValue={card.link_url}
+								value={localUrl}
 								onChange={handleUrlChange}
+								onBlur={handleUrlBlur}
 								className="w-full px-2 py-1 text-sm bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
 								placeholder="https://example.com"
 								onClick={(e) => e.stopPropagation()}

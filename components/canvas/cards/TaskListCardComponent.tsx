@@ -43,9 +43,27 @@ export function TaskListCardComponent({
 	const [localTasks, setLocalTasks] = useState<Map<string, string>>(new Map());
 	const taskInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
 
+	// Track previous editing state to save title on exit
+	const wasEditingTitleRef = useRef(editingTitle);
+	const justSavedTitleRef = useRef(false);
+
+	// Save title when exiting edit mode (e.g., clicking elsewhere)
+	useEffect(() => {
+		if (wasEditingTitleRef.current && !editingTitle) {
+			saveContent({ task_list_title: localTitle });
+			justSavedTitleRef.current = true;
+		}
+		wasEditingTitleRef.current = editingTitle;
+	}, [editingTitle, localTitle, saveContent]);
+
 	// Sync local title when card prop changes (from DB) and not editing
 	useEffect(() => {
 		if (!editingTitle) {
+			// Skip sync if we just saved - wait for DB to catch up
+			if (justSavedTitleRef.current) {
+				justSavedTitleRef.current = false;
+				return;
+			}
 			setLocalTitle(card.task_list_title);
 		}
 	}, [card.task_list_title, editingTitle]);
@@ -54,8 +72,12 @@ export function TaskListCardComponent({
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
 		const newTitle = e.target.value;
 		setLocalTitle(newTitle);
-		saveContent({ task_list_title: newTitle });
-	}, [saveContent]);
+	}, []);
+
+	const handleTitleBlur = useCallback(() => {
+		setEditingTitle(false);
+		saveContent({ task_list_title: localTitle });
+	}, [saveContent, localTitle]);
 
 	const handleToggleTask = useCallback(async (taskId: string) => {
 		const updatedTasks = card.tasks.map(task =>
@@ -65,13 +87,19 @@ export function TaskListCardComponent({
 	}, [card.tasks, saveContentImmediate]);
 
 	const handleTaskTextChange = useCallback((taskId: string, newText: string) => {
+		// Only update local state - save on blur
 		setLocalTasks(prev => new Map(prev).set(taskId, newText));
+	}, []);
+
+	const handleTaskTextBlur = useCallback((taskId: string) => {
+		const localText = localTasks.get(taskId);
+		if (localText === undefined) return; // No changes made
 
 		const updatedTasks = card.tasks.map(task =>
-			task.id === taskId ? { ...task, text: newText } : task
+			task.id === taskId ? { ...task, text: localText } : task
 		);
 		saveContent({ tasks: updatedTasks });
-	}, [card.tasks, saveContent]);
+	}, [card.tasks, localTasks, saveContent]);
 
 	const handleTaskKeyDown = useCallback(async (e: React.KeyboardEvent<HTMLInputElement>, taskId: string, taskText: string) => {
 		const sortedTasks = [...card.tasks].sort((a, b) => a.position - b.position);
@@ -175,10 +203,10 @@ export function TaskListCardComponent({
 							type="text"
 							value={localTitle}
 							onChange={handleTitleChange}
-							onBlur={() => setEditingTitle(false)}
+							onBlur={handleTitleBlur}
 							onKeyDown={(e) => {
 								if (e.key === 'Enter') {
-									setEditingTitle(false);
+									handleTitleBlur();
 								}
 							}}
 							className="w-full font-bold text-white bg-transparent border-none outline-none focus:ring-1 focus:ring-ring rounded px-1"
@@ -257,6 +285,7 @@ export function TaskListCardComponent({
 										type="text"
 										value={displayText}
 										onChange={(e) => handleTaskTextChange(taskId, e.target.value)}
+										onBlur={() => handleTaskTextBlur(taskId)}
 										onKeyDown={(e) => handleTaskKeyDown(e, taskId, displayText)}
 										placeholder="Task text..."
 										className={`flex-1 text-sm bg-transparent border-none outline-none transition-all

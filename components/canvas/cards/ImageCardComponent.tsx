@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ImageCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import Image from 'next/image';
@@ -39,6 +39,33 @@ export function ImageCardComponent({
 	};
 
 	const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+	const [localImageUrl, setLocalImageUrl] = useState(card.image_url || '');
+
+	// Track previous editing state to save on exit
+	const wasEditingRef = useRef(isEditing);
+	const justSavedRef = useRef(false);
+
+	// Save when exiting edit mode (e.g., clicking on canvas)
+	useEffect(() => {
+		if (wasEditingRef.current && !isEditing) {
+			// Was editing, now not - save the current local state
+			saveContent({ image_url: localImageUrl });
+			justSavedRef.current = true;
+		}
+		wasEditingRef.current = isEditing;
+	}, [isEditing, localImageUrl, saveContent]);
+
+	// Sync local state when card changes from DB and not editing
+	useEffect(() => {
+		if (!isEditing) {
+			// Skip sync if we just saved - wait for DB to catch up
+			if (justSavedRef.current) {
+				justSavedRef.current = false;
+				return;
+			}
+			setLocalImageUrl(card.image_url || '');
+		}
+	}, [card.image_url, isEditing]);
 
 	// Handle image load to update dimensions
 	const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -55,10 +82,14 @@ export function ImageCardComponent({
 		// so we don't need to update it here
 	}, []);
 
-	// Event handlers
+	// Event handlers - use local state with blur save
 	const handleImageUrlChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		saveContent({ image_url: e.target.value });
-	}, [saveContent]);
+		setLocalImageUrl(e.target.value);
+	}, []);
+
+	const handleImageUrlBlur = useCallback(() => {
+		saveContent({ image_url: localImageUrl });
+	}, [saveContent, localImageUrl]);
 
 	// ========================================================================
 	// RENDER
@@ -87,8 +118,9 @@ export function ImageCardComponent({
 								<label className="text-xs text-secondary-foreground block">Image URL</label>
 								<input
 									type="url"
-									value={card.image_url || ''}
+									value={localImageUrl}
 									onChange={handleImageUrlChange}
+									onBlur={handleImageUrlBlur}
 									className="w-full px-2 py-1 text-sm bg-slate-700/50 text-foreground border border-white/10 rounded focus:ring-1 focus:ring-ring outline-none"
 									placeholder="https://example.com/image.jpg"
 									onClick={(e) => e.stopPropagation()}

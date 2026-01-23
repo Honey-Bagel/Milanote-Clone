@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useEffect, useState, useRef } from 'react';
 import type { ColumnCard, Card, CardData } from '@/lib/types';
 import { useCanvasStore } from '@/lib/stores/canvas-store';
 import { useOptionalCardContext } from './CardContext';
@@ -56,6 +56,32 @@ export function ColumnCardComponent({
 		saveContentImmediate: async () => {},
 	};
 	const [localTitle, setLocalTitle] = useState(card.column_title || '');
+
+	// Track previous editing state to save on exit
+	const wasEditingRef = useRef(isEditing);
+	const justSavedRef = useRef(false);
+
+	// Save when exiting edit mode (e.g., clicking on canvas)
+	useEffect(() => {
+		if (wasEditingRef.current && !isEditing) {
+			// Was editing, now not - save the current local state
+			saveContent({ column_title: localTitle });
+			justSavedRef.current = true;
+		}
+		wasEditingRef.current = isEditing;
+	}, [isEditing, localTitle, saveContent]);
+
+	// Sync local title when card changes from DB and not editing
+	useEffect(() => {
+		if (!isEditing) {
+			// Skip sync if we just saved - wait for DB to catch up
+			if (justSavedRef.current) {
+				justSavedRef.current = false;
+				return;
+			}
+			setLocalTitle(card.column_title || '');
+		}
+	}, [card.column_title, isEditing]);
 
 	const { setNodeRef, over, active } = useDroppable({
 		id: card.id,
@@ -130,11 +156,12 @@ export function ColumnCardComponent({
 
 	// Event handlers
 	const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-		const newTitle = e.target.value;
-		setLocalTitle(newTitle);
+		setLocalTitle(e.target.value);
+	}, []);
 
-		saveContent({ column_title: newTitle });
-	}, [saveContent]);
+	const handleTitleBlur = useCallback(() => {
+		saveContent({ column_title: localTitle });
+	}, [saveContent, localTitle]);
 
 	const handleRemoveCard = useCallback(async (cardId: string) => {
 		const updatedItems = (card.column_items || [])
@@ -196,6 +223,7 @@ export function ColumnCardComponent({
 								type="text"
 								value={localTitle}
 								onChange={handleTitleChange}
+								onBlur={handleTitleBlur}
 								className="w-full px-3 py-1.5 text-sm font-semibold text-center bg-white/5 text-white border border-white/10 rounded-lg focus:ring-2 focus:ring-cyan-400/50 focus:border-transparent outline-none transition-all"
 								placeholder="Column Title"
 								onClick={(e) => e.stopPropagation()}
