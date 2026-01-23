@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { getTimeAgo } from '@/lib/utils';
 import { BoardSettingsModal } from './board-settings-modal';
-import { Star, Layers, Clock, MoreVertical } from 'lucide-react';
+import ShareModal from '@/app/ui/board/share-modal';
+import { Star, Layers, Clock, MoreVertical, Share2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { db } from '@/lib/instant/db';
@@ -27,6 +28,7 @@ export function BoardCard({
 	board
 }: BoardCardProps) {
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [isShareOpen, setIsShareOpen] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
 	const [isFavorited, setIsFavorited] = useState(board.is_favorite || false);
 	const [isUpdating, setIsUpdating] = useState(false);
@@ -37,6 +39,12 @@ export function BoardCard({
 		e.preventDefault();
 		e.stopPropagation();
 		setIsSettingsOpen(true);
+	};
+
+	const handleShareClick = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setIsShareOpen(true);
 	};
 
 	const handleFavoriteClick = async (e: React.MouseEvent) => {
@@ -107,6 +115,9 @@ export function BoardCard({
 								{getTimeAgo(board.updated_at)}
 							</div>
 							<div>
+								<button onClick={handleShareClick} className="p-1.5 hover:bg-white/5 rounded-lg text-muted-foreground hover:text-white transition-colors">
+									<Share2 size={20}/>
+								</button>
 								<button onClick={handleFavoriteClick} className={`p-1.5 rounded-lg text-muted-foreground hover:text-white transition-colors`}>
 									<Star className={`${isFavorited ? 'fill-slate-500' : ''}`} size={20}/>
 								</button>
@@ -123,6 +134,12 @@ export function BoardCard({
 				board={board}
 				isOpen={isSettingsOpen}
 				onClose={() => setIsSettingsOpen(false)}
+			/>
+
+			<ShareModal
+				boardId={board.id}
+				isOpen={isShareOpen}
+				onClose={() => setIsShareOpen(false)}
 			/>
 		</>
 	);
