@@ -17,6 +17,8 @@ const graph = i.schema({
 			is_admin: i.boolean().optional(), // Admin flag for template creation
 			created_at: i.number(),
 			last_active: i.number().optional(),
+			deleted_at: i.number().optional().indexed(),
+			clerk_user_id: i.string().optional().indexed(),
 
 			// Billing & Subscription
 			subscription_tier: i.string().indexed(), // 'free' | 'standard' | 'pro'
@@ -279,6 +281,13 @@ const graph = i.schema({
 			processed_at: i.number().indexed(),
 			data: i.json<any>(),
 		}),
+
+		clerk_webhook_events: i.entity({
+			event_id: i.string().unique().indexed(),
+			event_type: i.string().indexed(),
+			processed_at: i.number().indexed(),
+			data: i.json<Record<string, unknown>>(),
+		}),
 	},
 	links: {
 		// Links $users to profiles (1-1)
@@ -306,7 +315,8 @@ const graph = i.schema({
 				on: "user_preferences",
 				has: "one",
 				label: "user",
-			}
+				onDelete: "cascade",
+			},
 		},
 
 		// Link $users to boards they own

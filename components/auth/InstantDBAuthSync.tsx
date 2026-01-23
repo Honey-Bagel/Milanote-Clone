@@ -3,11 +3,10 @@
 import { db } from "@/lib/instant/db";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect } from "react";
-import { syncUserToInstantDB } from "./UserSync";
 
 // If a user is signed in with Clerk, sign them in with InstantDB
 export default function InstantDBAuthSync() {
-	const { isSignedIn, user, isLoaded } = useUser();
+	const { isSignedIn } = useUser();
 	const { getToken } = useAuth();
 
 	useEffect(() => {
@@ -29,12 +28,6 @@ export default function InstantDBAuthSync() {
 			db.auth.signOut();
 		}
 	}, [isSignedIn, getToken]);
-
-	useEffect(() => {
-		if (isLoaded && user) {
-			syncUserToInstantDB(user);
-		}
-	}, [isLoaded, user]);
 
 	return null;
 }
