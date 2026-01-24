@@ -17,7 +17,7 @@ interface DndContextProviderProps {
 }
 
 export function DndContextProvider({ boardId, allCardsMap, children }: DndContextProviderProps) {
-	const { viewport, selectedCardIds, selectCard } = useCanvasStore();
+	const { viewport, selectedCardIds, selectCard, activeDragCardId, activeDragType } = useCanvasStore();
 	const { preferences } = useUserPreferences();
 
 	const {
@@ -27,8 +27,6 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 		handleDragEnd,
 		handleDragOver: dragOverDND,
 		modifiers,
-		activeDragCard,
-		activeDragType,
 		customCollisionDetection
 	} = useDndCanvas({
 		boardId,
@@ -36,6 +34,9 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 		viewport,
 		selectCard,
 	});
+
+	// Use store's activeDragCardId as single source of truth for the drag overlay
+	const activeDragCard = activeDragCardId ? allCardsMap.get(activeDragCardId) || null : null;
 
 	return (
 		<DndContext
@@ -50,7 +51,7 @@ export function DndContextProvider({ boardId, allCardsMap, children }: DndContex
 			{children}
 
 			<DragOverlay dropAnimation={null} style={{ zIndex: 9999 }}>
-				{activeDragCard && activeDragType === 'column-card' ? (
+				{activeDragCard && (activeDragType === 'column-card' || activeDragType === 'canvas-card') ? (
 					(() => {
 						// Check if this is a compact board card
 						const isCompactBoard = activeDragCard.card_type === 'board' && preferences.compactBoardCards;

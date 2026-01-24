@@ -48,11 +48,6 @@ interface UseDndCanvasReturn {
 
 	// Modifiers
 	modifiers: Array<(args: ModifierArgs) => ModifierTransform>;
-
-	// Active drag state
-	activeId: string | null;
-	activeDragCard: CardData | null;
-	activeDragType: 'canvas-card' | 'column-card' | null;
 }
 
 function getInsertionIndex(params: {
@@ -84,6 +79,8 @@ export function useDndCanvas({
 		selectedCardIds,
 		setDragPositions,
 		clearDragPositions,
+		setActiveDragCardId,
+		setActiveDragType: setStoreActiveDragType,
 		snapToGrid,
 		setPotentialColumnTarget,
 		setPotentialBoardTarget,
@@ -390,6 +387,9 @@ export function useDndCanvas({
 
 		setActiveId(active.id as string);
 		setActiveDragType(dragType || 'canvas-card');
+		// Set store values (single source of truth for DragOverlay and card visibility)
+		setActiveDragCardId(active.id as string);
+		setStoreActiveDragType(dragType || 'canvas-card');
 
 		// Capture active card position for grid snapping
 		const activeCard = allCardsMap.get(active.id as string);
@@ -511,7 +511,7 @@ export function useDndCanvas({
 			selectCard(active.id as string, false);
 		}
 
-	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard, viewport, expandDragGroupWithLineAttachments]);
+	}, [selectedCardIds, allCardsMap, boardId, setDragPositions, selectCard, viewport, expandDragGroupWithLineAttachments, setActiveDragCardId, setStoreActiveDragType]);
 
 	const handleDragMove = useCallback((event: DragMoveEvent) => {
 		const { active, delta, over, activatorEvent } = event;
@@ -663,6 +663,16 @@ export function useDndCanvas({
 		const { active, over, delta, activatorEvent } = event;
 		const dragData = active.data.current;
 		const dragType = dragData?.type;
+		const endingCardId = active.id as string;
+
+		// Clear store drag state immediately so the card becomes visible
+		// Only clear if it matches the card that's ending its drag (prevents race condition
+		// when rapidly starting a new drag before the previous handleDragEnd completes)
+		const currentActiveDragCardId = useCanvasStore.getState().activeDragCardId;
+		if (currentActiveDragCardId === endingCardId) {
+			setActiveDragCardId(null);
+			setStoreActiveDragType(null);
+		}
 
 		setColumnInsertionIndexTarget(null);
 
@@ -1116,6 +1126,8 @@ export function useDndCanvas({
 		setColumnInsertionIndexTarget,
 		activeCardPosition,
 		expandDragGroupWithLineAttachments,
+		setActiveDragCardId,
+		setStoreActiveDragType,
 	]);
 
 	const handleDragOver = useCallback((event: DragOverEvent) => {
@@ -1138,8 +1150,6 @@ export function useDndCanvas({
 	// RETURN
 	// ============================================================================
 
-	const activeDragCard = activeId ? allCardsMap.get(activeId) || null : null;
-
 	return {
 		sensors,
 		handleDragStart,
@@ -1148,8 +1158,5 @@ export function useDndCanvas({
 		handleDragOver,
 		customCollisionDetection: columnAwareCollisionDetection,
 		modifiers,
-		activeId,
-		activeDragCard,
-		activeDragType,
 	};
 }

@@ -128,6 +128,7 @@ export const CanvasElement = memo(function CanvasElement({
 		interactionMode,
 		setInteractionMode,
 		presentationMode,
+		activeDragCardId,
 	} = useCanvasStore();
 	const { presentationSidebarOpen } = useBoardStore();
 	const [cardOptions, setCardOptions] = useState<CardOptions | null>(null);
@@ -152,7 +153,7 @@ export const CanvasElement = memo(function CanvasElement({
 	const isLineWithBlockedAttachments =
 		card.card_type === "line" && hasBlockedAttachments(card as LineCard, allCards);
 
-	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform} = useDraggable({
+	const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform } = useDraggable({
 		id: card.id,
 		data: {
 			type: 'canvas-card',
@@ -304,6 +305,12 @@ export const CanvasElement = memo(function CanvasElement({
 		}
 	}
 
+	// Hide only the actively dragged card (DragOverlay shows the preview above toolbars)
+	// Multi-select companion cards (in dragPositions but not actively dragged) remain visible
+	// We use the store's activeDragCardId as the single source of truth instead of dnd-kit's isDragging
+	// This prevents race conditions when rapidly dragging cards in succession
+	const shouldHideForDragOverlay = activeDragCardId === card.id;
+
 	return (
 		<div
 			ref={setNodeRef}
@@ -317,6 +324,7 @@ export const CanvasElement = memo(function CanvasElement({
 				zIndex: cssZIndex,
 				userSelect: isEditing ? 'auto' : 'none',
 				WebkitUserSelect: isEditing ? 'auto' : 'none',
+				visibility: shouldHideForDragOverlay ? 'hidden' : 'visible',
 			}}
 		>
 			<div

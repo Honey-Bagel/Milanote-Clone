@@ -132,6 +132,11 @@ interface CanvasState {
 	// Drag positions (map of card IDs to their current positions during drag)
 	dragPositions: Map<string, Position>;
 
+	// Active drag card ID (single source of truth for which card is being dragged)
+	activeDragCardId: string | null;
+	// Active drag type (canvas-card or column-card)
+	activeDragType: 'canvas-card' | 'column-card' | null;
+
 	// Column interaction state
 	potentialColumnTarget: string | null;
 	potentialBoardTarget: string | null;
@@ -250,6 +255,10 @@ interface CanvasState {
 	setDragPositions: (positions: Map<string, Position>) => void;
 	clearDragPositions: () => void;
 
+	// Active drag card
+	setActiveDragCardId: (cardId: string | null) => void;
+	setActiveDragType: (dragType: 'canvas-card' | 'column-card' | null) => void;
+
 	// Potential targets
 	setPotentialColumnTarget: (columnId: string | null) => void;
 	setPotentialBoardTarget: (boardCardId: string | null) => void;
@@ -313,6 +322,8 @@ export const useCanvasStore = create<CanvasState>()(
 				showGrid: true,
 				editingCardId: null as string | null,
 				dragPositions: new Map(),
+				activeDragCardId: null as string | null,
+				activeDragType: null as 'canvas-card' | 'column-card' | null,
 				potentialColumnTarget: null as string | null,
 				potentialBoardTarget: null as string | null,
 				columnInsertionIndexTarget: null as number | null,
@@ -688,6 +699,16 @@ export const useCanvasStore = create<CanvasState>()(
 				clearDragPositions: () =>
 					set((state) => {
 						state.dragPositions.clear();
+					}),
+
+				setActiveDragCardId: (cardId) =>
+					set((state) => {
+						state.activeDragCardId = cardId;
+					}),
+
+				setActiveDragType: (dragType) =>
+					set((state) => {
+						state.activeDragType = dragType;
 					}),
 
 				// ============================================================================
