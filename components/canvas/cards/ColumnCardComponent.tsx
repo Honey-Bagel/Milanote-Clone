@@ -253,7 +253,7 @@ export function ColumnCardComponent({
 							min-h-[75px]
 							border-0.5 border
 							transition-all duration-300
-							bg-white/5
+							${showInsertionLines ? 'bg-white/10' : 'bg-white/5'}
 						`}
 					>
 					</div>
