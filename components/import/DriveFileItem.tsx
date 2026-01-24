@@ -1,17 +1,17 @@
 'use client';
 
 import { useState } from "react";
-import { FileIcon, Image } from "lucide-react";
-import type { GoogleDriveFile } from "@/lib/hooks/connected-apps/useGoogleDriveFiles";
+import { FileIcon } from "lucide-react";
+import type { GoogleDriveFile } from "@/lib/hooks/connected-apps/use-google-drive-files";
 
 interface DriveFileItemProps {
-	file: GoogleDriveFile,
+	file: GoogleDriveFile;
 	boardId: string;
-};
+	compact?: boolean;
+}
 
-export function DriveFileItem({ file, boardId }: DriveFileItemProps) {
+export function DriveFileItem({ file, boardId, compact = false }: DriveFileItemProps) {
 	const [isDragging, setIsDragging] = useState(false);
-	const isImage = file.mimeType.startsWith('image/');
 
 	const handleDragStart = (e: React.DragEvent) => {
 		setIsDragging(true);
@@ -25,6 +25,32 @@ export function DriveFileItem({ file, boardId }: DriveFileItemProps) {
 			boardId,
 		}));
 	};
+
+	if (compact) {
+		return (
+			<div
+				draggable
+				onDragStart={handleDragStart}
+				onDragEnd={() => setIsDragging(false)}
+				className={`flex flex-col p-2 bg-slate-800 hover:bg-slate-700 rounded-lg cursor-move ${
+					isDragging ? 'opacity-50' : ''
+				}`}
+			>
+				{file.thumbnailLink ? (
+					<img
+						src={file.thumbnailLink}
+						alt={file.name}
+						className="w-full aspect-square object-cover rounded mb-2"
+					/>
+				) : (
+					<div className="w-full aspect-square bg-slate-700 rounded mb-2 flex items-center justify-center">
+						<FileIcon size={24} className="text-slate-400" />
+					</div>
+				)}
+				<div className="text-xs text-white truncate">{file.name}</div>
+			</div>
+		);
+	}
 
 	return (
 		<div
@@ -47,5 +73,5 @@ export function DriveFileItem({ file, boardId }: DriveFileItemProps) {
 				</div>
 			</div>
 		</div>
-	)
+	);
 }

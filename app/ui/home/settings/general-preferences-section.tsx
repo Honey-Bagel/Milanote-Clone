@@ -2,9 +2,11 @@
 
 import { ToggleCard } from './toggle-card';
 import { useUserPreferences } from '@/lib/hooks/use-user-preferences';
+import { useDrawerPersistence } from '@/lib/hooks/use-drawer-persistence';
 
 export function GeneralPreferencesSection() {
 	const { preferences, isLoading, updatePreferences } = useUserPreferences();
+	const { autoClose, updateAutoClose } = useDrawerPersistence();
 
 	return (
 		<div>
@@ -25,6 +27,13 @@ export function GeneralPreferencesSection() {
 						description="Display nested boards as compact icons instead of full cards"
 						checked={preferences.compactBoardCards}
 						onChange={(checked) => updatePreferences({ compactBoardCards: checked })}
+					/>
+
+					<ToggleCard
+						title="Import Drawer Auto-close"
+						description="Automatically close the import drawer when clicking outside"
+						checked={autoClose}
+						onChange={updateAutoClose}
 					/>
 
 					<div className="p-4 bg-[#020617] border border-white/10 rounded-xl">

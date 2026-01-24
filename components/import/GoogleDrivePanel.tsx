@@ -1,22 +1,31 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Folder, ChevronRight, Home, Loader2, AlertCircle } from 'lucide-react';
 import { useGoogleDriveFiles } from '@/lib/hooks/connected-apps/use-google-drive-files';
 import { DriveFileItem } from './DriveFileItem';
-import type { LinkedAccount } from '@/lib/types';
+import type { SortField, SortDirection, ItemsPerRow } from '@/lib/hooks/use-drawer-persistence';
+
+// Minimal account info needed for the panel
+interface AccountInfo {
+	provider_email: string;
+	provider_name?: string;
+}
 
 interface GoogleDrivePanelProps {
-	account: LinkedAccount | undefined;
+	account: AccountInfo | undefined;
 	boardId: string;
-};
+	sortField: SortField;
+	sortDirection: SortDirection;
+	itemsPerRow: ItemsPerRow;
+}
 
 interface BreadcrumbItem {
 	id: string;
 	name: string;
 };
 
-export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
+export function GoogleDrivePanel({ account, boardId, sortField, sortDirection, itemsPerRow }: GoogleDrivePanelProps) {
 	const [currentFolderId, setCurrentFolderId] = useState('root');
 	const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
 		{ id: 'root', name: 'My Drive' }
@@ -28,6 +37,27 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 	const showLoadingSpinner = isLoading && files.length === 0;
 	// Optional: Show a subtle refresh indicator during background refresh
 	const showRefreshIndicator = isValidating && files.length > 0;
+
+	// Sort files based on preferences
+	const sortedFiles = useMemo(() => {
+		const folders = files.filter(file => file.mimeType === 'application/vnd.google-apps.folder');
+		const nonFolders = files.filter(file => file.mimeType !== 'application/vnd.google-apps.folder');
+
+		const sortFn = (a: typeof files[0], b: typeof files[0]) => {
+			let comparison = 0;
+			if (sortField === 'name') {
+				comparison = a.name.localeCompare(b.name);
+			} else {
+				comparison = new Date(a.modifiedTime).getTime() - new Date(b.modifiedTime).getTime();
+			}
+			return sortDirection === 'desc' ? -comparison : comparison;
+		};
+
+		return {
+			folders: [...folders].sort(sortFn),
+			files: [...nonFolders].sort(sortFn),
+		};
+	}, [files, sortField, sortDirection]);
 
 	// Handle folder navigation
 	const navigateToFolder = (folderId: string, folderName: string) => {
@@ -75,14 +105,17 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 							{index > 0 && <ChevronRight size={14} className="text-slate-500" />}
 							<button
 								onClick={() => navigateToBreadcrumb(index)}
-								className={`px-2 py-1 rounded hover:bg-slate-700 transition-colors ${
+								className={`flex items-center gap-1.5 px-2 py-1 rounded hover:bg-slate-700 transition-colors ${
 									index === breadcrumbs.length - 1
 										? 'text-white font-medium'
 										: 'text-slate-400'
 								}`}
 							>
 								{index === 0 ? (
-									<Home size={14} className="inline" />
+									<>
+										<Home size={14} />
+										<span>My Drive</span>
+									</>
 								) : (
 									crumb.name
 								)}
@@ -92,22 +125,8 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 				</div>
 			</div>
 
-			{/* Account Info */}
-			<div className="px-4 py-2 border-b border-slate-700 bg-slate-800/30">
-				<div className="flex items-center gap-2">
-					<div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-						{account.provider_name?.[0] || 'G'}
-					</div>
-					<div className="flex-1 min-w-0">
-						<div className="text-xs text-slate-400 truncate">
-							{account.provider_email}
-						</div>
-					</div>
-				</div>
-			</div>
-
 			{/* File list */}
-			<div className="flex-1 overflow-y-auto min-h-0 relative">
+			<div className="flex-1 overflow-y-auto min-h-0 relative custom-scrollbar">
 				{showLoadingSpinner ? (
 					<div className="flex items-center justify-center h-full min-h-[200px]">
 						<Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
@@ -133,10 +152,8 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 						)}
 
 						<div className="p-3 space-y-2">
-							{/* Folders first */}
-							{files
-							.filter(file => file.mimeType === 'application/vnd.google-apps.folder')
-							.map(folder => (
+							{/* Folders first - always single column */}
+							{sortedFiles.folders.map(folder => (
 								<button
 									key={folder.id}
 									onClick={() => navigateToFolder(folder.id, folder.name)}
@@ -151,16 +168,17 @@ export function GoogleDrivePanel({ account, boardId }: GoogleDrivePanelProps) {
 								</button>
 							))}
 
-						{/* Files (draggable */}
-						{files
-							.filter(file => file.mimeType !== 'application/vnd.google-apps.folder')
-							.map(file => (
-								<DriveFileItem
-									key={file.id}
-									file={file}
-									boardId={boardId}
-								/>
-							))}
+							{/* Files - grid layout based on itemsPerRow */}
+							<div className={itemsPerRow === 2 ? 'grid grid-cols-2 gap-2' : 'space-y-2'}>
+								{sortedFiles.files.map(file => (
+									<DriveFileItem
+										key={file.id}
+										file={file}
+										boardId={boardId}
+										compact={itemsPerRow === 2}
+									/>
+								))}
+							</div>
 						</div>
 					</>
 				)}

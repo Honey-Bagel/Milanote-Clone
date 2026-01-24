@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 
 const MAX_WIDTH = 800;
+const MIN_WIDTH = 280; // Minimum usable width
 const CLOSE_THRESHOLD = 100; // If resized below this width, close the drawer
 
 export function useDrawerResize(
@@ -25,12 +26,9 @@ export function useDrawerResize(
 		const handleMouseMove = (e: MouseEvent) => {
 			// Calculate delta from RIGHT side (inverted because drawer is on right)
 			const deltaX = startXRef.current - e.clientX;
-			const newWidth = Math.min(MAX_WIDTH, startWidthRef.current + deltaX);
+			const newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, startWidthRef.current + deltaX));
 
-			// Allow any width, no minimum constraint
-			if (newWidth > 0) {
-				onWidthChange(newWidth);
-			}
+			onWidthChange(newWidth);
 		};
 
 		const handleMouseUp = () => {
