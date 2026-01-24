@@ -7,6 +7,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { BoardCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import { BoardService } from '@/lib/services';
@@ -188,39 +190,53 @@ export function BoardCardComponent({
 		}
 	}, [handleTitleSubmit]);
 
-	const handleNavigateToBoard = useCallback(async (e: React.MouseEvent) => {
+	const router = useRouter();
+
+	// For public view, we need to fetch the share token
+	const [publicShareToken, setPublicShareToken] = useState<string | null>(null);
+	useEffect(() => {
+		if (isPublicView && card.linked_board_id) {
+			db.queryOnce({
+				boards: {
+					$: {
+						where: {
+							id: card.linked_board_id,
+							is_public: true,
+						},
+						limit: 1,
+					},
+				},
+			}).then(({ data }) => {
+				const childBoard = data?.boards?.[0];
+				if (childBoard?.share_token) {
+					setPublicShareToken(childBoard.share_token);
+				}
+			}).catch(err => {
+				console.error('Failed to fetch child board share token:', err);
+			});
+		}
+	}, [isPublicView, card.linked_board_id]);
+
+	// Get the navigation href for the board
+	const getBoardHref = useCallback(() => {
+		if (!card.linked_board_id) return '#';
+		if (isPublicView && publicShareToken) {
+			return `/board/public/${publicShareToken}`;
+		}
+		return `/board/${card.linked_board_id}`;
+	}, [card.linked_board_id, isPublicView, publicShareToken]);
+
+	const handleNavigateToBoard = useCallback((e: React.MouseEvent) => {
 		if (!isEditing && card.linked_board_id) {
 			e.stopPropagation();
+			e.preventDefault();
 
-			if (isPublicView) {
-				try {
-					const { data } = await db.queryOnce({
-						boards: {
-							$: {
-								where: {
-									id: card.linked_board_id,
-									is_public: true,
-								},
-								limit: 1,
-							},
-						},
-					});
-
-					const childBoard = data?.boards?.[0];
-
-					if (childBoard && childBoard.is_public && childBoard.share_token) {
-						window.location.href = `/board/public/${childBoard.share_token}`;
-					} else {
-						console.warn('Child board is not publicly accessible');
-					}
-				} catch (error) {
-					console.error('Failed to fetch child board info:', error);
-				}
-			} else {
-				window.location.href = `/board/${card.linked_board_id}`;
+			const href = getBoardHref();
+			if (href !== '#') {
+				router.push(href);
 			}
 		}
-	}, [isEditing, card.linked_board_id, isPublicView]);
+	}, [isEditing, card.linked_board_id, getBoardHref, router]);
 
 	// ========================================================================
 	// EDITING MODE
@@ -336,48 +352,94 @@ export function BoardCardComponent({
 	// VIEW MODE
 	// ========================================================================
 
+	const boardHref = getBoardHref();
+	const canNavigate = !isEditing && card.linked_board_id && boardHref !== '#';
+
 	return (
 		<div ref={setNodeRef} className="board-card group/board-card bg-[#1e293b]/90 backdrop-blur-xl shadow-xl hover:border-accent/50 border border-white/10 cursor-pointer group w-full h-full overflow-hidden">
-			<div
-				className="h-full"
-				onDoubleClick={handleNavigateToBoard}
-			>
-				<div
-					className="h-32 flex items-center justify-center relative bg-gradient-to-br from-primary to-indigo-800"
-					style={{ background: `linear-gradient(to bottom right, ${card.board_color}, ${card.board_color}dd)` }}
+			{canNavigate ? (
+				<Link
+					href={boardHref}
+					className="h-full block"
+					onDoubleClick={handleNavigateToBoard}
+					onClick={(e) => e.preventDefault()} // Prevent single-click navigation, only double-click
+					prefetch={true}
 				>
-					<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-					<svg
-						className="w-12 h-12 text-white/80 relative z-10 group-hover/board-card:scale-110 transition-transform"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+					<div
+						className="h-32 flex items-center justify-center relative bg-gradient-to-br from-primary to-indigo-800"
+						style={{ background: `linear-gradient(to bottom right, ${card.board_color}, ${card.board_color}dd)` }}
 					>
-						<path
-							strokeLinecap="round"
-							strokeLinejoin="round"
-							strokeWidth={1.5}
-							d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
-						/>
-					</svg>
-				</div>
-				<div className="p-4 border-t border-white/5">
-					<h3 className="font-semibold text-white truncate mb-1 group-hover/board-card:text-accent transition-colors">
-						{card.board_title}
-					</h3>
-					<p className="text-xs text-muted-foreground flex items-center gap-1">
-						<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
-							<path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+						<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+						<svg
+							className="w-12 h-12 text-white/80 relative z-10 group-hover/board-card:scale-110 transition-transform"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={1.5}
+								d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+							/>
 						</svg>
-						{!isLoading && (
-							<>
-								{cards.length}{' '}
-								{parseInt(cards.length, 10) !== 1 ? 'cards' : 'card'}
-							</>
-						)}
-					</p>
+					</div>
+					<div className="p-4 border-t border-white/5">
+						<h3 className="font-semibold text-white truncate mb-1 group-hover/board-card:text-accent transition-colors">
+							{card.board_title}
+						</h3>
+						<p className="text-xs text-muted-foreground flex items-center gap-1">
+							<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+								<path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+							</svg>
+							{!isLoading && (
+								<>
+									{cards.length}{' '}
+									{parseInt(cards.length, 10) !== 1 ? 'cards' : 'card'}
+								</>
+							)}
+						</p>
+					</div>
+				</Link>
+			) : (
+				<div className="h-full" onDoubleClick={handleNavigateToBoard}>
+					<div
+						className="h-32 flex items-center justify-center relative bg-gradient-to-br from-primary to-indigo-800"
+						style={{ background: `linear-gradient(to bottom right, ${card.board_color}, ${card.board_color}dd)` }}
+					>
+						<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+						<svg
+							className="w-12 h-12 text-white/80 relative z-10 group-hover/board-card:scale-110 transition-transform"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								strokeLinecap="round"
+								strokeLinejoin="round"
+								strokeWidth={1.5}
+								d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+							/>
+						</svg>
+					</div>
+					<div className="p-4 border-t border-white/5">
+						<h3 className="font-semibold text-white truncate mb-1 group-hover/board-card:text-accent transition-colors">
+							{card.board_title}
+						</h3>
+						<p className="text-xs text-muted-foreground flex items-center gap-1">
+							<svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+								<path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+							</svg>
+							{!isLoading && (
+								<>
+									{cards.length}{' '}
+									{parseInt(cards.length, 10) !== 1 ? 'cards' : 'card'}
+								</>
+							)}
+						</p>
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 }

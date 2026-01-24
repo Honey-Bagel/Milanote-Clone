@@ -13,6 +13,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { BoardCard } from '@/lib/types';
 import { useOptionalCardContext } from './CardContext';
 import { db } from '@/lib/instant/db';
@@ -89,39 +91,53 @@ export function CompactBoardCardComponent({
 	// EVENT HANDLERS
 	// ========================================================================
 
-	const handleNavigateToBoard = useCallback(async (e: React.MouseEvent) => {
+	const router = useRouter();
+
+	// For public view, we need to fetch the share token
+	const [publicShareToken, setPublicShareToken] = useState<string | null>(null);
+	useEffect(() => {
+		if (isPublicView && card.linked_board_id) {
+			db.queryOnce({
+				boards: {
+					$: {
+						where: {
+							id: card.linked_board_id,
+							is_public: true,
+						},
+						limit: 1,
+					},
+				},
+			}).then(({ data }) => {
+				const childBoard = data?.boards?.[0];
+				if (childBoard?.share_token) {
+					setPublicShareToken(childBoard.share_token);
+				}
+			}).catch(err => {
+				console.error('Failed to fetch child board share token:', err);
+			});
+		}
+	}, [isPublicView, card.linked_board_id]);
+
+	// Get the navigation href for the board
+	const getBoardHref = useCallback(() => {
+		if (!card.linked_board_id) return '#';
+		if (isPublicView && publicShareToken) {
+			return `/board/public/${publicShareToken}`;
+		}
+		return `/board/${card.linked_board_id}`;
+	}, [card.linked_board_id, isPublicView, publicShareToken]);
+
+	const handleNavigateToBoard = useCallback((e: React.MouseEvent) => {
 		if (!isEditing && card.linked_board_id && !isEditingTitle) {
 			e.stopPropagation();
+			e.preventDefault();
 
-			if (isPublicView) {
-				try {
-					const { data } = await db.queryOnce({
-						boards: {
-							$: {
-								where: {
-									id: card.linked_board_id,
-									is_public: true,
-								},
-								limit: 1,
-							},
-						},
-					});
-
-					const childBoard = data?.boards?.[0];
-
-					if (childBoard && childBoard.is_public && childBoard.share_token) {
-						window.location.href = `/board/public/${childBoard.share_token}`;
-					} else {
-						console.warn('Child board is not publicly accessible');
-					}
-				} catch (error) {
-					console.error('Failed to fetch child board info:', error);
-				}
-			} else {
-				window.location.href = `/board/${card.linked_board_id}`;
+			const href = getBoardHref();
+			if (href !== '#') {
+				router.push(href);
 			}
 		}
-	}, [isEditing, card.linked_board_id, isPublicView, isEditingTitle]);
+	}, [isEditing, card.linked_board_id, isEditingTitle, getBoardHref, router]);
 
 	const handleTitleDoubleClick = useCallback((e: React.MouseEvent) => {
 		e.stopPropagation();
@@ -168,28 +184,47 @@ export function CompactBoardCardComponent({
 	// RENDER
 	// ========================================================================
 
+	const boardHref = getBoardHref();
+	const canNavigate = !isEditing && card.linked_board_id && boardHref !== '#';
+
+	const iconBox = (
+		<div
+			className="w-[65px] h-[65px] rounded-xl flex items-center justify-center cursor-pointer shadow-lg border border-white/10 relative"
+			style={{
+				background: `linear-gradient(135deg, ${card.board_color || '#6366f1'} 0%, ${card.board_color || '#6366f1'}dd 100%)`,
+			}}
+		>
+			{/* Subtle overlay */}
+			<div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
+
+			{/* Folder Icon */}
+			<svg
+				className="w-7 h-7 text-white/90 relative z-10"
+				fill="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+			</svg>
+		</div>
+	);
+
 	return (
 		<div className="compact-board-card flex flex-col items-center gap-1.5 select-none">
-			{/* Card Icon Box */}
-			<div
-				className="w-[65px] h-[65px] rounded-xl flex items-center justify-center cursor-pointer shadow-lg border border-white/10 relative"
-				style={{
-					background: `linear-gradient(135deg, ${card.board_color || '#6366f1'} 0%, ${card.board_color || '#6366f1'}dd 100%)`,
-				}}
-				onDoubleClick={handleNavigateToBoard}
-			>
-				{/* Subtle overlay */}
-				<div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
-
-				{/* Folder Icon */}
-				<svg
-					className="w-7 h-7 text-white/90 relative z-10"
-					fill="currentColor"
-					viewBox="0 0 24 24"
+			{/* Card Icon Box - Wrapped in Link for prefetching */}
+			{canNavigate ? (
+				<Link
+					href={boardHref}
+					onDoubleClick={handleNavigateToBoard}
+					onClick={(e) => e.preventDefault()} // Prevent single-click navigation, only double-click
+					prefetch={true}
 				>
-					<path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
-				</svg>
-			</div>
+					{iconBox}
+				</Link>
+			) : (
+				<div onDoubleClick={handleNavigateToBoard}>
+					{iconBox}
+				</div>
+			)}
 
 			{/* Title - Editable on double-click */}
 			<div className="w-full text-center">

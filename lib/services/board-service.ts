@@ -6,7 +6,7 @@
 
 import { db, generateId, updateEntity } from '@/lib/db/client';
 import { BOARD_DEFAULTS } from '@/lib/constants/defaults';
-import { syncBoardTitle } from '@/lib/instant/board-title-sync';
+import { syncBoardTitle, syncBoardColor } from '@/lib/instant/board-title-sync';
 import { TemplateService } from './template-service';
 import { incrementCounterWithCheck, decrementCounter } from '../billing/atomic-counter-service';
 import { SubscriptionTier, TIER_LIMITS } from '../billing/tier-limits';
@@ -235,18 +235,21 @@ export async function updateBoard(
 		share_token: string | null;
 	}>
 ): Promise<void> {
-	// If title is being updated, use the sync function to update both boards and cards
-	if (updates.title !== undefined) {
-		await syncBoardTitle(boardId, updates.title);
+	const { title, color, ...otherUpdates } = updates;
 
-		// If there are other updates besides title, apply them
-		const { title, ...otherUpdates } = updates;
-		if (Object.keys(otherUpdates).length > 0) {
-			await db.transact([updateEntity('boards', boardId, otherUpdates)]);
-		}
-	} else {
-		// No title update, just apply other updates normally
-		await db.transact([updateEntity('boards', boardId, updates)]);
+	// If title is being updated, use the sync function to update both boards and cards
+	if (title !== undefined) {
+		await syncBoardTitle(boardId, title);
+	}
+
+	// If color is being updated, use the sync function to update both boards and cards
+	if (color !== undefined) {
+		await syncBoardColor(boardId, color);
+	}
+
+	// If there are other updates (is_public, share_token), apply them normally
+	if (Object.keys(otherUpdates).length > 0) {
+		await db.transact([updateEntity('boards', boardId, otherUpdates)]);
 	}
 }
 
