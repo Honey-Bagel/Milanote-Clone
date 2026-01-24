@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TIER_INFO_MAP } from "@/lib/utils/tier-info";
 import { useUpgradePlan } from "@/lib/hooks/billing/use-upgrade-plan";
+import { useManageSubscription } from "@/lib/hooks/billing/use-manage-subscription";
 import { PricingCard } from "./PricingCard";
 import { useUserPlan } from "@/lib/hooks/user/use-user-plan";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,8 @@ interface PricingModalProps {
 
 export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 	const { handleUpgrade, isLoading } = useUpgradePlan();
-	const { tier: currentTierId } = useUserPlan();
+	const { openPortal, isLoading: isManageLoading } = useManageSubscription();
+	const { tier: currentTier } = useUserPlan();
 	const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
 	return (
@@ -79,9 +81,11 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 								key={tier.id}
 								tier={tier}
 								billingCycle={billingCycle}
-								isLoading={(isLoading === tier.priceIds[billingCycle]) && tier.name !== "Free"}
+								isLoading={!!isLoading && isLoading === tier.priceIds[billingCycle]}
 								onUpgrade={handleUpgrade}
-								isCurrent={currentTierId?.toLowerCase() === tier.id}
+								onManageSubscription={openPortal}
+								currentTier={currentTier}
+								isManageLoading={isManageLoading}
 							/>
 						))}
 					</div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { TIER_INFO_MAP } from "@/lib/utils/tier-info";
 import { useUpgradePlan } from "@/lib/hooks/billing/use-upgrade-plan";
+import { useManageSubscription } from "@/lib/hooks/billing/use-manage-subscription";
 import { PricingCard } from "./PricingCard";
 import { useUserPlan } from "@/lib/hooks/user/use-user-plan";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ interface PricingContentProps {
 
 export function PricingContent({ variant = 'modal', className }: PricingContentProps) {
 	const { handleUpgrade, isLoading } = useUpgradePlan();
+	const { openPortal, isLoading: isManageLoading } = useManageSubscription();
 	const { tier: currentTier } = useUserPlan();
 	const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
@@ -110,9 +112,11 @@ export function PricingContent({ variant = 'modal', className }: PricingContentP
 							key={tier.id}
 							tier={tier}
 							billingCycle={billingCycle}
-							isLoading={isLoading === tier.priceIds[billingCycle]}
+							isLoading={!!isLoading && isLoading === tier.priceIds[billingCycle]}
 							onUpgrade={handleUpgrade}
-							isCurrent={currentTier === tier.name}
+							onManageSubscription={openPortal}
+							currentTier={currentTier}
+							isManageLoading={isManageLoading}
 						/>
 					))}
 				</div>

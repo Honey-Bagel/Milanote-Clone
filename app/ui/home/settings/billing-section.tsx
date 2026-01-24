@@ -10,7 +10,10 @@ import { useUserPlan } from '@/lib/hooks/user/use-user-plan';
 import { usePaymentMethod } from '@/lib/hooks/billing/use-payment-method';
 import { useInvoices } from '@/lib/hooks/billing/use-invoices';
 import { UpdatePaymentModal } from '@/components/billing/UpdatePaymentModal';
+import { InvoicesModal } from '@/components/billing/InvoicesModal';
 import { format } from 'date-fns';
+
+const MAX_VISIBLE_INVOICES = 3;
 
 export function BillingSection() {
 	const { boardCount, fileUsage, isLoading, error } = useUserUsage();
@@ -18,6 +21,7 @@ export function BillingSection() {
 	const { paymentMethod, isLoading: isLoadingPayment, refresh: refreshPayment } = usePaymentMethod();
 	const { invoices, isLoading: isLoadingInvoices } = useInvoices();
 	const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+	const [isInvoicesModalOpen, setIsInvoicesModalOpen] = useState(false);
 
 	const limit = TIER_LIMITS[tier];
 	const cardCount = 88;
@@ -27,33 +31,33 @@ export function BillingSection() {
 	};
 
 	return (
-		<div className="max-w-[1400px] space-y-6">
-			<div>
+		<div className="h-full flex flex-col min-h-0">
+			<div className="shrink-0 mb-6">
 				<h3 className="text-lg font-bold text-white">Billing & Subscription</h3>
 				<p className="text-sm text-secondary-foreground">Manage your subscription and usage limits.</p>
 			</div>
 
-			<div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-stretch">
-				
+			<div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-5 gap-6">
+
 				{/* LEFT COLUMN: Plan Details (60% width) */}
-				<div className="lg:col-span-3 h-full">
+				<div className="lg:col-span-3">
 					<CurrentPlanCard />
 				</div>
 
 				{/* RIGHT COLUMN: Sidebar Stack (40% width) */}
-				<div className="lg:col-span-2 flex flex-col gap-6 h-full">
-					
+				<div className="lg:col-span-2 flex flex-col gap-4 min-h-0">
+
 					{/* 1. Resource Usage */}
-					<div className="p-6 bg-[#020617] border border-white/10 rounded-xl shadow-sm flex-1">
-						<div className="flex items-center justify-between mb-6">
-							<h4 className="text-base font-semibold text-white">Resource Usage</h4>
+					<div className="p-5 bg-[#020617] border border-white/10 rounded-xl shadow-sm shrink-0">
+						<div className="flex items-center justify-between mb-4">
+							<h4 className="text-sm font-semibold text-white">Resource Usage</h4>
 							<span className="text-[10px] font-medium text-secondary-foreground uppercase tracking-wider">
 								Monthly Cycle
 							</span>
 						</div>
-						
+
 						{isLoading ? (
-							<div className="space-y-6 animate-pulse">
+							<div className="space-y-4 animate-pulse">
 								<div className="h-2 bg-white/5 rounded w-full"></div>
 								<div className="h-2 bg-white/5 rounded w-3/4"></div>
 							</div>
@@ -62,7 +66,7 @@ export function BillingSection() {
 								<AlertCircle size={14} /> Failed to load usage
 							</div>
 						) : (
-							<div className="space-y-6">
+							<div className="space-y-4">
 								<UsageRow label="Boards Created" current={boardCount} max={limit.boards} format={(v) => v} color="bg-blue-500" />
 								<UsageRow label="Total Cards" current={cardCount} max={limit.cards} format={(v) => v} color="bg-blue-500" />
 								<UsageRow label="File Storage" current={fileUsage} max={limit.storageBytes} format={(v) => formatBytes(v, { base: 1000 })} color="bg-blue-500" />
@@ -71,7 +75,7 @@ export function BillingSection() {
 					</div>
 
 					{/* 2. Payment & History */}
-					<div className="p-6 bg-[#020617] border border-white/10 rounded-xl shadow-sm flex-none">
+					<div className="p-6 bg-[#020617] border border-white/10 rounded-xl shadow-sm shrink-0">
 						<div className="flex items-center justify-between mb-6">
 							 <h4 className="text-base font-semibold text-white">Payment Method</h4>
 							 <button onClick={() => setIsUpdateModalOpen(true)} className="text-xs text-primary hover:text-primary/80 transition-colors">Update</button>
@@ -118,17 +122,27 @@ export function BillingSection() {
 									<div className="h-8 bg-white/5 rounded animate-pulse"></div>
 								</div>
 							) : invoices.length > 0 ? (
-								<div className="space-y-3">
-									{invoices.slice(0, 5).map((invoice) => (
-										<InvoiceRow
-											key={invoice.id}
-											date={format(new Date(invoice.created), 'MMM d, yyyy')}
-											amount={`$${invoice.amount.toFixed(2)}`}
-											status={invoice.status}
-											pdfUrl={invoice.pdfUrl}
-										/>
-									))}
-								</div>
+								<>
+									<div className="space-y-3">
+										{invoices.slice(0, MAX_VISIBLE_INVOICES).map((invoice) => (
+											<InvoiceRow
+												key={invoice.id}
+												date={format(new Date(invoice.created), 'MMM d, yyyy')}
+												amount={`$${invoice.amount.toFixed(2)}`}
+												status={invoice.status}
+												pdfUrl={invoice.pdfUrl}
+											/>
+										))}
+									</div>
+									{invoices.length > MAX_VISIBLE_INVOICES && (
+										<button
+											onClick={() => setIsInvoicesModalOpen(true)}
+											className="w-full mt-4 py-2 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+										>
+											View all {invoices.length} invoices
+										</button>
+									)}
+								</>
 							) : (
 								<p className="text-sm text-secondary-foreground">No invoices yet</p>
 							)}
@@ -142,6 +156,13 @@ export function BillingSection() {
 				isOpen={isUpdateModalOpen}
 				onClose={() => setIsUpdateModalOpen(false)}
 				onSuccess={handlePaymentUpdateSuccess}
+			/>
+
+			{/* Invoices Modal */}
+			<InvoicesModal
+				isOpen={isInvoicesModalOpen}
+				onClose={() => setIsInvoicesModalOpen(false)}
+				invoices={invoices}
 			/>
 		</div>
 	);

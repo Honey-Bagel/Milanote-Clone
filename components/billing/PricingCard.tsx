@@ -1,6 +1,9 @@
-import { Check, Loader2 } from 'lucide-react';
+import { Check, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+// Tier order for comparison (higher index = higher tier)
+const TIER_ORDER = ['free', 'standard', 'pro'] as const;
 
 // Updated interface to match new data structure
 interface PricingTier {
@@ -14,24 +17,61 @@ interface PricingTier {
 		yearly: string;
 	};
 	priceIds: {
-		monthly: string | null;
-		yearly: string | null;
+		monthly: string | null | undefined;
+		yearly: string | null | undefined;
 	};
 	popular?: boolean;
 }
+
+type PlanAction = 'current' | 'upgrade' | 'downgrade';
 
 interface PricingCardProps {
 	tier: PricingTier;
 	billingCycle: 'monthly' | 'yearly';
 	isLoading: boolean;
 	onUpgrade: (priceId: string) => void;
-	isCurrent?: boolean;
+	onManageSubscription: () => void;
+	currentTier: string;
+	isManageLoading?: boolean;
 }
 
-export function PricingCard({ tier, billingCycle, isLoading, onUpgrade, isCurrent }: PricingCardProps) {
+export function PricingCard({
+	tier,
+	billingCycle,
+	isLoading,
+	onUpgrade,
+	onManageSubscription,
+	currentTier,
+	isManageLoading
+}: PricingCardProps) {
 	// Get current price and ID based on cycle
 	const price = tier.price[billingCycle];
 	const priceId = tier.priceIds[billingCycle];
+
+	// Determine the action type based on tier comparison
+	const currentTierIndex = TIER_ORDER.indexOf(currentTier as typeof TIER_ORDER[number]);
+	const thisTierIndex = TIER_ORDER.indexOf(tier.id as typeof TIER_ORDER[number]);
+
+	const action: PlanAction =
+		currentTierIndex === thisTierIndex ? 'current' :
+		thisTierIndex > currentTierIndex ? 'upgrade' : 'downgrade';
+
+	const getButtonText = () => {
+		if (action === 'current') return 'Current Plan';
+		if (action === 'upgrade') return `Upgrade to ${tier.name}`;
+		return `Downgrade to ${tier.name}`;
+	};
+
+	const handleClick = () => {
+		if (action === 'current') return;
+		if (action === 'downgrade') {
+			// Downgrades go through Stripe portal
+			onManageSubscription();
+		} else {
+			// Upgrades go through checkout
+			if (priceId) onUpgrade(priceId);
+		}
+	};
 
 	return (
 		<div
@@ -74,23 +114,25 @@ export function PricingCard({ tier, billingCycle, isLoading, onUpgrade, isCurren
 			</div>
 
 			<Button
-				onClick={() => priceId && onUpgrade(priceId)}
-				disabled={!priceId || isLoading || isCurrent}
-				variant={tier.popular ? "default" : "outline"}
+				onClick={handleClick}
+				disabled={action === 'current' || isLoading || (action === 'downgrade' && isManageLoading)}
+				variant={tier.popular && action === 'upgrade' ? "default" : "outline"}
 				className={cn(
-					"w-full font-medium transition-all mt-auto",
-					tier.popular 
-						? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20" 
+					"w-full font-medium transition-all mt-auto gap-2",
+					tier.popular && action === 'upgrade'
+						? "bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
 						: "border-white/10 hover:bg-white/5 text-white bg-transparent",
-					isCurrent && "opacity-50 cursor-not-allowed"
+					action === 'current' && "opacity-50 cursor-not-allowed",
+					action === 'downgrade' && "hover:border-orange-500/30 hover:text-orange-400"
 				)}
 			>
-				{isLoading ? (
+				{(action === 'upgrade' && isLoading) || (action === 'downgrade' && isManageLoading) ? (
 					<Loader2 className="w-4 h-4 animate-spin" />
-				) : isCurrent ? (
-					"Current Plan"
 				) : (
-					tier.buttonText
+					<>
+						{getButtonText()}
+						{action === 'downgrade' && <ExternalLink size={14} className="opacity-70" />}
+					</>
 				)}
 			</Button>
 		</div>
