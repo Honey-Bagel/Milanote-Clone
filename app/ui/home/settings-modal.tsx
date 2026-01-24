@@ -151,7 +151,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 						</div>
 
 						{/* Scrollable Content */}
-						<div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 will-change-scroll overscroll-contain">
+						<div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 will-change-scroll overscroll-contain custom-scrollbar">
 							{activeSection === 'profile' && <ProfileSection />}
 							{activeSection === 'preferences' && (
 								<div className="space-y-6 sm:space-y-8">

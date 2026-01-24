@@ -198,7 +198,7 @@ export default function Dashboard() {
 				</div>
 
 				{/* Main Content Area */}
-				<div className="flex-1 min-h-0 overflow-y-auto">
+				<div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
 					<div className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[2000px] mx-auto w-full">
 
 						{/* Quick actions Section */}
